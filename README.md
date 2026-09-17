@@ -202,7 +202,9 @@ showing. On top, every open session; below, the recent turns of the one you pick
 what you asked, how Claude read it, the tag, how long the turn took. Turns where
 Claude flagged its own reading with ⚠, turns where it was asked and wrote nothing,
 and turns the plugin never asked about are kept apart rather than folded into one
-colour, and a chart lays out how long each turn ran. Click anywhere outside to close it.
+colour, and a chart lays out how long each turn ran. Sessions you have closed fold into a
+single *Closed* row, grouped by workspace, and open only when you ask; nothing is deleted.
+Click anywhere outside to close it.
 
 <p align="center">
   <img src="docs/media/detail.en.png" width="700" alt="The panel: sessions, recent turns with their readings, and a chart of turn durations">
@@ -274,6 +276,7 @@ flowchart LR
 |---|---|
 | `UserPromptSubmit` | Writes your prompt **verbatim** to `~/.claude/willow/<session>.json`. For substantial requests, asks the model to open with the four lines. Short replies, slash commands and acknowledgements are skipped. |
 | `Stop` | Reads the transcript of the turn that just ended and looks for the declaration at the top of the model's messages. Found → records the reading and the short tag. Not found → leaves it `null`. Also prunes state files whose process is gone and that nobody has touched for a week. |
+| `SessionEnd` | Writes `endedAt` into the state file and touches nothing else. The panel uses it to fold the session under *Closed*; if the hook never ran (the process was killed), it falls back to whether the process is still alive. |
 | `statusLine` | Prints two rows: your prompt and the reading. |
 | Notch island | Reads the same state files and tails the live transcript. Never writes to `~/.claude/willow/` — even which turns you have seen is kept in Application Support. |
 

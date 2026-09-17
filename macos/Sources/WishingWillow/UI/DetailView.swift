@@ -19,9 +19,16 @@ struct DetailView: View {
     @State private var picked: String?
     @State private var shown = Offscreen.isRendering
     @State private var openRows: Set<String> = []
+    /// 「已关闭」那一行展开了没有。默认折叠（用户 2026-09-17）。
+    @State private var showClosed = Self.demoClosed
+    /// 已关闭里展开了的工作区组。
+    @State private var openGroups: Set<String> = []
+    /// 在上面那段里点过的会话：面板开着时它关掉了，也留在原处。
+    @State private var keptOpen: Set<String> = []
 
     /// 含两侧凹肩的形状尺寸；内容宽 = 宽 − 2 × 19。
-    static let size = CGSize(width: 620, height: 480)
+    /// 高度先前是 480：左栏 4 行会话 + 图表正好占满，加「已关闭」一行（26 + 间距 8）就把底部数据条挤出去 32pt（2026-09-17 实拍）。
+    static let size = CGSize(width: 620, height: 514)
     /// 内容等形状基本长到位再出现（开形状的弹簧：宽 0.34 秒、高 0.5 秒）。
     private static let revealAfter = 0.22
     /// 正文对齐线：行内标签宽 32 + 间距 8。时刻、进度条、步骤都对齐到这里。
@@ -39,21 +46,58 @@ struct DetailView: View {
         return sessions.first
     }
 
+    /// 已关闭的会话按工作区合并成的一组。`id` 是完整路径：同名不同路径的工作区不合并。
+    struct ClosedGroup: Identifiable, Equatable {
+        let id: String
+        let workspace: String
+        let sessions: [SessionState]     // 新 → 旧
+        let lastActive: Date
+    }
+
+    /// 左栏分两段（用户 2026-09-17）：开着的平铺；关掉的按工作区合并、默认折叠。
+    /// 按事实分，不按时间阈值藏：一个开了三天偶尔用的会话不该被藏，刚关掉一分钟的也不该还挂在上面。
+    /// 「关掉」= 插件写了 `endedAt`，或者进程没了（`isOpen` 的反面）。文件一个不删，只是不摆在上面。
+    /// `keep`：面板开着时上面那段里的会话中途关了，留在原处——不从你正看着的地方消失。
+    static func sections(_ sessions: [SessionState], keep: Set<String>) -> (open: [SessionState], closed: [ClosedGroup]) {
+        let open = sessions.filter { $0.isOpen || keep.contains($0.id) }
+        let closed = sessions.filter { !$0.isOpen && !keep.contains($0.id) }
+        let groups = Dictionary(grouping: closed) { $0.record.cwd ?? $0.workspace }.map { key, xs in
+            let sorted = xs.sorted { closedAt($0) > closedAt($1) }
+            return ClosedGroup(id: key, workspace: sorted[0].workspace, sessions: sorted, lastActive: closedAt(sorted[0]))
+        }
+        return (open, groups.sorted { $0.lastActive != $1.lastActive ? $0.lastActive > $1.lastActive : $0.id < $1.id })
+    }
+
+    /// 关掉的时刻：插件写下的 `endedAt`；没有（进程没了、没跑到 SessionEnd）就用最后一次动静。
+    static func closedAt(_ s: SessionState) -> Date { s.record.endedAt ?? WillowStore.activity(s) }
+
     var body: some View {
         let entries = current.map { TurnLog.read(sessionId: $0.id, directory: store.directory) } ?? []
         let tl = current.flatMap { store.timeline(for: $0) }
         let running = current?.declaration == .inProgress ? tl?.startedAt : nil
         let status = ClaudeStatus.snapshot(tl?.progress, settingsModel: store.settingsModel)
         let par = FocusRule.parallel(store)
+        let split = Self.sections(sessions, keep: keptOpen.union([focus].compactMap { $0 }))
+        // 一个开着的都没有时，折叠起来左栏就只剩一行字——直接摊开。
+        let closedShown = !split.closed.isEmpty && (showClosed || split.open.isEmpty)
         VStack(alignment: .leading, spacing: 0) {
             ears.reveal(0, shown, after: Self.revealAfter)
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
                     SectionHeader(title: L("会话", "Sessions"), value: L("\(par.running) 在跑 · \(par.idle) 空闲", "\(par.running) running · \(par.idle) idle"))
-                    sessionList.frame(height: min(CGFloat(sessions.count) * 42, 168), alignment: .top)
-                    SessionChart(entries: entries, runningSince: running)
-                        .frame(maxHeight: .infinity)
-                        .padding(.top, 4)
+                    // 和图表放在一起，这一栏装得下 4 行（2026-09-17 实拍量过）；再多在段内滚动。
+                    sessionList(split.open).frame(height: min(CGFloat(split.open.count) * 42, 168), alignment: .top)
+                    if !split.closed.isEmpty {
+                        closedToggle(split.closed, expanded: closedShown, fixed: split.open.isEmpty)
+                    }
+                    // 展开已关闭时，下半栏换成已关闭的列表：图表说的是选中的那个会话，挑会话的时候先让位。
+                    if closedShown {
+                        closedList(split.closed).frame(maxHeight: .infinity, alignment: .top)
+                    } else {
+                        SessionChart(entries: entries, runningSince: running)
+                            .frame(maxHeight: .infinity)
+                            .padding(.top, 4)
+                    }
                 }
                 .frame(width: 204)
                 .reveal(1, shown, after: Self.revealAfter)
@@ -75,7 +119,17 @@ struct DetailView: View {
         }
         .foregroundStyle(Ink.primary)
         .environment(\.colorScheme, .dark)
-        .onAppear { DispatchQueue.main.async { shown = true } }
+        .onAppear {
+            DispatchQueue.main.async { shown = true }
+            let closed = Self.sections(sessions, keep: []).closed.filter { $0.sessions.count > 1 }
+            // 一个开着的都没有时右边显示的是已关闭的会话：打开时把它所在的组展开，不然左边找不到它（2026-09-17 实拍）。
+            // 只在打开时展开一次，之后照样能收起。
+            if !sessions.contains(where: \.isOpen), let id = current?.id,
+               let g = closed.first(where: { $0.sessions.contains { $0.id == id } }) {
+                openGroups.insert(g.id)
+            }
+            if Self.demoClosed, let g = closed.first { openGroups.insert(g.id) }
+        }
     }
 
     // MARK: 刘海两侧
@@ -117,22 +171,26 @@ struct DetailView: View {
 
     // MARK: 会话
 
-    private var sessionList: some View {
-        let counts = Dictionary(sessions.map { ($0.workspace, 1) }, uniquingKeysWith: +)
+    /// 同名工作区才显示会话号前四位——只在同一段里比，已关闭的同名会话不算。
+    private func sessionList(_ list: [SessionState]) -> some View {
+        let counts = Dictionary(list.map { ($0.workspace, 1) }, uniquingKeysWith: +)
         let dupes = Set(counts.filter { $0.value > 1 }.keys)
         return scrollable {
             VStack(alignment: .leading, spacing: 2) {
-                ForEach(sessions) { s in sessionRow(s, dupes: dupes) }
+                ForEach(list) { s in
+                    let sub = !s.isOpen ? "\(s.workspace) · " + L("已关闭", "closed")
+                        : s.record.updatedAt.map { "\(s.workspace) · \(Self.ago($0))" } ?? s.workspace
+                    sessionRow(s, sub: sub, showsId: dupes.contains(s.workspace)) { keptOpen.insert(s.id) }
+                }
             }
         }
     }
 
-    /// 标题用标签——工作区名说的是「在哪」，不是「在做什么」。同名工作区才显示会话号前四位。
-    private func sessionRow(_ s: SessionState, dupes: Set<String>) -> some View {
+    /// 标题用标签——工作区名说的是「在哪」，不是「在做什么」。
+    private func sessionRow(_ s: SessionState, sub: String, showsId: Bool, onPick: @escaping () -> Void = {}) -> some View {
         let selected = s.id == current?.id
         // 进行中的一轮：状态文件里还没有标签（整轮结束才写），实时读到的先用上。
         let title = store.progress(for: s)?.tag ?? s.tag ?? FocusRule.lastLoggedTag(s, store) ?? L("还没有标签", "No tag yet")
-        let sub = s.record.updatedAt.map { "\(s.workspace) · \(Self.ago($0))" } ?? s.workspace
         return HStack(alignment: .center, spacing: 8) {
             Circle().fill(dotColor(s)).frame(width: 7, height: 7)
             VStack(alignment: .leading, spacing: 1) {
@@ -146,7 +204,7 @@ struct DetailView: View {
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 0)
-            if dupes.contains(s.workspace) {
+            if showsId {
                 Text(String(s.id.prefix(4))).font(Ink.number(9.5)).foregroundStyle(Ink.tertiary)
             }
         }
@@ -154,7 +212,88 @@ struct DetailView: View {
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
             .fill(selected ? Color.white.opacity(0.1) : Color.clear))
         .contentShape(Rectangle())
-        .onTapGesture { withAnimation(.snappy(duration: 0.2)) { picked = s.id } }
+        .onTapGesture { withAnimation(.snappy(duration: 0.2)) { picked = s.id; onPick() } }
+    }
+
+    // MARK: 已关闭
+
+    /// `--present … --detail --detail-closed`：打开时已关闭已展开、第一个多会话的组也展开，拍展开态用。
+    private static var demoClosed: Bool { PresentDemo.seconds != nil && CommandLine.arguments.contains("--detail-closed") }
+
+    /// 固定在开着的那段下面，不跟着滚——开着的会话多到要滚动时，这一行也总看得见。
+    /// `fixed`：一个开着的都没有，已关闭就是全部，不给收起。
+    private func closedToggle(_ groups: [ClosedGroup], expanded: Bool, fixed: Bool) -> some View {
+        let n = groups.reduce(0) { $0 + $1.sessions.count }
+        return HStack(spacing: 6) {
+            Text(L("已关闭", "Closed")).font(.system(size: 11, weight: .medium)).foregroundStyle(Ink.secondary)
+            Text("\(n)").font(Ink.number(11)).foregroundStyle(Ink.tertiary)
+            Spacer(minLength: 0)
+            if !fixed {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Ink.tertiary)
+                    .rotationEffect(.degrees(expanded ? 180 : 0))
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 26)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Ink.fill))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !fixed else { return }
+            withAnimation(.snappy(duration: 0.25)) { showClosed.toggle() }
+        }
+    }
+
+    /// 按工作区合并（用户 2026-09-17）。只有一个会话的工作区不再套一层，直接是会话行。
+    private func closedList(_ groups: [ClosedGroup]) -> some View {
+        scrollable {
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(groups) { g in
+                    if g.sessions.count == 1, let s = g.sessions.first {
+                        sessionRow(s, sub: "\(g.workspace) · \(Self.ago(Self.closedAt(s)))", showsId: false)
+                    } else {
+                        groupRow(g)
+                        if openGroups.contains(g.id) {
+                            ForEach(g.sessions) { s in
+                                sessionRow(s, sub: Self.ago(Self.closedAt(s)), showsId: true)
+                                    .padding(.leading, 15)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 箭头占圆点的位置，工作区名和会话行的标题对齐。
+    private func groupRow(_ g: ClosedGroup) -> some View {
+        let open = openGroups.contains(g.id)
+        return HStack(alignment: .center, spacing: 8) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(Ink.tertiary)
+                .rotationEffect(.degrees(open ? 90 : 0))
+                .frame(width: 7)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(g.workspace)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Ink.tertiary)
+                    .lineLimit(1).truncationMode(.middle)
+                Text(L("\(g.sessions.count) 个会话 · \(Self.ago(g.lastActive))", "\(g.sessions.count) sessions · \(Self.ago(g.lastActive))"))
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Ink.tertiary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8).padding(.vertical, 6)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.snappy(duration: 0.2)) {
+                if open { openGroups.remove(g.id) } else { openGroups.insert(g.id) }
+            }
+        }
     }
 
     private func dotColor(_ s: SessionState) -> Color {
