@@ -1,0 +1,8 @@
+{
+  "note": "一句话都没说过的会话结束时，不许凭空建一个状态文件：那会在面板里多出一个没有原话、没有轮次的空会话。没有 capture 就什么都不写。",
+  "session_id": "test-sess-24",
+  "steps": [
+    { "hook": "end", "input": "session-end.json" }
+  ],
+  "state_file": null
+}

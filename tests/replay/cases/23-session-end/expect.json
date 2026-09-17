@@ -1,0 +1,22 @@
+{
+  "note": "会话结束要写成事实。先前只挂了 UserPromptSubmit 与 Stop，`endedAt` 在本机 40 个状态文件里一次都没写过（2026-09-17 核对），app 只能拿进程号死活去猜「关了没有」，而进程号会被复用。SessionEnd 只补 `endedAt` 这一位：原话、声明、标签、轮次时间原样留着，也不往轮次日志里追加——会话结束不是一轮。",
+  "session_id": "test-sess-23",
+  "steps": [
+    { "hook": "capture", "input": "user-prompt-submit.json", "stdout": "inject" },
+    { "hook": "extract", "input": "stop.json" },
+    { "hook": "end", "input": "session-end.json" }
+  ],
+  "state_file": {
+    "endedAt": "<NONNULL>",
+    "turnEndedAt": "<NONNULL>",
+    "decode": "改面板左栏的列表，不动状态文件。",
+    "tag": "折叠已关会话",
+    "reminded": true,
+    "origin": "user",
+    "prompt_startswith": "把面板左边已经关掉的会话"
+  },
+  "log_lines": 1,
+  "log_last": {
+    "decode": "改面板左栏的列表，不动状态文件。"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "session_id": "test-sess-23",
+  "prompt_id": "00000000-0000-4000-8000-000000000023",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "把面板左边已经关掉的会话收起来，只留开着的，别删任何记录。"
+}

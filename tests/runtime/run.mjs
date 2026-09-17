@@ -154,6 +154,16 @@ if (bin) {
   );
 }
 
+// SessionEnd 同样求一次真值：end.mjs 依赖它在会话结束时真的会发。
+if (bin) {
+  const endKeys = payloadKeys(bin, 'SessionEnd');
+  check(
+    '运行时会发 SessionEnd（载荷带 reason）',
+    endKeys.includes('reason'),
+    endKeys.length ? `载荷键：${endKeys.join(', ')}` : '二进制里没匹配到 SessionEnd 载荷构造'
+  );
+}
+
 // ── fixture 不得比运行时更丰富 ────────────────────────────────────
 // 文档列了 scratchpad_dir / prompt_start_time / turn_index，二进制里一个都没有。
 // 照文档手写的 fixture 会带上这些字段，于是测试在一个现实中不存在的载荷上通过。
@@ -164,6 +174,7 @@ if (bin) {
   const perEvent = {
     'user-prompt-submit.json': new Set([...base, ...payloadKeys(bin, 'UserPromptSubmit')]),
     'stop.json': new Set([...base, ...payloadKeys(bin, 'Stop')]),
+    'session-end.json': new Set([...base, ...payloadKeys(bin, 'SessionEnd')]),
   };
   // 别名：本插件刻意同时认文档名，fixture 用它是合法的。
   perEvent['user-prompt-submit.json'].add('user_prompt');

@@ -1,0 +1,9 @@
+{
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "session_id": "test-sess-23",
+  "prompt_id": "00000000-0000-4000-8000-000000000023",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "你批准的：左栏只留开着的会话，已关闭的收起，不删记录。\n我读成了：改面板左栏的列表，不动状态文件。\n标签：折叠已关会话\n\n开始。"
+}

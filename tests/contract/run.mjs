@@ -103,6 +103,22 @@ if (!submit) {
     !!out?.hookSpecificOutput?.additionalContext,
     out ? `实际 ${JSON.stringify(out).slice(0, 80)}` : ''
   );
+
+  // 会话结束：同一个会话，照 hooks.json 里 SessionEnd 那条命令跑一次，endedAt 必须落盘。
+  // 没有这一位，app 只能拿进程号猜「关了没有」。
+  const end = entries.find((e) => e.event === 'SessionEnd');
+  if (check('找得到 SessionEnd 的 hook', !!end) && files.length === 1) {
+    const e = runAsWritten(end.h.command, JSON.stringify({
+      session_id: SID,
+      hook_event_name: 'SessionEnd',
+      reason: 'prompt_input_exit',
+      cwd: REPO,
+    }), stateDir);
+    check('SessionEnd 照 command 执行后 exit 0', e.code === 0, `exit=${e.code}${e.stderr ? ` stderr=${e.stderr.split('\n')[0]}` : ''}`);
+    const st = JSON.parse(readFileSync(join(stateDir, files[0]), 'utf8'));
+    check('SessionEnd 写下了 endedAt', typeof st.endedAt === 'string', `实际 ${JSON.stringify(st.endedAt)}`);
+    check('SessionEnd 没动原话', st.prompt === PROMPT, `实际 ${JSON.stringify(st.prompt)}`);
+  }
 }
 
 console.log('');

@@ -1,0 +1,7 @@
+{
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "session_id": "test-sess-24",
+  "hook_event_name": "SessionEnd",
+  "reason": "clear"
+}
