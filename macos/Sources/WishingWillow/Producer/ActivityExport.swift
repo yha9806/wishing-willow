@@ -311,21 +311,24 @@ enum ActivityExport {
     static func timeline(_ tl: TurnTimeline, asked: Bool, sentLabel: Bool) -> [String: Any] {
         let d = tl.progress.declaredAt
         let c = tl.endedAt == nil ? tl.progress.pendingChoice?.at : nil
-        func seg(_ k: TurnBar.Segment.Kind, _ from: Date?, _ to: Date?) -> [String: Any] {
+        func seg(_ k: TurnBar.Segment.Kind, _ from: Date?, _ to: Date?, mergeIfEmpty: Bool = false) -> [String: Any] {
             let swatch: String = switch k {
             case .before: "purple"
             case .after: "mint"
             case .waiting: "deepBlue"
             case .turn: "gray"
             }
-            return ["name": TurnBar.name(k), "swatch": swatch, "from": iso(from), "to": iso(to)]
+            var out: [String: Any] = ["name": TurnBar.name(k), "swatch": swatch, "from": iso(from), "to": iso(to)]
+            if mergeIfEmpty { out["mergeIfEmpty"] = true }
+            return out
         }
         var segs: [[String: Any]] = []
         if !asked {
             segs.append(seg(.turn, nil, c))
-        } else if let d, c.map({ d < $0 }) ?? true {
+        } else if let d {
+            // 分不分成前后两段由 lintel 按比例现算（TurnBar.segments 的 `d < end` 是在截到 0…1 的比例上比的，不是按时刻先后）。
             segs.append(seg(.before, nil, d))
-            segs.append(seg(.after, d, c))
+            segs.append(seg(.after, d, c, mergeIfEmpty: true))
         } else {
             segs.append(seg(.before, nil, c))
         }
