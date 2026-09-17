@@ -15,6 +15,12 @@ enum Main {
         if let i = args.firstIndex(of: "--anatomy") {
             exit(Anatomy.run(outputDirectory: i + 1 < args.count ? args[i + 1] : "anatomy"))
         }
+        // --lintel-export <目录>：作为 lintel 的来源程序导出一次活动文件（见 Producer/LintelProducer.swift）。
+        if let i = args.firstIndex(of: "--lintel-export") {
+            let out = i + 1 < args.count ? args[i + 1] : "lintel-export"
+            exit(LintelProducer.exportOnce(home: URL(fileURLWithPath: out, isDirectory: true),
+                                           fixtures: args.contains("--fixtures"), withRegistry: args.contains("--with-registry")))
+        }
         if let i = args.firstIndex(of: "--selfshot") {
             SelfShot.run(outputDirectory: i + 1 < args.count ? args[i + 1] : "selfshots")
             return
@@ -27,6 +33,18 @@ enum Main {
             // --real：用本机真实状态而不是样例。截图只留在本地，不进公开仓。
             PresentDemo.real = args.contains("--real")
             PresentDemo.passive = args.contains("--passive")
+        }
+        // 来源模式（lintel 分支的默认）：不画刘海，只把会话写成 lintel 活动。要许愿柳自己画刘海，加 --island（或演示 --present）。
+        if !args.contains("--island") && PresentDemo.seconds == nil {
+            let app = NSApplication.shared
+            app.setActivationPolicy(.accessory)
+            let env = ProcessInfo.processInfo.environment
+            let home = env["LINTEL_HOME"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+                ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("lintel", isDirectory: true)
+            let loop = ProducerLoop(store: WillowStore(), home: home, log: args.contains("--producer-log"))
+            loop.start()
+            withExtendedLifetime(loop) { app.run() }
+            return
         }
         let app = NSApplication.shared
         let delegate = AppDelegate()
