@@ -46,6 +46,10 @@ enum ActivityExport {
         return out
     }
 
+    /// 这一轮还在进行：声明在等、而且会话进程还在。进程不在了（一轮没写完就关掉），这一轮不会再进行——
+    /// 先前照样导出成「在跑」：计时从几天前一直走、胶囊在闪、带心跳，来源进程每 30 秒重写这些文件（F9，lintel 负担报告 2026-09-18）。
+    static func turnLive(_ s: SessionState) -> Bool { s.declaration == .inProgress && s.isOpen }
+
     static func activity(_ s: SessionState, _ store: WillowStore, now: Date) -> [String: Any] {
         let unseen = SeenStore(ephemeral: true)
         let seen = SeenStore(ephemeral: true)
@@ -61,7 +65,7 @@ enum ActivityExport {
             "open": s.isOpen,
             "running": s.isRunning,
             "stale": s.isStale,
-            "inProgress": s.declaration == .inProgress,
+            "inProgress": turnLive(s),
             "rank": rank(s, store),
             "flagged": s.flaggedByModel,
             "activityAt": iso(WillowStore.activity(s)),
@@ -71,7 +75,7 @@ enum ActivityExport {
             "status": status(s, store),
         ]
         // 进行中的一轮计时在走：许愿柳停了（来源进程退出），lintel 要能看出「没有消息」，不能让计时一直走下去。
-        if s.declaration == .inProgress { a["heartbeatSeconds"] = 60 }
+        if turnLive(s) { a["heartbeatSeconds"] = 60 }
 
         // 右翼：FocusRule.label；看过之后是否缩回
         let lu = FocusRule.label(s, unseen, store)
@@ -82,8 +86,9 @@ enum ActivityExport {
         // 胶囊：FocusRule.pill + SessionPill
         let pu = FocusRule.pill(s, unseen, store)
         let ps = FocusRule.pill(s, seen, store)
-        a["pill"] = pu.map { pill($0, s, store) } ?? NSNull()
-        a["pillUntilSeen"] = pu != nil && ps == nil
+        // 关掉的会话不上刘海（stale），胶囊不导出：它里面的「在跑」符号与计时只会是旧的。
+        a["pill"] = s.isOpen ? (pu.map { pill($0, s, store) } ?? NSNull()) : NSNull()
+        a["pillUntilSeen"] = s.isOpen && pu != nil && ps == nil
 
         // 耳朵：IslandExpandedContent.ears
         let tu = IslandExpandedContent.earTag(s, store: store, seen: unseen)
@@ -160,7 +165,7 @@ enum ActivityExport {
         case .withdrawn: "withdrawn"
         case .idle: "idle"
         }
-        var out: [String: Any] = ["center": center]
+        var out: [String: Any] = ["center": center == "live" && !s.isOpen ? "idle" : center]
         if let snap {
             out["ringRemaining"] = snap.remaining
             out["lastWriteAt"] = iso(snap.lastWrite)
@@ -172,9 +177,9 @@ enum ActivityExport {
         if let w = withdraw { out["bounceAt"] = iso(w.at) }
         if let w = withdraw, w.kind == .interrupted, let start = s.record.updatedAt, let end = p?.interruptedAt {
             out["clock"] = ["style": "frozen", "seconds": end.timeIntervalSince(start)]
-        } else if let c = p?.pendingChoice {
+        } else if let c = p?.pendingChoice, s.isOpen {
             out["clock"] = ["style": "live", "since": iso(c.at ?? s.record.updatedAt ?? Date()), "opacity": 0.8]
-        } else if s.declaration == .inProgress, let start = s.record.updatedAt {
+        } else if turnLive(s), let start = s.record.updatedAt {
             out["clock"] = ["style": "live", "since": iso(start), "opacity": 0.7]
         } else if s.declaration != .unreadable, let end = s.record.turnEndedAt ?? s.record.updatedAt {
             out["clock"] = ["style": "ago", "since": iso(end)]
@@ -447,7 +452,7 @@ enum ActivityExport {
                 "expandable": (t.prompt?.count ?? 0) > 36 || (t.decode?.count ?? 0) > 36,
             ]
         }
-        if s.declaration == .inProgress, let turn = s.record.turnId, !entries.contains(where: { $0.turnId == turn }) {
+        if turnLive(s), let turn = s.record.turnId, !entries.contains(where: { $0.turnId == turn }) {
             var live: [String: Any] = [
                 "at": iso(s.record.updatedAt), "tag": opt(p?.tag ?? s.tag), "badge": L("进行中", "Live"), "clockSince": iso(s.record.updatedAt),
                 "lines": [
@@ -466,7 +471,7 @@ enum ActivityExport {
 
         // SessionChart
         let ds2 = entries.compactMap(\.duration).sorted()
-        let running = s.declaration == .inProgress ? tl?.startedAt : nil
+        let running = turnLive(s) ? tl?.startedAt : nil
         let headline = ds2.isEmpty
             ? (running == nil ? L("还没有记录", "No records yet") : L("这一轮还在进行", "This turn is still running"))
             : L("\(entries.count) 轮 · 中位 \(DetailView.duration(ds2[ds2.count / 2])) · 对数纵轴", "\(entries.count) turns · median \(DetailView.duration(ds2[ds2.count / 2]))")
