@@ -1,0 +1,27 @@
+{
+  "note": "一轮进行中送达的跨会话消息不是一轮新对话，不许覆盖用户那一轮。2026-09-17 核对：真实的两条都把进行中的用户轮次挪进了日志（supersededAt），状态被换成另一个会话的话。与 18 同形，只是信封换成 <cross-session-message>。",
+  "session_id": "test-sess-26",
+  "steps": [
+    { "append": "transcript.pre.jsonl" },
+    { "hook": "capture", "input": "ups-user.json", "stdout": "inject" },
+    { "append": "transcript.part1.jsonl" },
+    { "hook": "capture", "input": "ups-peer.json", "stdout": "empty" },
+    { "append": "transcript.part2.jsonl" },
+    { "hook": "extract", "input": "stop.json" }
+  ],
+  "state_file": {
+    "origin": "user",
+    "midTurn": false,
+    "decode": "逐条对照原文核引文，只列不改。",
+    "tag": "核引文",
+    "prompt_startswith": "把这一节的引文逐条对照原文核一遍"
+  },
+  "log_lines": 1,
+  "log_last": {
+    "prompt": "把这一节的引文逐条对照原文核一遍，只列不改。",
+    "origin": "user",
+    "decode": "逐条对照原文核引文，只列不改。",
+    "interrupted": false,
+    "supersededAt": null
+  }
+}

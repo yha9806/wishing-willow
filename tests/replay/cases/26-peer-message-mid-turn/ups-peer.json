@@ -1,0 +1,9 @@
+{
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "session_id": "test-sess-26",
+  "prompt_id": "p26",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "<cross-session-message from=\"uds:/tmp/fake/1.sock\" from-name=\"other-session\" from-mode=\"prompting\">\nStatus from session B: the nightly build finished; no action needed here.\n</cross-session-message>"
+}

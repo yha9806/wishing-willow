@@ -191,9 +191,12 @@ const MIN_WEIGHT = 20;
  *
  * 认的是已知的几种信封头，认不出的照旧注入：多注入一次几十 token，漏一次是
  * 一整轮走错方向。不对称在这里，宁可多。
+ *
+ * 另一个 Claude 会话发来的消息（`<cross-session-message …>`）也是信封：它是说给模型听的，
+ * 不是你说的。2026-09-17 核对本机记录：两条都被记成了「你的要求」，并把进行中的那一轮挤进了日志。
  */
 const SYSTEM_ENVELOPE =
-  /^\s*(?:<(?:task-notification|ci-monitor-event|system-reminder|command-name|command-message|local-command-stdout)\b|\[SYSTEM NOTIFICATION)/i;
+  /^\s*(?:<(?:task-notification|ci-monitor-event|system-reminder|command-name|command-message|local-command-stdout|cross-session-message)\b|\[SYSTEM NOTIFICATION)/i;
 
 /**
  * 这句原话是不是系统塞进来的信封。capture 用它决定要不要提醒，也把结果作为

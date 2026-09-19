@@ -1,0 +1,9 @@
+{
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "session_id": "test-sess-26",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "## 核完了\n\n三处出入。"
+}

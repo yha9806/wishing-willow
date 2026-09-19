@@ -1,0 +1,15 @@
+{
+  "note": "另一个 Claude 会话发来的跨会话消息（<cross-session-message …>）也走 UserPromptSubmit：它在会话记录里是 origin.kind == \"peer\" 的 queued_command，送达时触发钩子。2026-09-17 核对：本机 2/2 条被记成 origin=user 并注入了提醒——别的会话说的话显示成了「你的要求」。原话照旧逐字记下，但标为 system、不注入。",
+  "capture": {
+    "exit_code": 0,
+    "stdout": "empty"
+  },
+  "state_file": {
+    "decode": null,
+    "promptField": "prompt",
+    "prompt_startswith": "<cross-session-message",
+    "origin": "system",
+    "reminded": false,
+    "turnEndedAt": null
+  }
+}
