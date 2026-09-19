@@ -3,26 +3,11 @@ import Foundation
 @testable import WishingWillow
 
 /// 并行会话：Apple HIG 的做法是一个活动贴着摄像头占两翼，第二个活动分离成一个小胶囊。
-/// 两件事要钉住：声明到达时不顶掉正在展开的那个（排队），胶囊显示的是「另一个会话里有话说的那个」。
+/// 要钉住的是：胶囊显示的是「另一个会话里有话说的那个」。（排队那一条随刘海界面移到 lintel `OrderingTests.arrivalQueue`，2026-09-19。）
 @MainActor
 @Suite("并行会话：排队与第二个会话")
 struct MultiSessionTests {
     init() { Lang.current = .zh }
-
-    @Test("排队：没在展示就立刻展示；正在展示同一个不排；别的会话排在后面、不重复；取下一个时跳过已结束的")
-    func arrivalQueue() {
-        var q = ArrivalQueue()
-        #expect(q.offer("a", showing: nil) == true)
-        #expect(q.offer("a", showing: "a") == false)
-        #expect(q.waiting.isEmpty)
-        #expect(q.offer("b", showing: "a") == false)
-        #expect(q.offer("c", showing: "a") == false)
-        #expect(q.offer("b", showing: "a") == false)
-        #expect(q.waiting == ["b", "c"])
-        #expect(q.next(alive: ["c"]) == "c")
-        #expect(q.waiting.isEmpty)
-        #expect(q.next(alive: ["c"]) == nil)
-    }
 
     private let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 

@@ -1,4 +1,4 @@
-import SwiftUI
+import Foundation
 
 /// 常亮层显示「哪一个会话」的规则，菜单栏和灵动岛共用一份。
 ///
