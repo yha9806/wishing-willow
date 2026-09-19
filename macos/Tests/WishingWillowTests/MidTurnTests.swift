@@ -97,15 +97,21 @@ struct MidTurnAndDodgeTests {
         try write(record(["transcriptPath": t.path, "decode": "读成了", "tag": "剧本审阅"], id: "busy", ago: 1200), "busy.json", in: d)
         let store = WillowStore(directory: d)
         store.reload()
-        #expect(FocusRule.live(store).count == 1)
-        #expect(FocusRule.parallel(store).running == 0)
-        #expect(FocusRule.parallel(store).idle == 1)
+        let liveCount = store.sessions.filter { !$0.isStale }.count
+        let openRunning = store.sessions.filter { $0.isOpen && $0.isRunning }.count
+        let openIdle = store.sessions.filter { $0.isOpen && !$0.isRunning }.count
+        #expect(liveCount == 1)
+        #expect(openRunning == 0)
+        #expect(openIdle == 1)
 
         try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(-1200)], ofItemAtPath: t.path)
         store.reload()
-        #expect(FocusRule.live(store).isEmpty)
-        #expect(FocusRule.parallel(store).running == 0)
-        #expect(FocusRule.parallel(store).idle == 1)
+        let liveCountLater = store.sessions.filter { !$0.isStale }.count
+        let openRunningLater = store.sessions.filter { $0.isOpen && $0.isRunning }.count
+        let openIdleLater = store.sessions.filter { $0.isOpen && !$0.isRunning }.count
+        #expect(liveCountLater == 0)
+        #expect(openRunningLater == 0)
+        #expect(openIdleLater == 1)
     }
 
     @Test("主动弹出的精简版只放两行：要求一行、理解最多两行；标 ⚠ 用橙色；原话换行压成空格；还没写出就说还没写出")
@@ -124,36 +130,6 @@ struct MidTurnAndDodgeTests {
         let openLines = IslandExpandedContent.compactLines(open, store: store)
         #expect(openLines.count == 2)
         #expect(openLines[1].text == "还没写出")
-    }
-
-    @Test("悬停翻页：底部那一行按在跑顺序循环到下一个会话，全都看过、胶囊规则挑不出第二个时也翻得到，三次走遍再回到开头；只有一个会话时没有这一行")
-    func flipThrough() throws {
-        let d = try dir()
-        for (id, ago) in [("a", 10.0), ("b", 20.0), ("c", 30.0)] {
-            try write(record(["decode": "读成了", "tag": "标签\(id)"], id: id, ago: ago), "\(id).json", in: d)
-        }
-        let store = WillowStore(directory: d)
-        store.reload()
-        let seen = SeenStore(ephemeral: true)
-        for s in store.sessions { seen.markSeen(s) }
-        let l = FocusRule.live(store)
-        #expect(l.count == 3)
-        #expect(FocusRule.secondary(store, seen, primary: l[0]) == nil)
-        var visited = [l[0].id]
-        var cur = l[0]
-        for _ in 0..<3 {
-            let next = try #require(FocusRule.flipTarget(store, after: cur))
-            visited.append(next.id)
-            cur = next
-        }
-        #expect(Set(visited.prefix(3)) == Set(l.map(\.id)))
-        #expect(visited.last == l[0].id)
-
-        let one = try dir()
-        try write(record(["decode": "读成了"], id: "solo"), "solo.json", in: one)
-        let single = WillowStore(directory: one)
-        single.reload()
-        #expect(FocusRule.flipTarget(single, after: single.sessions.first) == nil)
     }
 
     @Test("悬停面板一致：灵动岛没开着时结束的一轮，打开后从聊天记录补出时间线；开着又没问的一轮算进行中（结束后才是没问）")

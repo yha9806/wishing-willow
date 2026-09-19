@@ -80,7 +80,9 @@ struct ChoiceWaitTests {
 
         seen.markSeen(sessionId: "wait", turnId: "tw")
         #expect(FocusRule.label(w, seen, store)?.text == "等你选择")
-        #expect(FocusRule.focus(store, seen)?.id == "wait")
+        // 等你选择排在没看过的新声明前面：来源这边体现为 rank = waiting，排序本身在 lintel（Ordering.focus）。
+        #expect(ActivityExport.rank(w, store) == "waiting")
+        #expect(ActivityExport.rank(try #require(store.sessions.first { $0.id == "fresh" }), store) == "none")
         if case .choice = FocusRule.pill(w, seen, store) {} else {
             Issue.record("pill → \(String(describing: FocusRule.pill(w, seen, store)))")
         }

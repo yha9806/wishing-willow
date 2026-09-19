@@ -120,7 +120,7 @@ enum ActivityExport {
 
     // MARK: 排序字段
 
-    /// FocusRule.focus 的前三条：插件坏了 > 等你选择 > 刚撤回。
+    /// 原 FocusRule.focus 的前三条（排序本身在 lintel 的 Ordering）：插件坏了 > 等你选择 > 刚撤回。
     static func rank(_ s: SessionState, _ store: WillowStore) -> String {
         if s.declaration == .unreadable { return "anomaly" }
         if store.progress(for: s)?.pendingChoice != nil { return "waiting" }
