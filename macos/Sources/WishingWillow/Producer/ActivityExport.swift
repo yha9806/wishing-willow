@@ -431,6 +431,17 @@ enum ActivityExport {
         }
     }
 
+    /// 悬停一根柱的小卡（lintel 分镜 52）：时刻 · 标签 · 时长，下一行是理解那一句。
+    static func barNote(_ e: TurnLogEntry) -> String? {
+        guard let at = e.at else { return nil }
+        var head = [IslandExpandedContent.clock(at), e.tag].compactMap { $0 }.joined(separator: " ")
+        if let d = e.duration, d >= 1 { head += " · " + DetailView.duration(d) }
+        // 理解那一句只要开头：小卡不是用来读全文的（09-21 实拍：整段 200 字占了七行）。
+        var why = e.decode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if why.count > 72 { why = String(why.prefix(72)) + "…" }
+        return why.isEmpty ? head : head + "\n" + why
+    }
+
     static func detail(_ s: SessionState, _ store: WillowStore, tl: TurnTimeline?, unseen: SeenStore, seen: SeenStore) -> [String: Any] {
         let entries = TurnLog.read(sessionId: s.id, directory: store.directory)
         let p = store.progress(for: s)
@@ -474,12 +485,18 @@ enum ActivityExport {
         let running = turnLive(s) ? tl?.startedAt : nil
         let headline = ds2.isEmpty
             ? (running == nil ? L("还没有记录", "No records yet") : L("这一轮还在进行", "This turn is still running"))
-            : L("\(entries.count) 轮 · 中位 \(DetailView.duration(ds2[ds2.count / 2])) · 对数纵轴", "\(entries.count) turns · median \(DetailView.duration(ds2[ds2.count / 2]))")
+            : L("\(entries.count) 轮 · 中位 \(DetailView.duration(ds2[ds2.count / 2]))", "\(entries.count) turns · median \(DetailView.duration(ds2[ds2.count / 2]))")
         let counts = Dictionary(grouping: entries.compactMap(SessionChart.outcome)) { $0 }.mapValues(\.count)
+        // lintel 分镜 52（借写作循环的每日柱）：柱下写时刻、悬停一根柱出小卡；「对数纵轴」从副标题挪进标题悬停。
         out["chart"] = [
             "title": L("各轮时长", "Turn durations"),
             "headline": headline,
-            "bars": entries.map { e -> [String: Any] in ["seconds": opt(e.duration), "swatch": chartSwatch(SessionChart.outcome(e))] },
+            "hint": L("纵轴是对数的（1 秒 … 1 小时）· 柱上的数是那一轮的时长，柱多了只标最长与最近一根 · 悬停一根柱看那一轮",
+                      "Log axis (1 s … 1 h) · labels are turn durations; with many bars only the longest and the latest · hover a bar for that turn"),
+            "bars": entries.map { e -> [String: Any] in
+                ["seconds": opt(e.duration), "swatch": chartSwatch(SessionChart.outcome(e)),
+                 "label": opt(e.at.map(IslandExpandedContent.clock)), "note": opt(barNote(e))]
+            },
             "runningSince": iso(running),
             "legend": SessionChart.Outcome.allCases.map { ["name": SessionChart.name($0), "swatch": chartSwatch($0), "count": counts[$0] ?? 0] },
         ] as [String: Any]
@@ -494,6 +511,9 @@ enum ActivityExport {
             "tone": status.map { ringTone($0.remaining) } ?? "inkTertiary",
         ]
         if let status { context["gauge"] = status.usedFraction }
+        // lintel 分镜 53：一轮一点的走势线，末点就是上面那个占比；至少两点才画。
+        let series = store.contextSeries(for: s)
+        if series.count >= 2 { context["series"] = Array(series.suffix(400)) }
         var cache: [String: Any] = ["label": L("缓存命中", "Cache hits"), "value": status.map { IslandExpandedContent.percent($0.cacheHit) } ?? "—"]
         if let status { cache["dots"] = ClaudeStatus.dots(cacheHit: status.cacheHit) }
         out["stats"] = [
