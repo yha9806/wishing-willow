@@ -9,10 +9,11 @@
 //   状态「未决」且条件没满足 → 休眠，不说；条件满足 → 已触发，说。
 // 读不出、格式坏了：说「读不出」，绝不当成「没有条目」。
 
-import { readFileSync, existsSync, realpathSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
-import { stateDir } from './_willow.mjs';
+import { pathToFileURL } from 'node:url';
+import { stateDir, isSystemEnvelope } from './_willow.mjs';
 
 const HEAD = /^##\s+待触发\s+(\S+)\s+(.+?)\s*$/;
 const FIELD = /^\s*(来源|指向|范围|什么时候出现|消除它的证据|状态)\s*[：:]\s*(.*?)\s*$/;
@@ -198,4 +199,99 @@ export function triggerBlock(cwd, touched = [], before = null) {
   if (change) out.push(change);
   if (problems.length) out.push(`清单有读不懂的地方：${problems.join('；')}`);
   return { text: out.join('\n'), shown };
+}
+
+// ── 检查命令：node plugin/hooks/_triggers.mjs check <清单> ─────────────────────
+// 每轮的钩子挡着回车，只做格式层面的读取、不翻会话记录。提交清单之前手动跑这一道：
+// 格式、触发条件、指向的对象、状态写法，以及「关闭」附的 uuid 是不是真在会话记录里、是不是作者发的。
+// issue 形式的指向（owner/repo#n）只核格式：钩子和这个命令都不访问网络。
+
+const STATUS_OPEN = /^(未决|进行中|等作者关)$/;
+const CLOSED = /^已关闭\s+(\d{4}-\d{2}-\d{2})(?:\s*[—–-]+\s*作者\s*uuid\s+([0-9a-f-]{8,}))?\s*$/;
+const ISSUE = /^[\w.-]+\/[\w.-]+#\d+$/;
+
+function transcriptsDir() {
+  return process.env.WILLOW_TRANSCRIPTS_DIR || join(homedir(), '.claude', 'projects');
+}
+
+/** 会话记录里这个 uuid 是谁说的：'author'、'other'，找不到返回 null。插队进来的作者消息记成 queued_command 附件。 */
+function whoSaid(uuid) {
+  const root = transcriptsDir();
+  let dirs;
+  try { dirs = readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => join(root, d.name)); } catch { return null; }
+  let seen = null;
+  for (const dir of dirs) {
+    let files;
+    try { files = readdirSync(dir).filter((f) => f.endsWith('.jsonl')); } catch { continue; }
+    for (const f of files) {
+      let text;
+      try { text = readFileSync(join(dir, f), 'utf8'); } catch { continue; }
+      if (!text.includes(uuid)) continue;
+      for (const line of text.split('\n')) {
+        if (!line.includes(uuid)) continue;
+        let row;
+        try { row = JSON.parse(line); } catch { continue; }
+        if (row?.uuid !== uuid) continue;
+        if (row.type === 'attachment' && row.attachment?.type === 'queued_command') return 'author';
+        if (row.type === 'user' && row.isSidechain !== true) {
+          const c = row.message?.content;
+          const t = typeof c === 'string' ? c
+            : Array.isArray(c) && !c.some((b) => b?.type === 'tool_result')
+              ? c.filter((b) => b?.type === 'text').map((b) => b.text ?? '').join(' ') : null;
+          if (t !== null && !isSystemEnvelope(t)) return 'author';
+        }
+        seen = 'other';
+      }
+    }
+  }
+  return seen;
+}
+
+export function checkList(file) {
+  const errors = [];
+  const notes = [];
+  let text;
+  try { text = readFileSync(file, 'utf8'); } catch { return { errors: [`清单读不出：${file}`], notes, count: 0 }; }
+  const { items, problems } = parseTriggers(text);
+  errors.push(...problems);
+  if (items.length === 0) errors.push('清单里没有一条（要写成「## 待触发 <编号> <标题>」）');
+  const t = today();
+  for (const it of items) {
+    if (problems.some((p) => p.startsWith(`${it.id} `))) continue;
+    const ptr = it.fields['指向'];
+    if (ISSUE.test(ptr)) {
+      notes.push(`${it.id} 指向 ${ptr}：只核了格式，没去 GitHub 查`);
+    } else {
+      const m = /^(\S+)\s+(\S+)$/.exec(ptr);
+      if (!m) errors.push(`${it.id} 指向写法不认识：${ptr}（要 owner/repo#n，或「台账路径 条目编号」）`);
+      else {
+        let lt = null;
+        try { lt = readFileSync(expand(m[1]), 'utf8'); } catch { /* 下面报 */ }
+        if (lt === null || ledgerStatus(lt, m[2]) === null) errors.push(`${it.id} 指向的台账条目不存在：${ptr}`);
+      }
+    }
+    try { triggered(it, t); } catch (e) { errors.push(`${it.id} ${e.message}`); }
+    const st = it.fields['状态'];
+    const c = CLOSED.exec(st);
+    if (STATUS_OPEN.test(st)) continue;
+    if (!c) { errors.push(`${it.id} 状态写法不认识：${st}`); continue; }
+    if (!c[2]) { errors.push(`${it.id} 关闭要附作者 uuid（「已关闭 日期 — 作者 uuid <uuid>」）`); continue; }
+    const who = whoSaid(c[2]);
+    if (who === null) errors.push(`${it.id} 关闭附的 uuid 在会话记录里找不到：${c[2]}`);
+    else if (who !== 'author') errors.push(`${it.id} 关闭附的 uuid 不是作者的消息：${c[2]}`);
+  }
+  return { errors, notes, count: items.length };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const [cmd, file] = process.argv.slice(2);
+  if (cmd !== 'check' || !file) {
+    console.error('用法：node _triggers.mjs check <清单.md>');
+    process.exit(2);
+  }
+  const { errors, notes, count } = checkList(expand(file));
+  for (const e of errors) console.log(`ERR ${e}`);
+  for (const n of notes) console.log(`注 ${n}`);
+  console.log(errors.length ? `清单检查：${errors.length} 处问题` : `清单检查：通过（${count} 条）`);
+  process.exit(errors.length ? 1 : 0);
 }
