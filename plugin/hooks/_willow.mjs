@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, readdir
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const SCHEMA = 11;   // 11：加 plan、next（计划块与「下一步」）
+export const SCHEMA = 11;   // 11：加 plan、next（计划块与「下一步」）、touched（本会话动过的路径）、shown（上一轮说过的待触发条目）
 
 /** Where state lives. Overridable so tests never touch the real directory. */
 export function stateDir() {
@@ -358,6 +358,45 @@ function scanNext(message) {
     if (m) return m[1].trim() || null;
   }
   return null;
+}
+
+// 本轮动过的路径（待触发清单判断「和会话相关」用）。本机多数会话从一个仓库启动，再用绝对路径去改别的仓，
+// 只看 cwd 会漏。只收绝对路径和 ~/ 开头的路径；相对路径没有 cwd 之外的信息，收了也判不了。
+const PATH_KEYS = ['file_path', 'path', 'notebook_path'];
+const PATH_IN_COMMAND = /(?:^|[\s'"=(:])((?:\/|~\/)[^\s'"`;|&<>()*?]+)/g;
+export const TOUCHED_KEEP = 100;
+
+/** 这一轮工具调用里出现的路径，按出现先后、去重。读不到聊天记录就返回 []。 */
+export function touchedPaths(input, prev) {
+  const path = input?.transcript_path;
+  if (typeof path !== 'string' || !path || typeof prev?.transcriptOffset !== 'number') return [];
+  const text = slice(path, prev.transcriptOffset, 64 << 20);
+  const out = [];
+  const add = (s) => {
+    if (typeof s !== 'string') return;
+    const v = s.trim().replace(/[.,:]+$/, '');
+    if ((v.startsWith('/') && v.length > 1) || v.startsWith('~/')) { if (!out.includes(v)) out.push(v); }
+  };
+  for (const line of text.split('\n')) {
+    if (!line.includes('tool_use')) continue;
+    let row;
+    try { row = JSON.parse(line); } catch { continue; }
+    if (row?.type !== 'assistant' || row.isSidechain === true || !Array.isArray(row.message?.content)) continue;
+    for (const b of row.message.content) {
+      if (b?.type !== 'tool_use' || !b.input || typeof b.input !== 'object') continue;
+      for (const k of PATH_KEYS) add(b.input[k]);
+      if (typeof b.input.command === 'string') {
+        for (const m of b.input.command.matchAll(PATH_IN_COMMAND)) add(m[1]);
+      }
+    }
+  }
+  return out;
+}
+
+/** 把本轮的路径并进以前的：新的排在后面，只留最近 TOUCHED_KEEP 个。 */
+export function mergeTouched(before, now) {
+  const all = [...(Array.isArray(before) ? before : []).filter((x) => !now.includes(x)), ...now];
+  return all.slice(-TOUCHED_KEEP);
 }
 
 /**

@@ -86,7 +86,8 @@ for (const name of caseNames) {
   const cfgSrc = join(dir, 'state-config.json');
   if (existsSync(cfgSrc)) {
     mkdirSync(join(stateDir, 'config'), { recursive: true });
-    writeFileSync(join(stateDir, 'config', 'willow.json'), readFileSync(cfgSrc, 'utf8').replaceAll('<CASE_DIR>', dir));
+    writeFileSync(join(stateDir, 'config', 'willow.json'),
+      readFileSync(cfgSrc, 'utf8').replaceAll('<CASE_DIR>', dir).replaceAll('<STATE_DIR>', stateDir));
   }
 
   try {
@@ -103,9 +104,18 @@ for (const name of caseNames) {
     // 多步序列：真实会话里一轮之内不止「提交一次、结束一次」——进行中插进来的
     // 系统通知、被打断之后来的新消息（2026-09-12 两种都在真实日志里丢过整轮）。
     if (Array.isArray(expect.steps)) {
+      const STEP_KEYS = new Set(['append', 'copy', 'to', 'hook', 'input', 'stdout', 'context_includes', 'context_excludes']);
       for (const [i, st] of expect.steps.entries()) {
+        for (const k of Object.keys(st)) {
+          if (!STEP_KEYS.has(k)) check(name, `steps[${i}].keys`, false, `runner 不认识步骤键 ${k}`);
+        }
         if (st.append) {
           appendFileSync(join(stateDir, 'transcript.jsonl'), readFileSync(join(dir, st.append)));
+          continue;
+        }
+        // 两轮之间换掉状态目录里的一份文件（待触发清单）：用例目录本身不许被测试改写。
+        if (st.copy) {
+          writeFileSync(join(stateDir, st.to ?? st.copy), readFileSync(join(dir, st.copy), 'utf8'));
           continue;
         }
         const script = { capture: 'capture.mjs', extract: 'extract.mjs', end: 'end.mjs' }[st.hook] ?? null;
@@ -116,6 +126,16 @@ for (const name of caseNames) {
           const injected = r.stdout.trim().length > 0;
           ok = check(name, `steps[${i}].${st.hook}.stdout`, injected === (st.stdout === 'inject'),
             st.stdout === 'inject' ? '期望注入，却为空' : `期望不注入，却输出了 ${r.stdout.trim().length} 字符`) && ok;
+        }
+        if (st.context_includes || st.context_excludes) {
+          let ctx = '';
+          try { ctx = JSON.parse(r.stdout.trim() || '{}')?.hookSpecificOutput?.additionalContext ?? ''; } catch { ctx = ''; }
+          for (const s of st.context_includes ?? []) {
+            ok = check(name, `steps[${i}].context_includes`, ctx.includes(s), `注入内容里没有「${s}」`) && ok;
+          }
+          for (const s of st.context_excludes ?? []) {
+            ok = check(name, `steps[${i}].context_excludes`, !ctx.includes(s), `注入内容里不该有「${s}」`) && ok;
+          }
         }
         marks.push(`${st.hook}:${ok ? 'ok' : 'FAIL'}`);
       }

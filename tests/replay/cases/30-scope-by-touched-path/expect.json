@@ -1,0 +1,45 @@
+{
+  "note": "待触发清单：会话的 cwd 在范围外，但这一轮用工具读了范围里的路径（Bash 命令里的绝对路径、Read 的 file_path）——下一轮开始，这个范围的条目就算和会话相关。本机多数会话从另一个仓库启动，再用绝对路径去改别的仓，只看 cwd 会漏掉。",
+  "session_id": "test-sess-30",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "T1",
+        "T2"
+      ]
+    },
+    {
+      "append": "transcript.turn-a.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "T1",
+        "合成条目甲"
+      ],
+      "context_excludes": [
+        "T2"
+      ]
+    }
+  ],
+  "state_file": {
+    "prompt_startswith": "好的，那再把入口文件",
+    "touched": [
+      "/tmp/fake/awt/src",
+      "/tmp/fake/awt/README.md",
+      "/tmp/fake/awt/src/main.js"
+    ]
+  }
+}

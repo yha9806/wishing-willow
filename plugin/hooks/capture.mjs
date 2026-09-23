@@ -107,6 +107,19 @@ try {
     });
   }
 
+  // 待触发清单：没有配置就是 null，输出与以前一字不差。读不出不当成空（triggerBlock 自己说）。
+  // 「可以」这类短确认也要带上：批准往往就发生在这种轮次。系统信封（后台通知等）不带，也不动 shown。
+  let block = null;
+  let shown = prev?.shown ?? null;
+  if (origin !== 'system') {
+    try {
+      const r = triggerBlock(input.cwd, prev?.touched ?? [], prev?.shown ?? null);
+      if (r) { block = r.text; shown = r.shown; }
+    } catch {
+      block = '【Wishing-Willow · 待触发】清单读不出。不能当作没有待触发的条目。（私有清单，勿写进公开仓）';
+    }
+  }
+
   writeState(sessionId, {
     schema: SCHEMA,
     sessionId,
@@ -130,19 +143,14 @@ try {
     tag: null,             // ≤6 字，同样由 extract.mjs 填
     plan: null,            // 「计划：」块，逐步；同样由 extract.mjs 填，没声明就留 null
     next: null,            // 回复最后一行的「下一步：」
+    touched: prev?.touched ?? null,   // 本会话用工具动过的路径，extract 每轮并进来；跨轮带着走
+    shown,                 // 这一轮说了哪些待触发条目、各在什么阶段；下一轮拿来说「本轮变化」
     // 这一轮还没结束。extract 在 Stop 时写下时间戳。没有这一位，读方分不清
     // 「模型还在回答」和「答完了没写声明」—— 2026-09-12 用户实测：每一轮一开头
     // 灵动岛都冒一次橙色的「问了，模型没写声明」，而模型那时一个字都还没回。
     turnEndedAt: null,
     endedAt: null,
   });
-
-  // 待触发清单：没有配置就是 null，输出与以前一字不差。读不出不当成空（triggerBlock 自己说）。
-  // 「可以」这类短确认也要带上：批准往往就发生在这种轮次。系统信封（后台通知等）不带。
-  let block = null;
-  if (origin !== 'system') {
-    try { block = triggerBlock(input.cwd); } catch { block = '【Wishing-Willow · 待触发】清单读不出。不能当作没有待触发的条目。（私有清单，勿写进公开仓）'; }
-  }
 
   if (bypass && !block) quietExit();
 

@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-30",
+  "prompt_id": "p30a",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/home",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "入口文件是 src/main.js。\n\n下一步：等你说要不要讲读配置那一段"
+}

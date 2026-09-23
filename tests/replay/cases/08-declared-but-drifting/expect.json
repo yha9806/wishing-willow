@@ -32,6 +32,8 @@
     "transcriptPath",
     "midTurn",
     "plan",
-    "next"
+    "next",
+    "touched",
+    "shown"
   ]
 }

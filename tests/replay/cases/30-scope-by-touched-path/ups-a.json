@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-30",
+  "prompt_id": "p30a",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/home",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "请看一下合成仓库里的说明文档和源码目录，告诉我入口文件在哪里，先不要改任何东西。"
+}

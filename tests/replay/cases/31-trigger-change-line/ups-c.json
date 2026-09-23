@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-31",
+  "prompt_id": "p31c",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/awt",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "那就这样，把刚才说的整理成三句话给我，不用改文件。"
+}

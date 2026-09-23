@@ -1,0 +1,54 @@
+{
+  "note": "待触发清单：和上一轮相比，条目新出现、换了阶段、不再出现时，注入里另起一行「本轮变化」说出来，条目不许不声不响地消失。第一轮没有基准，不说；没有变化，也不说。",
+  "session_id": "test-sess-31",
+  "steps": [
+    {
+      "copy": "triggers-a.md",
+      "to": "triggers.md"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "T1"
+      ],
+      "context_excludes": [
+        "T2",
+        "本轮变化"
+      ]
+    },
+    {
+      "copy": "triggers-b.md",
+      "to": "triggers.md"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "本轮变化",
+        "新出现",
+        "T2",
+        "T3",
+        "不再出现",
+        "T1"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "T2",
+        "T3"
+      ],
+      "context_excludes": [
+        "本轮变化"
+      ]
+    }
+  ],
+  "state_file": {
+    "prompt_startswith": "那就这样"
+  }
+}

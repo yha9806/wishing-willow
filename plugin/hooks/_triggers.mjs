@@ -114,15 +114,19 @@ function norm(p) {
   try { return realpathSync(abs); } catch { return abs; }
 }
 
-/** 范围按路径分段比：/a/b 包括 /a/b/c，不包括 /a/bc。 */
-export function inScope(item, cwd) {
+/**
+ * 范围按路径分段比：/a/b 包括 /a/b/c，不包括 /a/bc。
+ * 「这个会话在哪」看两样：cwd，和本会话用工具动过的路径（extract 从聊天记录里收的）。
+ */
+export function inScope(item, cwd, touched = []) {
   const scope = item.fields['范围'] ?? '';
   if (scope.trim() === '全部') return true;
-  if (typeof cwd !== 'string' || !cwd) return false;
-  const here = norm(cwd);
+  const places = [cwd, ...(Array.isArray(touched) ? touched : [])].filter((x) => typeof x === 'string' && x).map(norm);
+  if (places.length === 0) return false;
   return scope.split(/\s*[,，]\s*/).filter(Boolean).some((p) => {
     const root = norm(p);
-    return here === root || here.startsWith(root.endsWith('/') ? root : `${root}/`);
+    const under = root.endsWith('/') ? root : `${root}/`;
+    return places.some((here) => here === root || here.startsWith(under));
   });
 }
 
@@ -132,26 +136,42 @@ function today() {
   return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
 }
 
+/** 和上一轮说过的比：新出现、换了阶段、不再出现。上一轮没有记录（第一轮）就不比。 */
+function changeLine(before, now) {
+  if (!before || typeof before !== 'object') return null;
+  const added = Object.keys(now).filter((id) => !(id in before)).map((id) => `${id}（${now[id]}）`);
+  const moved = Object.keys(now).filter((id) => id in before && before[id] !== now[id]).map((id) => `${id} ${before[id]}→${now[id]}`);
+  const gone = Object.keys(before).filter((id) => !(id in now));
+  const bits = [];
+  if (added.length) bits.push(`新出现 ${added.join('、')}`);
+  if (moved.length) bits.push(`换了阶段 ${moved.join('、')}`);
+  if (gone.length) bits.push(`不再出现 ${gone.join('、')}（关闭、改期或移出范围；关闭与改期要作者的 uuid）`);
+  return bits.length ? `本轮变化：${bits.join('；')}` : null;
+}
+
 /**
  * 给 capture 用：和这个会话相关、这一刻该说的条目，拼成一段注入文字。
- * 功能关着或没有该说的，返回 null。
+ * 返回 { text, shown }：shown 是这一轮说了哪些条目、各在什么阶段，下一轮拿来比。
+ * 功能关着返回 null；开着但没有该说的，text 为 null。
  */
-export function triggerBlock(cwd) {
+export function triggerBlock(cwd, touched = [], before = null) {
   const cfg = loadConfig();
   if (cfg === null) return null;
   const head = '【Wishing-Willow · 待触发】';
   const tailNote = '（私有清单，勿写进公开仓）';
-  if (cfg.error) return `${head}${cfg.error}。不能当作没有待触发的条目。${tailNote}`;
+  // 读不出时 shown 沿用上一轮：读不出不等于条目都没了，不能让下一轮报成「不再出现」。
+  if (cfg.error) return { text: `${head}${cfg.error}。不能当作没有待触发的条目。${tailNote}`, shown: before };
   let text;
   try { text = readFileSync(cfg.triggers, 'utf8'); } catch {
-    return `${head}清单读不出：${cfg.triggers}。不能当作没有待触发的条目。${tailNote}`;
+    return { text: `${head}清单读不出：${cfg.triggers}。不能当作没有待触发的条目。${tailNote}`, shown: before };
   }
   const { items, problems } = parseTriggers(text);
   const t = today();
   const lines = [];
+  const shown = {};
   for (const it of items) {
     if (problems.some((p) => p.startsWith(`${it.id} `))) continue;
-    if (!inScope(it, cwd)) continue;
+    if (!inScope(it, cwd, touched)) continue;
     const status = it.fields['状态'];
     let stage;
     if (status === '未决') {
@@ -170,9 +190,12 @@ export function triggerBlock(cwd) {
     }
     const ev = it.fields['消除它的证据'] ? `｜消除它的证据：${it.fields['消除它的证据']}` : '';
     lines.push(`- ${it.id} ${stage}：${it.title}｜指向 ${it.fields['指向']}${ev}`);
+    shown[it.id] = stage;
   }
-  if (lines.length === 0 && problems.length === 0) return null;
+  const change = changeLine(before, shown);
+  if (lines.length === 0 && problems.length === 0 && !change) return { text: null, shown };
   const out = [`${head}和这个会话相关的条目${tailNote}：`, ...lines];
+  if (change) out.push(change);
   if (problems.length) out.push(`清单有读不懂的地方：${problems.join('；')}`);
-  return out.join('\n');
+  return { text: out.join('\n'), shown };
 }

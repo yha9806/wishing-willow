@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-30",
+  "prompt_id": "p30b",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/home",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "好的，那再把入口文件里读配置的那一段讲给我听，还是只读，不要动文件。"
+}
