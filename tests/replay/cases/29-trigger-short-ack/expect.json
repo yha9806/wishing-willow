@@ -1,0 +1,21 @@
+{
+  "note": "待触发清单：「可以」这类短确认不加四行提醒（照旧），但范围内已触发的清单条目照样注入——批准往往就发生在这种轮次。",
+  "capture": {
+    "exit_code": 0,
+    "stdout": "inject",
+    "context_includes": [
+      "T1",
+      "合成条目甲",
+      "私有清单，勿写进公开仓"
+    ],
+    "context_excludes": [
+      "请在本轮回复的最开头写四行",
+      "T2",
+      "T3",
+      "T4"
+    ]
+  },
+  "state_file": {
+    "prompt_startswith": "可以"
+  }
+}

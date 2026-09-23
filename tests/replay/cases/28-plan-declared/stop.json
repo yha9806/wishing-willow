@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-28",
+  "prompt_id": "00000000-0000-4000-8000-000000000028",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "你批准的：核对三个合成配置文件\n我读成了：逐个核对三个配置文件并列出不一致的字段，不改文件\n我补上的：无\n标签：核对配置\n计划：\n① 现在：读三个配置文件\n② 现在：对照说明文档列出不一致\n③ 等 你看过清单：再决定改哪几处\n\n三个文件都读完了，下面是对不上的字段。\n\n下一步：等你看过这份清单，说改哪几处"
+}

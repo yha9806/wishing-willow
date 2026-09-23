@@ -1,0 +1,26 @@
+{
+  "note": "待触发清单：会话在条目的范围里时，已触发的条目要进模型上下文；范围外的、休眠的、只是字符串前缀相同的都不进。注入末尾要带「私有清单，勿写进公开仓」。",
+  "capture": {
+    "exit_code": 0,
+    "stdout": "inject",
+    "context_includes": [
+      "【Wishing-Willow】",
+      "T1",
+      "合成条目甲",
+      "合成证据甲",
+      "example/repo#1",
+      "私有清单，勿写进公开仓"
+    ],
+    "context_excludes": [
+      "T2",
+      "T3",
+      "T4",
+      "合成条目乙",
+      "合成条目丙",
+      "合成条目丁"
+    ]
+  },
+  "state_file": {
+    "prompt_startswith": "请把合成仓库里"
+  }
+}

@@ -80,6 +80,14 @@ for (const name of caseNames) {
   }
   const stateDir = mkdtempSync(join(tmpdir(), 'willow-test-'));
   const marks = [];
+  // 待触发清单：用例目录里的 state-config.json 放到状态目录的 config/willow.json；
+  // 里面的 <CASE_DIR> 换成用例目录的真实路径（清单文件写在用例目录里）。
+  // 放进子目录而不是状态目录顶层：app 把顶层每个 .json 都当会话读，readState 也是。
+  const cfgSrc = join(dir, 'state-config.json');
+  if (existsSync(cfgSrc)) {
+    mkdirSync(join(stateDir, 'config'), { recursive: true });
+    writeFileSync(join(stateDir, 'config', 'willow.json'), readFileSync(cfgSrc, 'utf8').replaceAll('<CASE_DIR>', dir));
+  }
 
   try {
     // 两阶段 transcript：提交那一刻文件里只有历史，本轮的内容是之后才追加的。
@@ -138,7 +146,23 @@ for (const name of caseNames) {
             out.startsWith('{') && out.endsWith('}') && (() => { try { JSON.parse(out); return true; } catch { return false; } })(),
             '注入的 stdout 必须是完整合法 JSON');
         }
-        marks.push(`capture:${codeOk && injOk && shapeOk ? 'ok' : 'FAIL'}`);
+        // 注入的内容。只查「有没有注入」看不见注入了什么，而待触发条目进没进上下文，
+        // 正是要测的东西。capture 的期望键也白名单：写错键名必须报错，不能静默跳过。
+        const CAP_KEYS = new Set(['exit_code', 'stdout', 'context_includes', 'context_excludes']);
+        let keysOk = true;
+        for (const k of Object.keys(expect.capture)) {
+          if (!CAP_KEYS.has(k)) keysOk = check(name, 'capture.keys', false, `runner 不认识 capture 期望键 ${k}`) && keysOk;
+        }
+        let ctx = '';
+        if (injected) { try { ctx = JSON.parse(out)?.hookSpecificOutput?.additionalContext ?? ''; } catch { ctx = ''; } }
+        let ctxOk = true;
+        for (const s of expect.capture.context_includes ?? []) {
+          ctxOk = check(name, 'capture.context_includes', ctx.includes(s), `注入内容里没有「${s}」`) && ctxOk;
+        }
+        for (const s of expect.capture.context_excludes ?? []) {
+          ctxOk = check(name, 'capture.context_excludes', !ctx.includes(s), `注入内容里不该有「${s}」`) && ctxOk;
+        }
+        marks.push(`capture:${codeOk && injOk && shapeOk && ctxOk && keysOk ? 'ok' : 'FAIL'}`);
       }
     }
 
@@ -184,7 +208,10 @@ for (const name of caseNames) {
           if (SPECIAL.has(k)) continue;
           const got = state[k] ?? null;
           // "<NONNULL>"：只断言「写了」，不断言写了什么（时间戳这类每次都不同的值）。
-          const hit = want === '<NONNULL>' ? got !== null : got === want;
+          // 数组与对象（计划块）按 JSON 逐字比，其余照旧用 ===。
+          const hit = want === '<NONNULL>' ? got !== null
+            : (want !== null && typeof want === 'object') ? JSON.stringify(got) === JSON.stringify(want)
+            : got === want;
           ok = check(name, `state.${k}`, hit,
             `期望 ${JSON.stringify(want)}，得到 ${JSON.stringify(got)}`) && ok;
         }
