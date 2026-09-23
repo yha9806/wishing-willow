@@ -30,6 +30,8 @@
     "origin",
     "turnEndedAt",
     "transcriptPath",
-    "midTurn"
+    "midTurn",
+    "plan",
+    "next"
   ]
 }

@@ -6,7 +6,7 @@
 // is supposed to show you.
 
 import {
-  SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, quietExit,
+  SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, quietExit,
 } from './_willow.mjs';
 
 try {
@@ -20,13 +20,15 @@ try {
   const found = findDeclaration(input, prev);
   const decode = found?.decode ?? null;
   const tag = found?.tag ?? null;
+  const plan = found?.plan ?? null;
+  const next = findNext(input, prev);
 
   // Only ever touch `decode` and the timestamp. `prompt` stays exactly as
   // capture.mjs wrote it — this hook has no business rewriting what you said.
   const endedAt = new Date().toISOString();
 
   if (prev) {
-    writeState(sessionId, { ...prev, decode, tag, turnEndedAt: endedAt, updatedAt: endedAt });
+    writeState(sessionId, { ...prev, decode, tag, plan, next, turnEndedAt: endedAt, updatedAt: endedAt });
     // 只在 capture 跑过的时候记日志：没有 capture 就没有原话，也没有「问没问」，
     // 记一条三个字段都是 null 的东西只会让统计更难看懂。
     appendTurnLog(sessionId, {
@@ -59,6 +61,8 @@ try {
       prompt: null,
       decode,
       tag,
+      plan,
+      next,
       turnEndedAt: endedAt,
       midTurn: false,
       endedAt: null,

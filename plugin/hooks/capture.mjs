@@ -10,6 +10,7 @@ import {
   SCHEMA, readStdin, parseInput, readPrompt, readState, writeState, shouldBypass, isSystemEnvelope,
   appendTurnLog, findDeclaration, interruptedSince, quietExit,
 } from './_willow.mjs';
+import { triggerBlock } from './_triggers.mjs';
 
 /**
  * transcript 在此刻的字节长度 —— 也就是「本轮开始之前」的位置。
@@ -34,7 +35,12 @@ const REMINDER =
   '我补上的：<请求里没说、由你替用户定下的部分——范围、对象、标准、先后、形式，逐项简写；确实没有就写「无」>\n' +
   '标签：<把「我读成了」压成 ≤6 个汉字（英文 ≤14 字符），动词+宾语；' +
   '禁止「继续 / 往下做 / 处理 / 优化 / 完善 / 推进 / 跟进」这类不含信息的词>\n' +
-  '前两行一致时也照写，保持平淡。不要解释这几行本身。';
+  '前两行一致时也照写，保持平淡。不要解释这几行本身。\n' +
+  // 计划块（2026-09-23 用户要求：对齐不止开头那一段，接下来的步骤也要对齐、看得见）。
+  // 标「现在 / 等 什么」是这块的全部用处：一句「实现仍等某事结束」夹在长句里没人看得出，排成一格就看得出。
+  '这一轮要做不止一步时，四行之后另起一行写「计划：」，下面每步一行（最多 5 步）：' +
+  '①、②… 加「现在」或「等 <什么>」，冒号，再写这一步做什么。只回答问题、没有步骤就不写这一块。\n' +
+  '回复的最后一行写「下一步：<这一轮之后等用户什么，或你接着做什么>」。';
 
 // 标签那一行是给菜单栏／刘海那条常亮层用的：刘海 156pt，11pt 中文大约 14 个字，
 // 一句解码放不下。它必须由模型自己压，**不能由读方截断解码行** —— 实测
@@ -122,6 +128,8 @@ try {
     reminded: !bypass,
     decode: null,          // absence is the signal; extract.mjs fills it in
     tag: null,             // ≤6 字，同样由 extract.mjs 填
+    plan: null,            // 「计划：」块，逐步；同样由 extract.mjs 填，没声明就留 null
+    next: null,            // 回复最后一行的「下一步：」
     // 这一轮还没结束。extract 在 Stop 时写下时间戳。没有这一位，读方分不清
     // 「模型还在回答」和「答完了没写声明」—— 2026-09-12 用户实测：每一轮一开头
     // 灵动岛都冒一次橙色的「问了，模型没写声明」，而模型那时一个字都还没回。
@@ -129,14 +137,21 @@ try {
     endedAt: null,
   });
 
-  if (bypass) quietExit();
+  // 待触发清单：没有配置就是 null，输出与以前一字不差。读不出不当成空（triggerBlock 自己说）。
+  // 「可以」这类短确认也要带上：批准往往就发生在这种轮次。系统信封（后台通知等）不带。
+  let block = null;
+  if (origin !== 'system') {
+    try { block = triggerBlock(input.cwd); } catch { block = '【Wishing-Willow · 待触发】清单读不出。不能当作没有待触发的条目。（私有清单，勿写进公开仓）'; }
+  }
+
+  if (bypass && !block) quietExit();
 
   // Must be complete, valid JSON: Claude Code treats output starting with '{'
   // but not ending in '}' as plain text.
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit',
-      additionalContext: REMINDER,
+      additionalContext: bypass ? block : (block ? `${REMINDER}\n\n${block}` : REMINDER),
     },
   }));
   process.exit(0);

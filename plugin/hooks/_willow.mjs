@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, readdir
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const SCHEMA = 10;
+export const SCHEMA = 11;   // 11：加 plan、next（计划块与「下一步」）
 
 /** Where state lives. Overridable so tests never touch the real directory. */
 export function stateDir() {
@@ -265,6 +265,12 @@ export function pruneState(keepId) {
 // is usable outside Chinese sessions.
 const DECODE_LINE = /^\s*(?:我读成了|我理解为|How I read it|Read as)\s*[：:]\s*(.+?)\s*$/iu;
 const TAG_LINE = /^\s*(?:标签|Tag)\s*[：:]\s*(.+?)\s*$/iu;
+// 计划块：四行之后「计划：」起头，下面每步一行「① 现在：…」「② 等 某事：…」。
+// 「现在 / 等 什么」原样留着，不改写、不归一：那是模型自己排的先后，读方只转述。
+const PLAN_HEAD = /^\s*(?:计划|Plan)\s*[：:]\s*$/iu;
+const PLAN_STEP = /^\s*([①②③④⑤⑥⑦⑧⑨⑩])\s*(现在|Now|(?:等|After)\s*[^：:]+?)\s*[：:]\s*(.+?)\s*$/iu;
+const NEXT_LINE = /^\s*(?:下一步|Next)\s*[：:]\s*(.+?)\s*$/iu;
+const NEXT_SCAN = 6;     // 「下一步」属于回复的最后几行，不在就是没写
 
 const SCAN_LINES = 12;   // the declaration belongs at the top of a message or not at all
 
@@ -285,6 +291,8 @@ function scanMessage(message) {
   let fence = null;
   let decode = null;
   let tag = null;
+  let plan = null;          // null = 没写计划块；[] 不会出现（有块头没有一步也算没写）
+  let inPlan = false;
 
   for (const line of message.split(/\r?\n/)) {
     const t = line.trim();
@@ -301,7 +309,19 @@ function scanMessage(message) {
     if (t.startsWith('>')) continue;           // 引用块
     if (/^\s{4,}\S/.test(line)) continue;      // 缩进代码
 
+    if (inPlan) {
+      const s = PLAN_STEP.exec(line);
+      if (s) {
+        (plan ??= []).push({ mark: s[1], when: s[2].trim(), text: s[3].trim() });
+        continue;                               // 计划的每一步不占四行的扫描额度
+      }
+      inPlan = false;
+      break;                                    // 计划块之后就是正文了
+    }
+
     if (++seen > SCAN_LINES) break;
+
+    if (decode !== null && PLAN_HEAD.test(line)) { inPlan = true; continue; }
 
     if (decode === null) {
       const m = DECODE_LINE.exec(line);
@@ -311,10 +331,57 @@ function scanMessage(message) {
       const m = TAG_LINE.exec(line);
       if (m) tag = m[1].trim() || null;
     }
-    if (decode !== null && tag !== null) break;
   }
 
-  return decode === null ? null : { decode, tag };
+  return decode === null ? null : { decode, tag, plan };
+}
+
+/** 一条消息最后几行里的「下一步：」。引用、代码块里的不算。 */
+function scanNext(message) {
+  if (typeof message !== 'string' || !message) return null;
+  const kept = [];
+  let fence = null;
+  for (const line of message.split(/\r?\n/)) {
+    const t = line.trim();
+    const f = /^(`{3,}|~{3,})/.exec(t);
+    if (f) {
+      const kind = f[1][0];
+      if (fence === kind) fence = null;
+      else if (fence === null) fence = kind;
+      continue;
+    }
+    if (fence !== null || t === '' || t.startsWith('>') || /^\s{4,}\S/.test(line)) continue;
+    kept.push(line);
+  }
+  for (const line of kept.slice(-NEXT_SCAN).reverse()) {
+    const m = NEXT_LINE.exec(line);
+    if (m) return m[1].trim() || null;
+  }
+  return null;
+}
+
+/**
+ * 这一轮最后一段文字里的「下一步：」。
+ * 桌面端聊天记录一轮只存第一次调用工具之前的文字和最后一段文字（2026-09-13 实测），
+ * 「下一步」写在回复结尾，正好落在最后一段里。读不到聊天记录时退回 last_assistant_message。
+ */
+export function findNext(input, prev) {
+  const path = input?.transcript_path;
+  if (typeof path === 'string' && path && typeof prev?.transcriptOffset === 'number') {
+    const text = slice(path, prev.transcriptOffset, 64 << 20);
+    if (text) {
+      let last = null;
+      for (const line of text.split('\n')) {
+        if (!line.trim()) continue;
+        let row;
+        try { row = JSON.parse(line); } catch { continue; }
+        const ts = assistantTexts(row);
+        if (ts.length) last = ts[ts.length - 1];
+      }
+      if (last !== null) return scanNext(last);
+    }
+  }
+  return scanNext(input?.last_assistant_message);
 }
 
 /** Read from `from` to EOF, at most `max` bytes. Returns '' on any failure. */
