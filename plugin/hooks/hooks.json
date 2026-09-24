@@ -1,5 +1,5 @@
 {
-  "description": "Wishing-Willow: capture the verbatim prompt, extract the model's decode line, mark the session ended.",
+  "description": "Wishing-Willow: capture the verbatim prompt, extract the model's decode line, mark the session ended; after a compaction, hand the list back.",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -29,6 +29,18 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/end.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/compacted.mjs\"",
             "timeout": 10
           }
         ]

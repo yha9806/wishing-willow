@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-56",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "prompt_id": "p56b",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "还在做。\n\n下一步：接着做"
+}

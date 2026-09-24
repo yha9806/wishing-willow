@@ -1,0 +1,8 @@
+{
+  "session_id": "test-sess-56",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "SessionStart",
+  "source": "resume"
+}

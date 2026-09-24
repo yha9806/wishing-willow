@@ -119,6 +119,24 @@ if (!submit) {
     check('SessionEnd 写下了 endedAt', typeof st.endedAt === 'string', `实际 ${JSON.stringify(st.endedAt)}`);
     check('SessionEnd 没动原话', st.prompt === PROMPT, `实际 ${JSON.stringify(st.prompt)}`);
   }
+
+  // 压缩之后：照 hooks.json 里 SessionStart 那条命令跑一次（匹配值 compact），要交回一段话给模型。
+  const start = entries.find((e) => e.event === 'SessionStart');
+  const matcher = (cfg.hooks?.SessionStart ?? []).find((m) => (m.hooks ?? []).includes(start?.h))?.matcher;
+  if (check('找得到 SessionStart 的 hook', !!start) && check('SessionStart 只在压缩后跑', matcher === 'compact', `matcher=${JSON.stringify(matcher)}`)) {
+    const s = runAsWritten(start.h.command, JSON.stringify({
+      session_id: SID,
+      hook_event_name: 'SessionStart',
+      source: 'compact',
+      cwd: REPO,
+    }), stateDir);
+    check('SessionStart 照 command 执行后 exit 0', s.code === 0, `exit=${s.code}${s.stderr ? ` stderr=${s.stderr.split('\n')[0]}` : ''}`);
+    let o = null;
+    try { o = JSON.parse(s.stdout); } catch { /* 下面报 */ }
+    check('SessionStart 交回的是 SessionStart 的 additionalContext',
+      o?.hookSpecificOutput?.hookEventName === 'SessionStart' && !!o?.hookSpecificOutput?.additionalContext,
+      o ? `实际 ${JSON.stringify(o).slice(0, 80)}` : `stdout=${s.stdout.slice(0, 60)}`);
+  }
 }
 
 console.log('');

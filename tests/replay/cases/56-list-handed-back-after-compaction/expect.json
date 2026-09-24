@@ -1,0 +1,63 @@
+{
+  "note": "上下文压缩后（SessionStart，source = compact），把清单和清单的写法原样重交一次，并清掉「上次完整列出」：下一轮开头照样完整列出，不说「其余和第 N 轮一样」——被压缩掉的正是那一份。别的 source（这里是 resume）什么都不说。（2026-09-24 实测：一轮中途压缩后，回复里清单一行没带、做完的两项一直开着。）",
+  "session_id": "test-sess-56",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "append": "transcript.turn-a.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项丁"
+      ]
+    },
+    {
+      "append": "transcript.turn-b.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "compacted",
+      "input": "start-resume.json",
+      "stdout": "none"
+    },
+    {
+      "hook": "compacted",
+      "input": "start-compact.json",
+      "stdout": "inject",
+      "context_includes": [
+        "【Wishing-Willow · 压缩后】",
+        "L1 在做：合成事项丁",
+        "清单变化：",
+        "回复末尾照写这一行",
+        "回复的最后一行写「下一步："
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项丁"
+      ],
+      "context_excludes": [
+        "其余 1 项"
+      ]
+    }
+  ]
+}

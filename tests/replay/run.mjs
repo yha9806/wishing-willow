@@ -124,7 +124,7 @@ for (const name of caseNames) {
           writeFileSync(join(stateDir, st.to ?? st.copy), readFileSync(join(dir, st.copy), 'utf8'));
           continue;
         }
-        const script = { capture: 'capture.mjs', extract: 'extract.mjs', end: 'end.mjs' }[st.hook] ?? null;
+        const script = { capture: 'capture.mjs', extract: 'extract.mjs', end: 'end.mjs', compacted: 'compacted.mjs' }[st.hook] ?? null;
         if (!script) { check(name, `steps[${i}]`, false, `未知步骤 ${JSON.stringify(st)}`); continue; }
         const r = runHook(script, join(dir, st.input), stateDir, env);
         let ok = check(name, `steps[${i}].${st.hook}.exit`, r.code === 0, `exit=${r.code} ${(r.stderr || '').slice(0, 80)}`);
