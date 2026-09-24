@@ -1,0 +1,31 @@
+{
+  "note": "「等你」10 轮以上没动的，交给模型的清单里标出几轮没动；刚提的不标。回复里那一行清单先列最近动过的等你，不按编号从最早的列起。（2026-09-24：26 项等你大半是早上提的、没人再问过。）",
+  "session_id": "test-sess-58",
+  "steps": [
+    {
+      "copy": "state.json",
+      "to": "test-sess-58.json"
+    },
+    {
+      "copy": "list.jsonl",
+      "to": "test-sess-58.list.jsonl"
+    },
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 等你：合成旧等待（12 轮没动）",
+        "L2 等你：合成新等待\n",
+        "□ 等你 2：L2 合成新等待、L1 合成旧等待"
+      ],
+      "context_excludes": [
+        "合成新等待（",
+        "L3 在做：合成的事（"
+      ]
+    }
+  ]
+}

@@ -28,6 +28,8 @@ export const LIST_RULES =
   '回复的最后一行写「下一步：<这一轮之后等用户什么，或你接着做什么>」。';
 
 export const STALE_TURNS = 5;
+// 「等你」10 轮以上没动的标出来（2026-09-24：26 项等你大半是早上提的、没人再问过，刘海上的「等你 N」因此失去意义）。
+export const STALE_YOU_TURNS = 10;
 const CLOSED = new Set(['做完', '撤掉']);
 const STATUS = '(在做|等你|以后|等\\s*[^：:]+?)';
 const ADD = new RegExp(`^\\+\\s*${STATUS}\\s*[：:]\\s*(.+)$`);
@@ -199,7 +201,9 @@ export function inlineLine(open) {
     parts.push('◧ 在做 ' + doing.slice(0, 2).map((x) => `${x.id} ${brief(x.text)}`).join('、')
       + (doing.length > 2 ? ` 等 ${doing.length} 项` : ''));
   }
-  const you = by('等你');
+  // 最近动过的等你排前面：按编号列出来的总是最早那两项，而那两项往往早就没人问了。
+  const you = by('等你').map((x, i) => [x, i])
+    .sort((a, b) => ((b[0].touched ?? -1) - (a[0].touched ?? -1)) || (a[1] - b[1])).map(([x]) => x);
   if (you.length) {
     parts.push(`□ 等你 ${you.length}：` + you.slice(0, 2).map((x) => `${x.id} ${brief(x.text)}`).join('、') + (you.length > 2 ? '…' : ''));
   }
@@ -228,15 +232,16 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null) {
   const full = mode === 'full' && (!lastShown || lastShown.snap !== snap
     || typeof lastShown.turn !== 'number' || typeof turnIndex !== 'number' || turnIndex - lastShown.turn >= REFRESH_TURNS);
   const open = cur.items.filter((x) => !CLOSED.has(x.status));
-  const idleOf = (x) => (x.status === '在做' && typeof turnIndex === 'number' && typeof x.touched === 'number'
+  const idleOf = (x) => ((x.status === '在做' || x.status === '等你') && typeof turnIndex === 'number' && typeof x.touched === 'number'
     ? turnIndex - x.touched : 0);
-  const shownItems = full ? open : open.filter((x) => x.status === '等你' || (mode === 'full' && idleOf(x) >= STALE_TURNS));
+  const staleAt = (x) => (x.status === '等你' ? STALE_YOU_TURNS : STALE_TURNS);
+  const shownItems = full ? open : open.filter((x) => x.status === '等你' || (mode === 'full' && x.status === '在做' && idleOf(x) >= STALE_TURNS));
   const lines = shownItems.map((x) => {
     const idle = idleOf(x);
     return `${x.id} ${label(x)}：${x.text}`
       + (x.basis && x.basis !== '预测' ? `（依据：${x.basis}）` : '')
       + (x.approvedTurn ? '（已认可）' : '')
-      + (idle >= STALE_TURNS ? `（${idle} 轮没动）` : '');
+      + (idle >= staleAt(x) ? `（${idle} 轮没动）` : '');
   });
   const problems = Array.isArray(cur.problems) ? cur.problems : [];
   const rest = open.length - shownItems.length;
