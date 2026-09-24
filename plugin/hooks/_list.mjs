@@ -114,6 +114,31 @@ function label(x) {
   return x.status === '等' ? `等 ${x.wait}` : x.status;
 }
 
+const brief = (t, n = 12) => (t.length > n ? t.slice(0, n) + '…' : t);
+
+/**
+ * 回复里的那一行清单（作者 09-24：「每次回复应该有一个 inline 的 todolist」）。钩子写好，模型照抄——
+ * 让模型从十几项里自己摘，摘法每轮会不一样；照抄一行，本轮有变化再改。
+ */
+export function inlineLine(open) {
+  const by = (st) => open.filter((x) => x.status === st);
+  const parts = [];
+  const doing = by('在做');
+  if (doing.length) {
+    parts.push('◧ 在做 ' + doing.slice(0, 2).map((x) => `${x.id} ${brief(x.text)}`).join('、')
+      + (doing.length > 2 ? ` 等 ${doing.length} 项` : ''));
+  }
+  const you = by('等你');
+  if (you.length) {
+    parts.push(`□ 等你 ${you.length}：` + you.slice(0, 2).map((x) => `${x.id} ${brief(x.text)}`).join('、') + (you.length > 2 ? '…' : ''));
+  }
+  const other = by('等');
+  if (other.length) parts.push(`⬚ 等别的 ${other.length}`);
+  const later = by('以后');
+  if (later.length) parts.push(`▫ 以后 ${later.length}`);
+  return parts.length ? '清单：' + parts.join(' ｜ ') : '清单：没有开着的事';
+}
+
 export const REFRESH_TURNS = 10;
 
 /**
@@ -144,12 +169,13 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null) {
   });
   const problems = Array.isArray(cur.problems) ? cur.problems : [];
   const rest = open.length - shownItems.length;
-  if (!lines.length && !problems.length && mode !== 'full') return { text: null, shown: lastShown };
   const count = (st) => open.filter((x) => x.status === st).length;
   const head = `【Wishing-Willow · 清单】开着 ${open.length} 项（等你 ${count('等你')}、在做 ${count('在做')}、`
     + `等别的 ${count('等')}、以后 ${count('以后')}）。编号给「清单变化：」用；清单只在本机，别抄进公开仓。`;
   const tail = [];
   if (!full && mode === 'full' && rest > 0) tail.push(`其余 ${rest} 项和第 ${lastShown.turn} 轮列出的一样。`);
   if (problems.length) tail.push(`上一次清单变化的问题：${problems.join('；')}`);
+  // 每条回复都带：短确认、系统信封开始的一轮也一样。
+  tail.push(`回复末尾照写这一行（本轮有变化就先改好）：\n${inlineLine(open)}`);
   return { text: [head, ...lines, ...tail].join('\n'), shown: full ? { snap, turn: turnIndex } : lastShown };
 }

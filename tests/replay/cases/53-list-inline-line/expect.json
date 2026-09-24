@@ -1,0 +1,41 @@
+{
+  "note": "每条回复里都要看得到清单（作者 09-24：「每次回复应该有一个 inline 的 todolist」）：钩子在【清单】里给出现成的一行「清单：…」，模型照抄（本轮有变化先改好）。普通轮和短确认轮都给。",
+  "session_id": "test-sess-53",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "回复末尾照写这一行",
+        "清单：◧ 在做 L1 合成事项甲",
+        "□ 等你 1：L2 合成事项乙",
+        "⬚ 等别的 1"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "回复末尾照写这一行",
+        "清单：◧ 在做 L1 合成事项甲"
+      ],
+      "context_excludes": [
+        "请在本轮回复的最开头写四行"
+      ]
+    }
+  ]
+}

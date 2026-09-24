@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-53",
+  "prompt_id": "prompt-53-b",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "你批准的：核对三个合成配置文件\n我读成了：逐个核对三个配置文件，把对不上的字段找出来\n我补上的：无\n标签：核对配置\n\n正文。\n\n下一步：接着做"
+}
