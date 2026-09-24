@@ -115,7 +115,51 @@ enum ActivityExport {
 
         a["flip"] = ["title": title(s, store), "subtitle": s.workspace, "phase": IslandExpandedContent.phaseWord(s, store: store)]
         a["detail"] = detail(s, store, tl: tl, unseen: unseen, seen: seen)
+        // 整场对话的长清单（ops-private spec 2026-09-24 对话层 V1–V6，lintel 分镜 ⑦④ ⑦⑦ ⑦⑨）：字这边写好，lintel 只排版。
+        if let c = chain(s, store) { a["chain"] = c }
         return a
+    }
+
+    /// 插件长清单最后一份快照 → lintel 的 `chain`。撤掉的项不出现；右栏的注：做完的写证据（没附就写没附），
+    /// 其余写依据，没有依据的写「模型说的」。「在做」5 轮以上没动的带上几轮。没有文件不导出；读不出导出一句读不出。
+    static func chain(_ s: SessionState, _ store: WillowStore) -> [String: Any]? {
+        let labels: [String: String] = ["doing": L("在做", "Doing"), "you": L("等你", "Waiting on you"),
+                                        "other": L("等别的", "Waiting on other"), "later": L("以后", "Later"), "done": L("做完", "Done")]
+        switch ConversationList.read(sessionId: s.id, directory: store.directory) {
+        case .none:
+            return nil
+        case .unreadable(let why):
+            return ["items": [Any](), "problems": [String](), "labels": labels,
+                    "error": L("清单读不出（\(why)），不能当作没有开着的事", "The list cannot be read (\(why)); that is not the same as nothing open")]
+        case .snapshot(let snap):
+            let now = s.record.turnIndex
+            let items = snap.items.compactMap { x -> [String: Any]? in
+                let state: String
+                switch x.status {
+                case "做完": state = "done"
+                case "在做": state = "doing"
+                case "等你": state = "you"
+                case "等": state = "other"
+                case "以后": state = "later"
+                default: return nil   // 撤掉的，和认不出的状态
+                }
+                var text = x.text
+                if state == "other", let w = x.wait, !w.isEmpty { text += " · " + L("等 ", "waiting on ") + w }
+                let note: String
+                if state == "done" {
+                    note = x.evidence.flatMap { $0.isEmpty ? nil : $0 } ?? L("没附证据", "no evidence given")
+                } else if let b = x.basis, !b.isEmpty, b != "预测" {
+                    note = b
+                } else {
+                    note = L("模型说的", "the model's guess")
+                }
+                var out: [String: Any] = ["id": x.id, "text": text, "state": state, "note": note]
+                if x.approved { out["approved"] = true }
+                if state == "doing", let n = now, let t = x.touched, n - t >= 5 { out["idle"] = n - t }
+                return out
+            }
+            return ["items": items, "problems": snap.problems, "labels": labels]
+        }
     }
 
     // MARK: 排序字段
