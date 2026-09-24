@@ -1,0 +1,11 @@
+{
+  "note": "桌面端在应用重新打开后替作者发的一句话，不是作者说的。30 天内的本机记录里有 7 条；Claude Code 自己没把它标成 human。",
+  "capture": {
+    "exit_code": 0,
+    "stdout": "empty"
+  },
+  "state_file": {
+    "origin": "system",
+    "prompt_startswith": "The app was"
+  }
+}

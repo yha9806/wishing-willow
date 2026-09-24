@@ -8,5 +8,5 @@
     "bash-input", "bash-stdout", "bash-stderr",
     "preview-annotation-context"
   ],
-  "prefixes": ["[SYSTEM NOTIFICATION"]
+  "prefixes": ["[SYSTEM NOTIFICATION", "[Request interrupted by user", "The app was quit while you were working."]
 }
