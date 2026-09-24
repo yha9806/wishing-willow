@@ -15,6 +15,8 @@ struct ListSnapshot {
     }
 
     var turnIndex: Int?
+    var turnId: String?
+    var at: String?
     var items: [Item]
     var changes: [String]
     var problems: [String]
@@ -31,16 +33,41 @@ enum ConversationList {
         let url = directory.appendingPathComponent("\(sessionId).list.jsonl")
         guard FileManager.default.fileExists(atPath: url.path) else { return .none }
         guard let text = try? String(contentsOf: url, encoding: .utf8) else { return .unreadable(L("文件打不开", "cannot open the file")) }
-        guard let last = text.split(separator: "\n", omittingEmptySubsequences: true).last,
-              let obj = try? JSONSerialization.jsonObject(with: Data(last.utf8)) as? [String: Any],
-              let rows = obj["items"] as? [[String: Any]]
-        else { return .unreadable(L("最后一行不是快照", "the last line is not a snapshot")) }
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: true)
+        guard let last = lines.last.flatMap(parse) else { return .unreadable(L("最后一行不是快照", "the last line is not a snapshot")) }
+        return .snapshot(last)
+    }
+
+    /// 最后一份之前的那一份（比出这一轮变了什么用）；没有或读不出是 nil。
+    static func previous(sessionId: String, directory: URL) -> ListSnapshot? {
+        let url = directory.appendingPathComponent("\(sessionId).list.jsonl")
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: true)
+        return lines.count >= 2 ? parse(lines[lines.count - 2]) : nil
+    }
+
+    static func parse(_ line: Substring) -> ListSnapshot? {
+        guard let obj = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
+              let rows = obj["items"] as? [[String: Any]] else { return nil }
         let items = rows.compactMap { r -> ListSnapshot.Item? in
             guard let id = r["id"] as? String, let text = r["text"] as? String, let status = r["status"] as? String else { return nil }
             return .init(id: id, text: text, status: status, wait: r["wait"] as? String, basis: r["basis"] as? String,
                          evidence: r["evidence"] as? String, approved: r["approvedTurn"] is String, touched: r["touched"] as? Int)
         }
-        return .snapshot(.init(turnIndex: obj["turnIndex"] as? Int, items: items,
-                               changes: obj["changes"] as? [String] ?? [], problems: obj["problems"] as? [String] ?? []))
+        return .init(turnIndex: obj["turnIndex"] as? Int, turnId: obj["turnId"] as? String, at: obj["at"] as? String, items: items,
+                     changes: obj["changes"] as? [String] ?? [], problems: obj["problems"] as? [String] ?? [])
+    }
+
+    /// 主动弹出只在三种情况下弹（spec V3，作者 09-24 认可）：新出现等你、有事项被打回或撤掉、你认可了一项。
+    /// 单纯又做完一步不弹。返回 (种类, 那一项)，按清单次序。
+    static func triggers(previous prev: ListSnapshot?, last: ListSnapshot) -> [(String, ListSnapshot.Item)] {
+        last.items.compactMap { x in
+            let p = prev?.items.first { $0.id == x.id }
+            if x.status == "等你", p?.status != "等你" { return (L("等你", "Waiting"), x) }
+            if x.status == "撤掉", let p, p.status != "撤掉" { return (L("撤掉", "Dropped"), x) }
+            if let p, p.status == "做完", x.status != "做完", x.status != "撤掉" { return (L("打回", "Reopened"), x) }
+            if x.approved, !(p?.approved ?? false) { return (L("认可", "Approved"), x) }
+            return nil
+        }
     }
 }

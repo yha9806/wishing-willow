@@ -94,6 +94,68 @@ struct ConversationListTests {
         #expect(becomesWaiting)
     }
 
+    private func activity(_ d: URL) throws -> [String: Any] {
+        let s = WillowStore(directory: d)
+        s.reload()
+        return try #require(ActivityExport.activities(s)["s"])
+    }
+
+    private func listEvents(_ a: [String: Any]) -> [[String: Any]] {
+        (a["events"] as? [[String: Any]] ?? []).filter { $0["type"] as? String == "list" }
+    }
+
+    @Test("主动弹出只放变化（V3）：这一轮新出现等你、打回、撤掉、认可时发 list 事件，弹卡只列这几项")
+    func popupOnTriggers() throws {
+        let d = try dir(ended: true)
+        try writeList(d, [
+            ["turnId": "t8", "turnIndex": 8, "items": [item("L1", "改引言", "在做"), item("L2", "合并 PR", "做完", evidence: "abc"),
+                                                       item("L4", "旧想法", "以后")], "changes": [], "problems": []],
+            ["turnId": "t9", "turnIndex": 9, "at": iso.format(Date()), "items": [
+                item("L1", "改引言", "做完", evidence: "def"),
+                item("L2", "合并 PR", "在做"),
+                item("L3", "看新 spec", "等你"),
+                item("L4", "旧想法", "撤掉"),
+            ], "changes": ["L1 做完", "L2 在做", "新增 L3", "L4 撤掉"], "problems": []],
+        ])
+        let a = try activity(d)
+        #expect(listEvents(a).count == 1)
+        let popup = try #require(a["popup"] as? [[String: Any]])
+        #expect(popup.map { $0["label"] as? String } == ["打回", "等你", "撤掉"], "单纯做完一项（L1）不弹")
+        #expect((popup[1]["text"] as? String)?.contains("看新 spec") == true)
+    }
+
+    @Test("只是做完一步：不发 list 事件，弹卡照旧")
+    func noPopupWithoutTrigger() throws {
+        let d = try dir(ended: true)
+        try writeList(d, [
+            ["turnId": "t8", "turnIndex": 8, "items": [item("L1", "改引言", "在做")], "changes": [], "problems": []],
+            ["turnId": "t9", "turnIndex": 9, "items": [item("L1", "改引言", "做完", evidence: "def")], "changes": ["L1 做完"], "problems": []],
+        ])
+        let a = try activity(d)
+        #expect(listEvents(a).isEmpty)
+        #expect(!((a["popup"] as? [[String: Any]]) ?? []).contains { $0["label"] as? String == "等你" })
+    }
+
+    @Test("快照是更早一轮的：这一轮没有清单变化，不弹")
+    func staleSnapshotNoPopup() throws {
+        let d = try dir(ended: true)
+        try writeList(d, [["turnId": "t1", "turnIndex": 1, "items": [item("L1", "看新 spec", "等你")], "changes": ["新增 L1"], "problems": []]])
+        #expect(listEvents(try activity(d)).isEmpty)
+    }
+
+    @Test("注超过 lintel 的上限（64 字）就截短：一条长证据曾让整份活动被 lintel 拒收、会话从刘海上消失（09-24）")
+    func longNoteIsCut() throws {
+        let d = try dir()
+        let long = String(repeating: "证", count: 95)
+        try writeList(d, [["turnIndex": 8, "items": [item("L1", "合并", "做完", evidence: long),
+                                                      item("L2", "看 spec", "等你", basis: long)], "changes": [], "problems": []]])
+        let items = try #require(chain(d)?["items"] as? [[String: Any]])
+        for x in items {
+            let n = try #require(x["note"] as? String)
+            #expect(n.count <= 64 && n.hasSuffix("…"))
+        }
+    }
+
     @Test("做完没附证据：右栏写没附证据，不写成事实")
     func doneWithoutEvidence() throws {
         let d = try dir()

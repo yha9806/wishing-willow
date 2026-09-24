@@ -116,6 +116,20 @@ enum ActivityExport {
         a["flip"] = ["title": title(s, store), "subtitle": s.workspace, "phase": IslandExpandedContent.phaseWord(s, store: store)]
         a["detail"] = detail(s, store, tl: tl, unseen: unseen, seen: seen)
         // 整场对话的长清单（ops-private spec 2026-09-24 对话层 V1–V6，lintel 分镜 ⑦④ ⑦⑦ ⑦⑨）：字这边写好，lintel 只排版。
+        // 主动弹出只放变化（spec V3，分镜 ⑦⑤）：这一轮的清单快照里有该弹的变化，就发 list 事件，弹卡只列这几项。
+        // 理解写出时照旧弹「要求 / 理解」（一轮开头）；清单变化在一轮结束时才记下，两者不在同一时刻。
+        if case .snapshot(let last) = ConversationList.read(sessionId: s.id, directory: store.directory),
+           let turn = s.record.turnId, last.turnId == turn {
+            let hits = ConversationList.triggers(previous: ConversationList.previous(sessionId: s.id, directory: store.directory), last: last)
+            if !hits.isEmpty {
+                a["popup"] = hits.prefix(4).map { kind, x -> [String: Any] in
+                    ["label": kind, "text": x.text, "tone": kind == L("等你", "Waiting") ? "accent" : "secondary", "lines": 1]
+                }
+                var ev = a["events"] as? [[String: Any]] ?? []
+                ev.append(["id": "list|\(turn)|\(last.at ?? "")", "type": "list", "at": opt(last.at)])
+                a["events"] = ev
+            }
+        }
         if let c = chain(s, store) {
             a["chain"] = c
             // 「等你 N」常驻（spec V2）：看过就缩回的标签，看过之后换成它；本来没有标签的，直接就是它。
@@ -166,12 +180,14 @@ enum ActivityExport {
                 } else {
                     note = L("模型说的", "the model's guess")
                 }
-                var out: [String: Any] = ["id": x.id, "text": text, "state": state, "note": note]
+                // lintel 的注上限 64 字，超了整份活动被拒收、会话从刘海上消失（09-24 实见）：这边先截短。
+                let capped = note.count > 64 ? String(note.prefix(63)) + "…" : note
+                var out: [String: Any] = ["id": x.id, "text": text, "state": state, "note": capped]
                 if x.approved { out["approved"] = true }
                 if state == "doing", let n = now, let t = x.touched, n - t >= 5 { out["idle"] = n - t }
                 return out
             }
-            return ["items": items, "problems": snap.problems, "labels": labels]
+            return ["items": items, "problems": Array(snap.problems.prefix(16)), "labels": labels]
         }
     }
 
