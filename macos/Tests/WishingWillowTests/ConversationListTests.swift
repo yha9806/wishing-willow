@@ -12,13 +12,16 @@ struct ConversationListTests {
 
     private let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
-    private func dir() throws -> URL {
+    /// ended：这一轮已经结束、理解写了——右翼是标签，看过就缩回（`labelUntilSeen`）。
+    private func dir(ended: Bool = false) throws -> URL {
         let d = FileManager.default.temporaryDirectory.appendingPathComponent("willow-list-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
         let obj: [String: Any] = ["schema": 12, "sessionId": "s", "pid": Int(ProcessInfo.processInfo.processIdentifier),
                                   "cwd": "/x/w", "turnId": "t9", "turnIndex": 9,
                                   "updatedAt": iso.format(Date()), "prompt": "一句够长的请求", "promptField": "prompt",
-                                  "origin": "user", "reminded": true, "decode": NSNull(), "turnEndedAt": NSNull()]
+                                  "origin": "user", "reminded": true,
+                                  "decode": ended ? "把三个配置文件对一遍" : NSNull(), "tag": ended ? "核对配置" : NSNull(),
+                                  "turnEndedAt": ended ? iso.format(Date()) : NSNull()]
         try JSONSerialization.data(withJSONObject: obj).write(to: d.appendingPathComponent("s.json"))
         return d
     }
@@ -71,6 +74,24 @@ struct ConversationListTests {
         #expect(c["problems"] as? [String] == ["L9 不存在"])
         let labels = try #require(c["labels"] as? [String: String])
         #expect(labels["you"] == "等你" && labels["other"] == "等别的" && labels["later"] == "以后")
+    }
+
+    @Test("有等你的事：「等你 N」常驻——看过就缩回的标签看过后换成它，没有标签就直接是它")
+    func waitingStays() throws {
+        let d = try dir(ended: true)
+        try writeList(d, [["turnIndex": 8, "items": [item("L1", "装新版", "等你"), item("L2", "看 spec", "等你"),
+                                                      item("L3", "合并", "做完", evidence: "abc")], "changes": [], "problems": []]])
+        let s = WillowStore(directory: d)
+        s.reload()
+        let a = try #require(ActivityExport.activities(s)["s"])
+        let label = a["label"] as? [String: Any]
+        let seen = a["labelSeen"] as? [String: Any]
+        let staysAfterSeen = label != nil && (a["labelUntilSeen"] as? Bool) == false
+        let becomesWaiting = (seen?["text"] as? String) == "等你" && (seen?["count"] as? Int) == 2
+        let isWaiting = (label?["text"] as? String) == "等你" && (label?["count"] as? Int) == 2
+        #expect(staysAfterSeen || becomesWaiting || isWaiting, "\(String(describing: label)) / \(String(describing: seen))")
+        #expect(a["labelUntilSeen"] as? Bool == true, "这一轮结束、理解已写：标签看过就缩回——这正是要测的情形")
+        #expect(becomesWaiting)
     }
 
     @Test("做完没附证据：右栏写没附证据，不写成事实")

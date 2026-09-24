@@ -116,7 +116,20 @@ enum ActivityExport {
         a["flip"] = ["title": title(s, store), "subtitle": s.workspace, "phase": IslandExpandedContent.phaseWord(s, store: store)]
         a["detail"] = detail(s, store, tl: tl, unseen: unseen, seen: seen)
         // 整场对话的长清单（ops-private spec 2026-09-24 对话层 V1–V6，lintel 分镜 ⑦④ ⑦⑦ ⑦⑨）：字这边写好，lintel 只排版。
-        if let c = chain(s, store) { a["chain"] = c }
+        if let c = chain(s, store) {
+            a["chain"] = c
+            // 「等你 N」常驻（spec V2）：看过就缩回的标签，看过之后换成它；本来没有标签的，直接就是它。
+            let n = (c["items"] as? [[String: Any]])?.filter { $0["state"] as? String == "you" }.count ?? 0
+            if n > 0 {
+                let waiting: [String: Any] = ["text": L("等你", "Waiting"), "tone": "white", "count": n]
+                if a["label"] is NSNull {
+                    a["label"] = waiting
+                    a["labelUntilSeen"] = false
+                } else if a["labelUntilSeen"] as? Bool == true {
+                    a["labelSeen"] = waiting
+                }
+            }
+        }
         return a
     }
 
