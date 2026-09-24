@@ -47,7 +47,7 @@ struct ConversationListTests {
         return ActivityExport.activities(s)["s"]?["chain"] as? [String: Any]
     }
 
-    @Test("最后一份快照：每项带状态、显示的字、右栏的注；撤掉的不出现；预测标「模型说的」")
+    @Test("最后一份快照：每项带状态、显示的字、注；撤掉的不出现；预测不带注")
     func lastSnapshot() throws {
         let d = try dir()
         try writeList(d, [
@@ -66,7 +66,8 @@ struct ConversationListTests {
         #expect(items.map { $0["id"] as? String } == ["L1", "L2", "L3", "L4", "L5"])
         #expect(items.map { $0["state"] as? String } == ["done", "doing", "you", "other", "later"])
         #expect(items[0]["note"] as? String == "main 8d68286")
-        #expect(items[1]["note"] as? String == "模型说的")
+        #expect(items[1]["note"] == nil, "预测不写字：有证据的写证据，没写的就是还没有证据")
+        #expect(items[4]["note"] == nil)
         #expect(items[1]["idle"] as? Int == 7, "在做 7 轮没动（当前第 9 轮、上次动在第 2 轮）")
         #expect(items[2]["note"] as? String == "ops 9cdaa73")
         #expect(items[2]["approved"] as? Bool == true)
@@ -122,6 +123,7 @@ struct ConversationListTests {
         let popup = try #require(a["popup"] as? [[String: Any]])
         #expect(popup.map { $0["label"] as? String } == ["打回", "等你", "撤掉"], "单纯做完一项（L1）不弹")
         #expect((popup[1]["text"] as? String)?.contains("看新 spec") == true)
+        #expect(popup.allSatisfy { $0["lines"] as? Int == 2 }, "弹卡的一项写两行：09-24 实拍一行时事项被截成「…」")
     }
 
     @Test("只是做完一步：不发 list 事件，弹卡照旧")

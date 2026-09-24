@@ -123,7 +123,8 @@ enum ActivityExport {
             let hits = ConversationList.triggers(previous: ConversationList.previous(sessionId: s.id, directory: store.directory), last: last)
             if !hits.isEmpty {
                 a["popup"] = hits.prefix(4).map { kind, x -> [String: Any] in
-                    ["label": kind, "text": x.text, "tone": kind == L("等你", "Waiting") ? "accent" : "secondary", "lines": 1]
+                    // 两行：一行时事项被截成「…」，读不全（09-24 实拍）。
+                    ["label": kind, "text": x.text, "tone": kind == L("等你", "Waiting") ? "accent" : "secondary", "lines": 2]
                 }
                 var ev = a["events"] as? [[String: Any]] ?? []
                 ev.append(["id": "list|\(turn)|\(last.at ?? "")", "type": "list", "at": opt(last.at)])
@@ -147,8 +148,8 @@ enum ActivityExport {
         return a
     }
 
-    /// 插件长清单最后一份快照 → lintel 的 `chain`。撤掉的项不出现；右栏的注：做完的写证据（没附就写没附），
-    /// 其余写依据，没有依据的写「模型说的」。「在做」5 轮以上没动的带上几轮。没有文件不导出；读不出导出一句读不出。
+    /// 插件长清单最后一份快照 → lintel 的 `chain`。撤掉的项不出现；注：做完的写证据（没附就写没附），
+    /// 其余写依据，没有依据的（预测）不带注。「在做」5 轮以上没动的带上几轮。没有文件不导出；读不出导出一句读不出。
     static func chain(_ s: SessionState, _ store: WillowStore) -> [String: Any]? {
         let labels: [String: String] = ["doing": L("在做", "Doing"), "you": L("等你", "Waiting on you"),
                                         "other": L("等别的", "Waiting on other"), "later": L("以后", "Later"), "done": L("做完", "Done")]
@@ -172,17 +173,18 @@ enum ActivityExport {
                 }
                 var text = x.text
                 if state == "other", let w = x.wait, !w.isEmpty { text += " · " + L("等 ", "waiting on ") + w }
-                let note: String
+                // 预测不带注（09-24 起）：面板上每行都挂一个预测标记是噪音。有证据的写证据，没写的就是还没有证据。
+                let note: String?
                 if state == "done" {
                     note = x.evidence.flatMap { $0.isEmpty ? nil : $0 } ?? L("没附证据", "no evidence given")
                 } else if let b = x.basis, !b.isEmpty, b != "预测" {
                     note = b
                 } else {
-                    note = L("模型说的", "the model's guess")
+                    note = nil
                 }
+                var out: [String: Any] = ["id": x.id, "text": text, "state": state]
                 // lintel 的注上限 64 字，超了整份活动被拒收、会话从刘海上消失（09-24 实见）：这边先截短。
-                let capped = note.count > 64 ? String(note.prefix(63)) + "…" : note
-                var out: [String: Any] = ["id": x.id, "text": text, "state": state, "note": capped]
+                if let note { out["note"] = note.count > 64 ? String(note.prefix(63)) + "…" : note }
                 if x.approved { out["approved"] = true }
                 if state == "doing", let n = now, let t = x.touched, n - t >= 5 { out["idle"] = n - t }
                 return out
