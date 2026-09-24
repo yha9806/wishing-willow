@@ -11,6 +11,7 @@ import {
   appendTurnLog, findDeclaration, interruptedSince, quietExit, envelopeRulesProblem,
 } from './_willow.mjs';
 import { triggerBlock } from './_triggers.mjs';
+import { inboxText } from './_inbox.mjs';
 
 /**
  * transcript 在此刻的字节长度 —— 也就是「本轮开始之前」的位置。
@@ -152,7 +153,16 @@ try {
     endedAt: null,
   });
 
-  if (bypass && !block) quietExit();
+  // 别的来源（写作循环）留给模型的话，由这一个出口一起说（_inbox.mjs）。普通轮带全部；
+  // 短确认、系统信封开始的一轮只带常驻的那一行——两边用同一条轮次规则。读不出照实说。
+  let inbox = null;
+  try {
+    inbox = inboxText(sessionId, input.prompt_id, bypass ? 'always' : 'full');
+  } catch {
+    inbox = '【Wishing-Willow】留言读不出。这一轮没带上别的来源要说的话，不能当作没有。';
+  }
+
+  if (bypass && !block && !inbox) quietExit();
 
   // Must be complete, valid JSON: Claude Code treats output starting with '{'
   // but not ending in '}' as plain text.
@@ -161,7 +171,7 @@ try {
       hookEventName: 'UserPromptSubmit',
       // 规则文件读不出时，只认得 [SYSTEM NOTIFICATION 这一种信封：照实说出来，不静默。
       additionalContext: (envelopeRulesProblem && !bypass ? `【Wishing-Willow】${envelopeRulesProblem}：后台通知等可能被当成你的话记下。\n` : '')
-        + (bypass ? block : (block ? `${REMINDER}\n\n${block}` : REMINDER)),
+        + [bypass ? null : REMINDER, block, inbox].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);

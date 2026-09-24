@@ -1,0 +1,14 @@
+{
+  "note": "写作循环第一次见到这个会话，这一轮它自己已经说了（since = 这一轮的 prompt_id）：许愿柳不再重复。",
+  "capture": {
+    "exit_code": 0,
+    "stdout": "inject",
+    "context_includes": [
+      "请在本轮回复的最开头写四行"
+    ],
+    "context_excludes": [
+      "〔循环〕合成说明块：涉及稿件时在回复最后加解释块",
+      "覆盖：合成检查甲没看过当前稿"
+    ]
+  }
+}

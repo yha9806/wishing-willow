@@ -89,6 +89,12 @@ for (const name of caseNames) {
     writeFileSync(join(stateDir, 'config', 'willow.json'),
       readFileSync(cfgSrc, 'utf8').replaceAll('<CASE_DIR>', dir).replaceAll('<STATE_DIR>', stateDir));
   }
+  // 别的来源（写作循环）留给模型的话：用例目录里的 state-inbox/ 原样放到状态目录的 inbox/。
+  const inboxSrc = join(dir, 'state-inbox');
+  if (existsSync(inboxSrc)) {
+    mkdirSync(join(stateDir, 'inbox'), { recursive: true });
+    for (const f of readdirSync(inboxSrc)) writeFileSync(join(stateDir, 'inbox', f), readFileSync(join(inboxSrc, f)));
+  }
 
   try {
     // 两阶段 transcript：提交那一刻文件里只有历史，本轮的内容是之后才追加的。

@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-39",
+  "prompt_id": "00000000-0000-4000-8000-000000000039",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/manuscript",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "把第二节里那句关于样本的话改短一点，意思别变"
+}

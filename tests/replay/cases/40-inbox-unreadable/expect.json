@@ -1,0 +1,14 @@
+{
+  "note": "留言文件坏了：说读不出，不能当作没有。",
+  "capture": {
+    "exit_code": 0,
+    "stdout": "inject",
+    "context_includes": [
+      "请在本轮回复的最开头写四行",
+      "留言读不出"
+    ],
+    "context_excludes": [
+      "〔循环〕合成说明块：涉及稿件时在回复最后加解释块"
+    ]
+  }
+}
