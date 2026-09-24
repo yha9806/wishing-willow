@@ -134,7 +134,12 @@ enum ActivityExport {
         if let c = chain(s, store) {
             a["chain"] = c
             // 「等你 N」常驻（spec V2）：看过就缩回的标签，看过之后换成它；本来没有标签的，直接就是它。
-            let n = (c["items"] as? [[String: Any]])?.filter { $0["state"] as? String == "you" }.count ?? 0
+            // N 只数新的（最近 freshTurns 轮提出或动过）：09-24 刘海上一直是「等你 26」，大半是早上提的、没人再问过，
+            // 数字大到不看。旧的照样在悬停与面板的清单里，10 轮以上没动的标着几轮没动。
+            var n = 0
+            if case .snapshot(let snap) = ConversationList.read(sessionId: s.id, directory: store.directory) {
+                n = freshWaiting(snap.items, now: s.record.turnIndex)
+            }
             if n > 0 {
                 let waiting: [String: Any] = ["text": L("等你", "Waiting"), "tone": "white", "count": n]
                 if a["label"] is NSNull {
@@ -192,10 +197,25 @@ enum ActivityExport {
                 if let note { out["note"] = note.count > 64 ? String(note.prefix(63)) + "…" : note }
                 if x.approved { out["approved"] = true }
                 if state == "doing", let n = now, let t = x.touched, n - t >= 5 { out["idle"] = n - t }
+                if state == "you", let n = now, let t = x.touched, n - t >= staleWaitingTurns { out["idle"] = n - t }
                 return out
             }
             return ["items": items, "problems": Array(snap.problems.prefix(16)), "labels": labels]
         }
+    }
+
+    /// 「等你」算新的：最近几轮提出或动过（插件 applyOps 在新增、改状态时写 touched）。
+    static let freshTurns = 3
+    /// 「等你」这么多轮没动就标出几轮没动（与插件 STALE_YOU_TURNS 一致）。
+    static let staleWaitingTurns = 10
+
+    /// 刘海上「等你 N」的 N：新的等你。不知道轮次（旧快照、状态文件缺轮次）的算新的——宁可多数，不把事藏起来。
+    static func freshWaiting(_ items: [ListSnapshot.Item], now: Int?) -> Int {
+        items.filter { x in
+            guard x.status == "等你" else { return false }
+            guard let n = now, let t = x.touched else { return true }
+            return n - t < freshTurns
+        }.count
     }
 
     /// 这一轮的进度挂在哪一项上：「在做」里最近动过的那项（touched 最大），一样大取清单里靠后的（后加的）。

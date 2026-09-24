@@ -193,4 +193,15 @@ struct ConversationListTests {
         #expect(ActivityExport.progressNote(steps: 2, since: now.addingTimeInterval(-20), now: now) == "第 2 步 · 刚开始")
         #expect(ActivityExport.progressNote(steps: 0, since: nil, now: now) == "第 0 步 · 刚开始")
     }
+
+    @Test("刘海上的「等你 N」只数新的（最近 3 轮提出或动过）；不知道轮次的算新的，宁可多数")
+    func freshWaiting() {
+        func item(_ id: String, _ status: String, _ touched: Int?) -> ListSnapshot.Item {
+            .init(id: id, text: id, status: status, wait: nil, basis: nil, evidence: nil, approved: false, touched: touched)
+        }
+        let xs = [item("L1", "等你", 0), item("L2", "等你", 10), item("L3", "等你", 12), item("L4", "在做", 12), item("L5", "等你", nil)]
+        #expect(ActivityExport.freshWaiting(xs, now: 12) == 3)      // L2（2 轮）、L3（0 轮）、L5（不知道）
+        #expect(ActivityExport.freshWaiting(xs, now: nil) == 4)     // 不知道现在第几轮：全算
+        #expect(ActivityExport.freshWaiting([item("L1", "等你", 0)], now: 3) == 0)
+    }
 }
