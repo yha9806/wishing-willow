@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "about": "Which user-role records are not the person speaking. A record is not the person's words when, after every block below is removed (outer tag with everything inside it), nothing is left; or when it starts with one of the prefixes. If any text is left, it is the person's words and is kept verbatim. The writing loop reads this same file, so the two cannot drift apart.",
+  "tags": [
+    "task-notification", "ci-monitor-event", "system-reminder", "cross-session-message",
+    "command-name", "command-message", "command-args",
+    "local-command-caveat", "local-command-stdout", "local-command-stderr",
+    "bash-input", "bash-stdout", "bash-stderr",
+    "preview-annotation-context"
+  ],
+  "prefixes": ["[SYSTEM NOTIFICATION"]
+}

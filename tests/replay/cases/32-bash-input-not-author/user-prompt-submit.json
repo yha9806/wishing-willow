@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-32",
+  "prompt_id": "00000000-0000-4000-8000-000000000032",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "<bash-input>git status --short</bash-input><bash-stdout> M notes.md</bash-stdout><bash-stderr></bash-stderr>"
+}

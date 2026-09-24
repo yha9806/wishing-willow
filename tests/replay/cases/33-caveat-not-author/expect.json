@@ -1,0 +1,11 @@
+{
+  "note": "Claude Code 在本地命令输出前加的说明：不是作者说的话。30 天内的本机记录里有 298 条，两边都没认出来。",
+  "capture": {
+    "exit_code": 0,
+    "stdout": "empty"
+  },
+  "state_file": {
+    "origin": "system",
+    "prompt_startswith": "<local-comma"
+  }
+}

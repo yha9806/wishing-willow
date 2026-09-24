@@ -1,0 +1,11 @@
+{
+  "note": "护栏：系统说明后面跟着作者自己的话。整条去掉白名单里的标签块以后还剩文字，就是作者说的，必须照常提醒、origin 记成 user。只看开头标签的规则会把这句话吞掉。",
+  "capture": {
+    "exit_code": 0,
+    "stdout": "inject"
+  },
+  "state_file": {
+    "origin": "user",
+    "prompt_startswith": "<preview-ann"
+  }
+}

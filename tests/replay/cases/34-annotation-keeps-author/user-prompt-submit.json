@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-34",
+  "prompt_id": "00000000-0000-4000-8000-000000000034",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "<preview-annotation-context>The attached image is a screenshot of the running app preview with the user's freehand annotations drawn on top.</preview-annotation-context> 这个按钮的位置还是偏右了，请把它和左边的标题对齐，别动别的元素"
+}

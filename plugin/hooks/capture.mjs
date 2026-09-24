@@ -8,7 +8,7 @@
 import { statSync } from 'node:fs';
 import {
   SCHEMA, readStdin, parseInput, readPrompt, readState, writeState, shouldBypass, isSystemEnvelope,
-  appendTurnLog, findDeclaration, interruptedSince, quietExit,
+  appendTurnLog, findDeclaration, interruptedSince, quietExit, envelopeRulesProblem,
 } from './_willow.mjs';
 import { triggerBlock } from './_triggers.mjs';
 
@@ -159,7 +159,9 @@ try {
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit',
-      additionalContext: bypass ? block : (block ? `${REMINDER}\n\n${block}` : REMINDER),
+      // 规则文件读不出时，只认得 [SYSTEM NOTIFICATION 这一种信封：照实说出来，不静默。
+      additionalContext: (envelopeRulesProblem && !bypass ? `【Wishing-Willow】${envelopeRulesProblem}：后台通知等可能被当成你的话记下。\n` : '')
+        + (bypass ? block : (block ? `${REMINDER}\n\n${block}` : REMINDER)),
     },
   }));
   process.exit(0);

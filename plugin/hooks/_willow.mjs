@@ -195,8 +195,25 @@ const MIN_WEIGHT = 20;
  * 另一个 Claude 会话发来的消息（`<cross-session-message …>`）也是信封：它是说给模型听的，
  * 不是你说的。2026-09-17 核对本机记录：两条都被记成了「你的要求」，并把进行中的那一轮挤进了日志。
  */
-const SYSTEM_ENVELOPE =
-  /^\s*(?:<(?:task-notification|ci-monitor-event|system-reminder|command-name|command-message|local-command-stdout|cross-session-message)\b|\[SYSTEM NOTIFICATION)/i;
+// The list lives in envelopes.json, beside this file, so that the writing loop reads the same rule instead of keeping
+// a copy: two copies had already drifted (the loop learnt `!` shell input on 2026-09-21, this file never did, so a
+// shell command was recorded as the person's request). A block is removed whole, with everything inside it; a record
+// is an envelope only when nothing is left afterwards. Checked against 30 days of this machine's transcripts
+// (2026-09-24): every tag-led record was tags only, except one annotation that carried the person's own sentence.
+const ENVELOPES = (() => {
+  try {
+    const r = JSON.parse(readFileSync(new URL('./envelopes.json', import.meta.url), 'utf8'));
+    if (!Array.isArray(r.tags) || !Array.isArray(r.prefixes)) throw new Error('shape');
+    return { tags: r.tags, prefixes: r.prefixes, problem: null };
+  } catch (e) {
+    return { tags: [], prefixes: ['[SYSTEM NOTIFICATION'], problem: `envelopes.json 读不出（${e?.message ?? e}）` };
+  }
+})();
+const BLOCK = ENVELOPES.tags.length
+  ? new RegExp(`<(${ENVELOPES.tags.map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b[^>]*>[\\s\\S]*?</\\1>`, 'gi')
+  : null;
+/** Not null when the rule file could not be read: then only the prefixes are known, and capture says so. */
+export const envelopeRulesProblem = ENVELOPES.problem;
 
 /**
  * 这句原话是不是系统塞进来的信封。capture 用它决定要不要提醒，也把结果作为
@@ -204,7 +221,14 @@ const SYSTEM_ENVELOPE =
  * 两份规则分别写在 JS 和 Swift 里，迟早漂成两套。
  */
 export function isSystemEnvelope(prompt) {
-  return typeof prompt === 'string' && SYSTEM_ENVELOPE.test(prompt.trim());
+  if (typeof prompt !== 'string') return false;
+  const t = prompt.trim();
+  if (!t) return false;
+  if (ENVELOPES.prefixes.some((p) => t.startsWith(p))) return true;
+  if (!BLOCK || !t.startsWith('<')) return false;
+  let rest = t, prev;
+  do { prev = rest; rest = rest.replace(BLOCK, ''); } while (rest !== prev);
+  return rest.trim() === '';
 }
 
 export function shouldBypass(prompt) {
@@ -212,7 +236,7 @@ export function shouldBypass(prompt) {
   const t = prompt.trim();
   if (t.length === 0) return true;
   if (t.startsWith('/')) return true;              // slash command
-  if (SYSTEM_ENVELOPE.test(t)) return true;        // 系统塞进来的，不是人说的
+  if (isSystemEnvelope(t)) return true;           // 系统塞进来的，不是人说的
   if (ACK_ONLY.test(t)) return true;               // purely an acknowledgement
   if (weigh(t) < MIN_WEIGHT) return true;          // too slight to misread meaningfully
   return false;

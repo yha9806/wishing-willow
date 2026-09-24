@@ -1,0 +1,11 @@
+{
+  "note": "作者在终端里用 ! 跑的一条命令和它的输出：不是对 Claude 说的话，不注入四行提醒，origin 记成 system。写作循环 09-21 已这样认，这里以前不认，于是命令被记成「你的要求」。",
+  "capture": {
+    "exit_code": 0,
+    "stdout": "empty"
+  },
+  "state_file": {
+    "origin": "system",
+    "prompt_startswith": "<bash-input>"
+  }
+}
