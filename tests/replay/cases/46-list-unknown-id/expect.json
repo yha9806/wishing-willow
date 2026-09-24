@@ -1,0 +1,23 @@
+{
+  "note": "引用了不存在的编号：说出来，不静默吞掉。",
+  "session_id": "test-sess-46",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项甲",
+        "L9 不存在"
+      ]
+    }
+  ]
+}

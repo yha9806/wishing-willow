@@ -34,6 +34,7 @@
     "plan",
     "next",
     "touched",
-    "shown"
+    "shown",
+    "listShown"
   ]
 }

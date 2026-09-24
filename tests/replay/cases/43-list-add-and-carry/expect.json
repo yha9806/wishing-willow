@@ -1,0 +1,47 @@
+{
+  "note": "长清单：回复末尾的「清单变化：」块新增的事项由钩子编号（L1、L2…），下一轮随四行一起完整注入；之后没提到的项原样留着，清单没变的轮次只列等你的项、说其余和第几轮列的一样——注入会一直留在对话里，没变就重列一遍是纯重复。",
+  "session_id": "test-sess-43",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "L1"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "请在本轮回复的最开头写四行",
+        "L1 在做：合成事项甲",
+        "L2 等你：合成事项乙",
+        "L3 等 合成外部事件：合成事项丙",
+        "清单变化："
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L2 等你：合成事项乙",
+        "其余 2 项和第 1 轮列出的一样"
+      ],
+      "context_excludes": [
+        "L1 在做",
+        "L3 等"
+      ]
+    }
+  ]
+}

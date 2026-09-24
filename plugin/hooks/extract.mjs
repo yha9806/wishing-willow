@@ -7,7 +7,9 @@
 
 import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
+  turnAssistantTexts,
 } from './_willow.mjs';
+import { parseOps, applyOps, readList, appendSnapshot } from './_list.mjs';
 
 try {
   const input = parseInput(readStdin());
@@ -27,6 +29,19 @@ try {
   // Only ever touch `decode` and the timestamp. `prompt` stays exactly as
   // capture.mjs wrote it — this hook has no business rewriting what you said.
   const endedAt = new Date().toISOString();
+
+  // 长清单：这一轮的「清单变化：」块应用到上一份快照上，追加一份新的。旧清单读不出就不写——
+  // 拿空清单盖掉它比读不出更糟；capture 会照实说读不出。清单出错不许拖垮下面声明的记录。
+  try {
+    const ops = parseOps(turnAssistantTexts(input, prev));
+    if (ops.length) {
+      const cur = readList(sessionId);
+      if (!cur?.error) {
+        const turn = { turnId: prev?.turnId ?? null, turnIndex: prev?.turnIndex ?? null };
+        appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn) });
+      }
+    }
+  } catch { /* 见上 */ }
 
   if (prev) {
     writeState(sessionId, { ...prev, decode, tag, plan, next, touched, turnEndedAt: endedAt, updatedAt: endedAt });

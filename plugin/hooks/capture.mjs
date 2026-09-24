@@ -12,6 +12,7 @@ import {
 } from './_willow.mjs';
 import { triggerBlock } from './_triggers.mjs';
 import { inboxText } from './_inbox.mjs';
+import { listBlock } from './_list.mjs';
 
 /**
  * transcript 在此刻的字节长度 —— 也就是「本轮开始之前」的位置。
@@ -37,10 +38,12 @@ const REMINDER =
   '标签：<把「我读成了」压成 ≤6 个汉字（英文 ≤14 字符），动词+宾语；' +
   '禁止「继续 / 往下做 / 处理 / 优化 / 完善 / 推进 / 跟进」这类不含信息的词>\n' +
   '前两行一致时也照写，保持平淡。不要解释这几行本身。\n' +
-  // 计划块（2026-09-23 用户要求：对齐不止开头那一段，接下来的步骤也要对齐、看得见）。
-  // 标「现在 / 等 什么」是这块的全部用处：一句「实现仍等某事结束」夹在长句里没人看得出，排成一格就看得出。
-  '这一轮要做不止一步时，四行之后另起一行写「计划：」，下面每步一行（最多 5 步）：' +
-  '①、②… 加「现在」或「等 <什么>」，冒号，再写这一步做什么。只回答问题、没有步骤就不写这一块。\n' +
+  // 长清单（2026-09-24 用户：要整场对话的长链路清单，跟着对话变，不只下一步）。旧的「计划：」块并进来：
+  // 这一轮要做的步骤就是清单里「在做」的项。只写变化，一项只能靠明写的一行离开——见 _list.mjs。
+  '这场对话有一张长清单（【清单】里是还开着的项）。这一轮让清单有变化时——出现了要做或要等的事、做完了、换了状态、撤掉——' +
+  '在「下一步：」那一行之前写「清单变化：」，下面一行一条：「+ 在做：<事>」「+ 等你：<事>」「+ 等 <什么>：<事>」「+ 以后：<事>」新增' +
+  '（有事实依据时在末尾加「（依据：<提交号、文件或 CI>）」，不加就算预测）；「L3 做完：<证据>」「L3 → 等你：<为什么>」' +
+  '「L3 撤掉：<原因>」「L3 认可」（用户这一轮认可了它）。没提到的项原样留着；清单没有变化就不写这一块。\n' +
   '回复的最后一行写「下一步：<这一轮之后等用户什么，或你接着做什么>」。';
 
 // 标签那一行是给菜单栏／刘海那条常亮层用的：刘海 156pt，11pt 中文大约 14 个字，
@@ -121,6 +124,17 @@ try {
     }
   }
 
+  // 长清单：普通轮放开着的项（没变就只放要紧的，见 listBlock）；短确认、系统信封开始的一轮只放「等你」的。
+  let list = null;
+  let listShown = prev?.listShown ?? null;
+  try {
+    const r = listBlock(sessionId, bypass ? 'always' : 'full', (prev?.turnIndex ?? -1) + 1, listShown);
+    list = r.text;
+    listShown = r.shown;
+  } catch {
+    list = '【Wishing-Willow · 清单】清单读不出，不能当作没有开着的事。';
+  }
+
   writeState(sessionId, {
     schema: SCHEMA,
     sessionId,
@@ -146,6 +160,7 @@ try {
     next: null,            // 回复最后一行的「下一步：」
     touched: prev?.touched ?? null,   // 本会话用工具动过的路径，extract 每轮并进来；跨轮带着走
     shown,                 // 这一轮说了哪些待触发条目、各在什么阶段；下一轮拿来说「本轮变化」
+    listShown,             // 长清单上次完整列出是哪份快照、第几轮；没变就不重列（_list.mjs）
     // 这一轮还没结束。extract 在 Stop 时写下时间戳。没有这一位，读方分不清
     // 「模型还在回答」和「答完了没写声明」—— 2026-09-12 用户实测：每一轮一开头
     // 灵动岛都冒一次橙色的「问了，模型没写声明」，而模型那时一个字都还没回。
@@ -162,7 +177,7 @@ try {
     inbox = '【Wishing-Willow】留言读不出。这一轮没带上别的来源要说的话，不能当作没有。';
   }
 
-  if (bypass && !block && !inbox) quietExit();
+  if (bypass && !block && !inbox && !list) quietExit();
 
   // Must be complete, valid JSON: Claude Code treats output starting with '{'
   // but not ending in '}' as plain text.
@@ -171,7 +186,7 @@ try {
       hookEventName: 'UserPromptSubmit',
       // 规则文件读不出时，只认得 [SYSTEM NOTIFICATION 这一种信封：照实说出来，不静默。
       additionalContext: (envelopeRulesProblem && !bypass ? `【Wishing-Willow】${envelopeRulesProblem}：后台通知等可能被当成你的话记下。\n` : '')
-        + [bypass ? null : REMINDER, block, inbox].filter(Boolean).join('\n\n'),
+        + [bypass ? null : REMINDER, block, list, inbox].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);

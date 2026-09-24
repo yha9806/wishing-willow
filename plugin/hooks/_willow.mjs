@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, readdir
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const SCHEMA = 11;   // 11：加 plan、next（计划块与「下一步」）、touched（本会话动过的路径）、shown（上一轮说过的待触发条目）
+export const SCHEMA = 12;   // 11：加 plan、next（计划块与「下一步」）、touched（本会话动过的路径）、shown（上一轮说过的待触发条目）；12：加 listShown（长清单上次完整列出）
 
 /** Where state lives. Overridable so tests never touch the real directory. */
 export function stateDir() {
@@ -445,6 +445,28 @@ export function findNext(input, prev) {
     }
   }
   return scanNext(input?.last_assistant_message);
+}
+
+/**
+ * 这一轮助手写的全部文字，按顺序。有 capture 记下的偏移就从那里往后读聊天记录；
+ * 读不到时退回 last_assistant_message（只有最后一段）。清单变化块可能写在任何一段里。
+ */
+export function turnAssistantTexts(input, prev) {
+  const path = input?.transcript_path;
+  if (typeof path === 'string' && path && typeof prev?.transcriptOffset === 'number') {
+    const text = slice(path, prev.transcriptOffset, 64 << 20);
+    if (text) {
+      const out = [];
+      for (const line of text.split('\n')) {
+        if (!line.trim()) continue;
+        let row;
+        try { row = JSON.parse(line); } catch { continue; }
+        out.push(...assistantTexts(row));
+      }
+      if (out.length) return out;
+    }
+  }
+  return typeof input?.last_assistant_message === 'string' ? [input.last_assistant_message] : [];
 }
 
 /** Read from `from` to EOF, at most `max` bytes. Returns '' on any failure. */

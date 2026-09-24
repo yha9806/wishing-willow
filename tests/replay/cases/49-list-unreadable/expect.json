@@ -1,0 +1,33 @@
+{
+  "note": "清单文件读不出：照实说，不能当作没有开着的事；也不许拿空清单覆盖它。",
+  "session_id": "test-sess-49",
+  "steps": [
+    {
+      "copy": "broken.list.jsonl",
+      "to": "test-sess-49.list.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单文件读不出"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单文件读不出"
+      ],
+      "context_excludes": [
+        "L1 在做"
+      ]
+    }
+  ]
+}

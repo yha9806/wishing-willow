@@ -1,0 +1,63 @@
+{
+  "note": "「在做」5 轮以上没动：注入时标出几轮没动，不静默挂着。",
+  "session_id": "test-sess-48",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-1.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-1.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-2.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-2.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-3.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-3.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-4.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-4.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-5.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-5.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-z.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项甲",
+        "6 轮没动"
+      ]
+    }
+  ]
+}

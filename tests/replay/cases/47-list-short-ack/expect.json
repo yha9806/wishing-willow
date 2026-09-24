@@ -1,0 +1,26 @@
+{
+  "note": "短确认轮：只带「等你」的项（和问题），不带四行、不带在做的项。",
+  "session_id": "test-sess-47",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L2 等你：合成事项乙"
+      ],
+      "context_excludes": [
+        "请在本轮回复的最开头写四行",
+        "L1 在做"
+      ]
+    }
+  ]
+}

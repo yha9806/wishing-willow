@@ -1,0 +1,34 @@
+{
+  "note": "撤掉要写原因：没写原因的不撤，下一轮说出来；写了原因的离开开着的项。",
+  "session_id": "test-sess-44",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项甲",
+        "L1 撤掉没写原因"
+      ],
+      "context_excludes": [
+        "L2 在做"
+      ]
+    }
+  ]
+}

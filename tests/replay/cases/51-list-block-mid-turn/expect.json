@@ -1,0 +1,34 @@
+{
+  "note": "「清单变化：」写在这一轮第一段（工具调用之前），最后一段里没有：从 capture 记下的偏移往后读聊天记录，块照样算进这一轮；偏移之前那一轮的块不算。",
+  "session_id": "test-sess-51",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "append": "transcript.turn-a.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项甲",
+        "L2 等你：合成事项乙",
+        "开着 2 项"
+      ],
+      "context_excludes": [
+        "更早一轮的事",
+        "开着 3 项"
+      ]
+    }
+  ]
+}

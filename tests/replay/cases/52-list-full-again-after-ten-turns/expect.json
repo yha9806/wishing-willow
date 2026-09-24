@@ -1,0 +1,107 @@
+{
+  "note": "清单没变也不能一直只列要紧的：隔 10 轮完整列一次（压缩上下文会丢掉早先那份完整清单）。",
+  "session_id": "test-sess-52",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-1.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-1.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-2.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "L1 在做"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-2.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-3.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-3.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-4.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-4.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-5.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-5.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-6.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-6.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-7.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-7.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-8.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-8.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-9.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-9.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-10.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-10.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-z.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项甲",
+        "L3 等 合成外部事件"
+      ]
+    }
+  ]
+}

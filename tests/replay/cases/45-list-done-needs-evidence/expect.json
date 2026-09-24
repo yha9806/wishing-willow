@@ -1,0 +1,34 @@
+{
+  "note": "做完要附证据：没附的照记做完，但下一轮说「没附证据」。",
+  "session_id": "test-sess-45",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 做完没附证据"
+      ],
+      "context_excludes": [
+        "L1 在做",
+        "L2 在做"
+      ]
+    }
+  ]
+}

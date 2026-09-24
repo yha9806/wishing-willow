@@ -1,0 +1,39 @@
+{
+  "note": "「L1 认可」记下本轮，注入时标「已认可」；块在空行或「下一步：」处结束，后面的字不当成清单变化。",
+  "session_id": "test-sess-50",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项甲"
+      ],
+      "context_excludes": [
+        "L2",
+        "块外的一行不算"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项甲",
+        "已认可"
+      ]
+    }
+  ]
+}
