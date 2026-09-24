@@ -48,6 +48,13 @@ struct TurnProgress: Sendable, Equatable {
     }
     var pendingChoice: Choice?
 
+    /// 压缩会把旧消息原样重写进聊天记录末尾（2026-09-24 实测：一次自动压缩后 3,836 行，uuid 和时间戳都是原来的），
+    /// 从偏移往后数工具调用就会凭空多出上千步。规则与插件 turnSlice 相同：比这一段第一行早一分钟以上的不算，
+    /// 同一个 uuid 只算一次。第一行作锚：偏移处的第一行一定是这一轮写的，副本总在它后面。
+    private var anchor: Date?
+    private var seenRows: Set<String> = []
+    static let copySkew: TimeInterval = 60
+
     /// 这一轮每次请求的 token 用量，按 message.id 去重（同一条消息流式写成 2–5 行，usage 相同）。
     var usageByMessage: [String: TokenUsage] = [:]
     /// 最近一次请求的用量：上下文占用与缓存命中看这一次。
@@ -59,6 +66,13 @@ struct TurnProgress: Sendable, Equatable {
     mutating func ingest(_ row: [String: Any]) {
         guard (row["isSidechain"] as? Bool) != true else { return }
         let at = (row["timestamp"] as? String).flatMap(WillowRecord.parseISO8601)
+        if let at {
+            if let a = anchor { if at < a.addingTimeInterval(-Self.copySkew) { return } } else { anchor = at }
+        }
+        if let u = row["uuid"] as? String {
+            if seenRows.contains(u) { return }
+            seenRows.insert(u)
+        }
         switch row["type"] as? String {
         case "assistant": break
         case "user": noteInterrupt(row, at: at); noteToolResult(row); return

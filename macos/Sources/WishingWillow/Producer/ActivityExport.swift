@@ -161,6 +161,9 @@ enum ActivityExport {
                     "error": L("清单读不出（\(why)），不能当作没有开着的事", "The list cannot be read (\(why)); that is not the same as nothing open")]
         case .snapshot(let snap):
             let now = s.record.turnIndex
+            // 这一轮还在跑：最近动过的那项「在做」写上第几步、几分钟（作者 09-24：「任务是要实时更新进度和内容的」）。
+            let live = store.progress(for: s).flatMap { $0.interruptedAt == nil ? $0 : nil }
+            let active = live == nil ? nil : activeDoing(snap.items)
             let items = snap.items.compactMap { x -> [String: Any]? in
                 let state: String
                 switch x.status {
@@ -177,6 +180,8 @@ enum ActivityExport {
                 let note: String?
                 if state == "done" {
                     note = x.evidence.flatMap { $0.isEmpty ? nil : $0 } ?? L("没附证据", "no evidence given")
+                } else if x.id == active, let p = live {
+                    note = progressNote(steps: p.steps.count, since: s.record.updatedAt, now: Date())
                 } else if let b = x.basis, !b.isEmpty, b != "预测" {
                     note = b
                 } else {
@@ -191,6 +196,23 @@ enum ActivityExport {
             }
             return ["items": items, "problems": Array(snap.problems.prefix(16)), "labels": labels]
         }
+    }
+
+    /// 这一轮的进度挂在哪一项上：「在做」里最近动过的那项（touched 最大），一样大取清单里靠后的（后加的）。
+    /// 进度属于这一轮，不属于某一项；挂在最近动过的那项上是猜，猜错的代价是进度挂在了隔壁一行。
+    static func activeDoing(_ items: [ListSnapshot.Item]) -> String? {
+        var best: ListSnapshot.Item?
+        for x in items where x.status == "在做" {
+            if best == nil || (x.touched ?? -1) >= (best?.touched ?? -1) { best = x }
+        }
+        return best?.id
+    }
+
+    /// 「第 12 步 · 3 分钟」。步数是这一轮的工具调用数；分钟从这一轮开始算，不到一分钟写「刚开始」。
+    static func progressNote(steps: Int, since: Date?, now: Date) -> String {
+        let minutes = since.map { Int(now.timeIntervalSince($0) / 60) } ?? 0
+        let time = minutes < 1 ? L("刚开始", "just started") : L("\(minutes) 分钟", "\(minutes) min")
+        return L("第 \(steps) 步 · ", "step \(steps) · ") + time
     }
 
     // MARK: 排序字段

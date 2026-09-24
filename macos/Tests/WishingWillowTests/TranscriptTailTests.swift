@@ -142,4 +142,23 @@ struct TranscriptTailTests {
         #expect(p?.decode == "本轮的解码")
         #expect(p?.tag == "本轮标签")
     }
+
+    @Test("压缩后重写进来的旧消息不算步数：比这一段第一行早一分钟以上的不算，同一个 uuid 只算一次（09-24 实测一次压缩 3,836 行）")
+    func compactionCopies() {
+        func tool(_ uuid: String, _ ts: String, _ path: String) -> String {
+            #"{"type":"assistant","uuid":"\#(uuid)","timestamp":"\#(ts)","message":{"content":[{"type":"tool_use","id":"\#(uuid)","name":"Read","input":{"file_path":"\#(path)"}}]}}"#
+        }
+        let rows = [
+            #"{"type":"user","uuid":"u1","timestamp":"2026-09-20T10:00:00.000Z","message":{"content":"合成的一轮"}}"#,
+            tool("t1", "2026-09-20T10:00:05.000Z", "/tmp/fake/a.json"),
+            #"{"type":"system","subtype":"compact_boundary","uuid":"cb","timestamp":"2026-09-20T10:05:00.000Z"}"#,
+            tool("o1", "2026-09-20T09:00:05.000Z", "/tmp/fake/old-1.json"),   // 一小时前的旧消息，原样重写进来
+            tool("o2", "2026-09-20T09:00:06.000Z", "/tmp/fake/old-2.json"),
+            tool("t1", "2026-09-20T10:00:05.000Z", "/tmp/fake/a.json"),       // 本轮自己的一条也被重写了一次
+            tool("t2", "2026-09-20T10:06:00.000Z", "/tmp/fake/b.json"),
+        ]
+        let p = parse(rows.joined(separator: "\n"))
+        #expect(p.steps.count == 2)
+        #expect(p.steps.map(\.text).joined().contains("old") == false)
+    }
 }

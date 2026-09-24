@@ -175,4 +175,22 @@ struct ConversationListTests {
         #expect((c["items"] as? [Any])?.isEmpty == true)
         #expect((c["error"] as? String)?.contains("读不出") == true)
     }
+
+    @Test("这一轮在跑：进度挂在「在做」里最近动过的那项，一样近取后加的；没有在做的就不挂")
+    func activeDoing() {
+        func item(_ id: String, _ status: String, _ touched: Int?) -> ListSnapshot.Item {
+            .init(id: id, text: id, status: status, wait: nil, basis: nil, evidence: nil, approved: false, touched: touched)
+        }
+        #expect(ActivityExport.activeDoing([item("L1", "在做", 3), item("L2", "在做", 5), item("L3", "等你", 9)]) == "L2")
+        #expect(ActivityExport.activeDoing([item("L1", "在做", 5), item("L2", "在做", 5)]) == "L2")
+        #expect(ActivityExport.activeDoing([item("L1", "等你", 5), item("L2", "做完", 6)]) == nil)
+    }
+
+    @Test("进度的注：第几步、几分钟；不到一分钟写刚开始")
+    func progressNote() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        #expect(ActivityExport.progressNote(steps: 12, since: now.addingTimeInterval(-190), now: now) == "第 12 步 · 3 分钟")
+        #expect(ActivityExport.progressNote(steps: 2, since: now.addingTimeInterval(-20), now: now) == "第 2 步 · 刚开始")
+        #expect(ActivityExport.progressNote(steps: 0, since: nil, now: now) == "第 0 步 · 刚开始")
+    }
 }
