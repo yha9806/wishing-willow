@@ -1,0 +1,2 @@
+{"type": "user", "uuid": "57-u1", "isSidechain": false, "timestamp": "2026-09-20T10:00:00.000Z", "message": {"role": "user", "content": "把合成事项戊做完"}}
+{"type": "assistant", "uuid": "57-a1", "isSidechain": false, "timestamp": "2026-09-20T10:00:05.000Z", "message": {"role": "assistant", "content": [{"type": "text", "text": "你批准的：核对配置\n我读成了：核对合成配置文件\n我补上的：无\n标签：核对配置\n\n先开个头。"}]}}

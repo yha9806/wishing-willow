@@ -110,7 +110,7 @@ for (const name of caseNames) {
     // 多步序列：真实会话里一轮之内不止「提交一次、结束一次」——进行中插进来的
     // 系统通知、被打断之后来的新消息（2026-09-12 两种都在真实日志里丢过整轮）。
     if (Array.isArray(expect.steps)) {
-      const STEP_KEYS = new Set(['append', 'copy', 'to', 'hook', 'input', 'stdout', 'context_includes', 'context_excludes']);
+      const STEP_KEYS = new Set(['append', 'copy', 'to', 'hook', 'input', 'stdout', 'context_includes', 'context_excludes', 'exit', 'stdout_includes']);
       for (const [i, st] of expect.steps.entries()) {
         for (const k of Object.keys(st)) {
           if (!STEP_KEYS.has(k)) check(name, `steps[${i}].keys`, false, `runner 不认识步骤键 ${k}`);
@@ -124,10 +124,14 @@ for (const name of caseNames) {
           writeFileSync(join(stateDir, st.to ?? st.copy), readFileSync(join(dir, st.copy), 'utf8'));
           continue;
         }
-        const script = { capture: 'capture.mjs', extract: 'extract.mjs', end: 'end.mjs', compacted: 'compacted.mjs' }[st.hook] ?? null;
+        const script = { capture: 'capture.mjs', extract: 'extract.mjs', end: 'end.mjs', compacted: 'compacted.mjs', listctl: 'listctl.mjs' }[st.hook] ?? null;
         if (!script) { check(name, `steps[${i}]`, false, `未知步骤 ${JSON.stringify(st)}`); continue; }
         const r = runHook(script, join(dir, st.input), stateDir, env);
-        let ok = check(name, `steps[${i}].${st.hook}.exit`, r.code === 0, `exit=${r.code} ${(r.stderr || '').slice(0, 80)}`);
+        let ok = check(name, `steps[${i}].${st.hook}.exit`, r.code === (st.exit ?? 0), `exit=${r.code} ${(r.stderr || '').slice(0, 80)}`);
+        // 命令行工具（listctl）的输出是给模型读的纯文本，不是注入的 JSON。
+        for (const s of st.stdout_includes ?? []) {
+          ok = check(name, `steps[${i}].stdout_includes`, r.stdout.includes(s), `输出里没有「${s}」：${r.stdout.slice(0, 80)}`) && ok;
+        }
         if (st.stdout) {
           const injected = r.stdout.trim().length > 0;
           ok = check(name, `steps[${i}].${st.hook}.stdout`, injected === (st.stdout === 'inject'),

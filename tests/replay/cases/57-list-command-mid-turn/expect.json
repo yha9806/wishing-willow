@@ -1,0 +1,62 @@
+{
+  "note": "一轮中途用命令记清单（listctl.mjs）：命令一跑清单就变，不等这一轮结束；它回一句改了什么和新的清单那一行，认不出的行照实说没记。回复末尾又把同一行写了一遍，只算一次；末尾新写的照常记。会话号对不上的不写。每轮开头交给模型的说明里带着这条命令和本会话的号。 第二条命令改的是第一条刚记下的 L1：第一条没真的写进清单，第二条当场就报「L1 不存在」。",
+  "session_id": "test-sess-57",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "listctl.mjs\" --session test-sess-57"
+      ]
+    },
+    {
+      "append": "transcript.turn-a1.jsonl"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "记下了：新增 L1",
+        "在做 L1 合成事项戊"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-move.json",
+      "stdout_includes": [
+        "记下了：L1 在做"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-wrong-session.json",
+      "exit": 2
+    },
+    {
+      "append": "transcript.turn-a2.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项戊",
+        "L2 等你：合成事项己",
+        "开着 2 项"
+      ],
+      "context_excludes": [
+        "L3 在做",
+        "开着 3 项",
+        "不该出现的事"
+      ]
+    }
+  ]
+}

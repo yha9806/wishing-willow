@@ -12,7 +12,7 @@ import {
 } from './_willow.mjs';
 import { triggerBlock } from './_triggers.mjs';
 import { inboxText } from './_inbox.mjs';
-import { listBlock, LIST_RULES } from './_list.mjs';
+import { listBlock, LIST_RULES, commandRule } from './_list.mjs';
 
 /**
  * transcript 在此刻的字节长度 —— 也就是「本轮开始之前」的位置。
@@ -181,7 +181,7 @@ try {
       hookEventName: 'UserPromptSubmit',
       // 规则文件读不出时，只认得 [SYSTEM NOTIFICATION 这一种信封：照实说出来，不静默。
       additionalContext: (envelopeRulesProblem && !bypass ? `【Wishing-Willow】${envelopeRulesProblem}：后台通知等可能被当成你的话记下。\n` : '')
-        + [bypass ? null : REMINDER, block, list, inbox].filter(Boolean).join('\n\n'),
+        + [bypass ? null : `${REMINDER}\n${commandRule(sessionId)}`, block, list, inbox].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);

@@ -9,7 +9,7 @@ import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
   turnAssistantRows,
 } from './_willow.mjs';
-import { parseOps, applyOps, readList, appendSnapshot, appliedRows } from './_list.mjs';
+import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines } from './_list.mjs';
 
 try {
   const input = parseInput(readStdin());
@@ -36,7 +36,9 @@ try {
     // 已经执行过的消息不再执行：压缩会把它们原样重写进这一轮后面（见 appliedRows、turnSlice）。
     const done = appliedRows(sessionId);
     const fresh = turnAssistantRows(input, prev).filter((r) => r.uuid === null || !done.has(r.uuid));
-    const ops = parseOps(fresh.flatMap((r) => r.texts));
+    // 这一轮已经用命令记过的行（listctl.mjs），回复末尾又写了一遍的，不再执行。
+    const commanded = commandedLines(sessionId, prev?.turnId ?? null);
+    const ops = parseOps(fresh.flatMap((r) => r.texts)).filter((o) => !(o.raw && commanded.has(o.raw)));
     if (ops.length) {
       const cur = readList(sessionId);
       if (!cur?.error) {

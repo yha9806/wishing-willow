@@ -9,7 +9,7 @@
 // 输出里认 hookSpecificOutput.additionalContext。
 
 import { readStdin, parseInput, readState, writeState, quietExit } from './_willow.mjs';
-import { listBlock, LIST_RULES } from './_list.mjs';
+import { listBlock, LIST_RULES, commandRule } from './_list.mjs';
 
 const HEAD = '【Wishing-Willow · 压缩后】上下文刚被压缩，这一轮开头交给你的清单和写法可能已经不在了，这里重交一份。'
   + '这一轮里已经做完或变了的事，照下面的写法在回复末尾补上。';
@@ -32,7 +32,7 @@ try {
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
       hookEventName: 'SessionStart',
-      additionalContext: [HEAD, LIST_RULES, list].filter(Boolean).join('\n\n'),
+      additionalContext: [HEAD, `${LIST_RULES}\n${commandRule(sessionId)}`, list].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);

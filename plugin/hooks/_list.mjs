@@ -13,6 +13,7 @@
 
 import { readFileSync, appendFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { stateDir } from './_willow.mjs';
 
 // 清单的写法，每轮开头随提醒注入（capture.mjs），压缩后原样重交一次（compacted.mjs）。
@@ -73,6 +74,7 @@ export function parseOps(texts) {
       if (HEAD.test(line)) { inBlock = true; continue; }
       if (!inBlock) continue;
       let m;
+      const before = ops.length;
       if ((m = ADD.exec(line))) {
         const b = BASIS.exec(m[2]);
         ops.push({ op: 'add', ...status(m[1]), text: (b ? m[2].slice(0, b.index) : m[2]).trim(), basis: b ? b[1].trim() : '预测' });
@@ -83,6 +85,7 @@ export function parseOps(texts) {
       else if ((m = APPROVE.exec(line))) ops.push({ op: 'approve', id: m[1] });
       else if (/^(\+|L\d+)/.test(line)) ops.push({ op: 'bad', line });
       else inBlock = false;   // 空行、「下一步：」、正文：块到此为止
+      if (ops.length > before) ops[ops.length - 1].raw = line;   // 用命令记过的行，回复末尾再写一遍时认得出
     }
   }
   return ops;
@@ -136,6 +139,42 @@ export function appliedRows(sessionId) {
     }
   } catch { /* 见上 */ }
   return out;
+}
+
+/**
+ * 这一轮用命令记过的行（listctl.mjs 写的快照：via = 'command'，lines 是原样的行）。
+ * 回复末尾的「清单变化：」里再写一遍同一行，extract 跳过它——一行只算一次。
+ */
+export function commandedLines(sessionId, turnId) {
+  const out = new Set();
+  const p = listPath(sessionId);
+  if (!existsSync(p) || turnId === null || turnId === undefined) return out;
+  try {
+    for (const line of readFileSync(p, 'utf8').split('\n')) {
+      if (!line.trim()) continue;
+      let snap;
+      try { snap = JSON.parse(line); } catch { continue; }
+      if (snap?.via !== 'command' || snap.turnId !== turnId) continue;
+      for (const l of Array.isArray(snap.lines) ? snap.lines : []) if (typeof l === 'string') out.add(l);
+    }
+  } catch { /* 读不出就不跳：最坏是同一行记两次，比丢一行好认 */ }
+  return out;
+}
+
+/**
+ * 一轮中途改清单的那条命令（2026-09-24 作者：「任务是要实时更新进度和内容的」）。清单原来只在回复结束时记下，
+ * 一轮做二十分钟，刘海上的清单二十分钟不动。命令一跑就追加一份快照，app 靠 FSEvents 一秒内读到。
+ * 会话号直接写进命令：跑命令的 shell 不知道自己属于哪个会话。
+ */
+export function listCommand(sessionId) {
+  const script = fileURLToPath(new URL('./listctl.mjs', import.meta.url));
+  return `node "${script}" --session ${sessionId}`;
+}
+
+export function commandRule(sessionId) {
+  return '清单一变就立刻记下，不用等到回复末尾（刘海马上就能看到）：跑 '
+    + `${listCommand(sessionId)} "<一行>" ["<一行>" …]` + '，一行的写法和「清单变化：」里的一样；它会回你改了什么和新的清单那一行。'
+    + '用命令记过的，回复末尾不用再写，写了也只算一次。';
 }
 
 export function appendSnapshot(sessionId, snap) {
