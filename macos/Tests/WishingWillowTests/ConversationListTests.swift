@@ -56,7 +56,7 @@ struct ConversationListTests {
                 item("L1", "合并 PR", "做完", evidence: "main 8d68286"),
                 item("L2", "重画分镜", "在做", touched: 2),
                 item("L3", "装新版", "等你", basis: "ops 9cdaa73", approved: true),
-                item("L4", "核对 A4", "等", wait: "IPM 下一条消息"),
+                item("L4", "核对 A4", "等", wait: "另一场会话的下一条消息"),
                 item("L5", "稿件的环", "以后"),
                 item("L6", "旧想法", "撤掉"),
             ], "changes": ["新增 L5"], "problems": ["L9 不存在"]],
@@ -71,7 +71,7 @@ struct ConversationListTests {
         #expect(items[1]["idle"] as? Int == 7, "在做 7 轮没动（当前第 9 轮、上次动在第 2 轮）")
         #expect(items[2]["note"] as? String == "ops 9cdaa73")
         #expect(items[2]["approved"] as? Bool == true)
-        #expect(items[3]["text"] as? String == "核对 A4 · 等 IPM 下一条消息")
+        #expect(items[3]["text"] as? String == "核对 A4 · 等 另一场会话的下一条消息")
         #expect(c["problems"] as? [String] == ["L9 不存在"])
         let labels = try #require(c["labels"] as? [String: String])
         #expect(labels["you"] == "等你" && labels["other"] == "等别的" && labels["later"] == "以后")
