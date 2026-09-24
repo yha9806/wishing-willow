@@ -1,0 +1,4 @@
+{"type": "user", "uuid": "54-old-u1", "isSidechain": false, "timestamp": "2026-09-20T09:00:00.000Z", "message": {"role": "user", "content": "更早的一轮"}}
+{"type": "assistant", "uuid": "54-old-a1", "isSidechain": false, "timestamp": "2026-09-20T09:00:05.000Z", "message": {"role": "assistant", "content": [{"type": "text", "text": "清单变化：\n+ 在做：合成旧事项甲\n\n下一步：无"}]}}
+{"type": "assistant", "uuid": "54-old-a2", "isSidechain": false, "timestamp": "2026-09-20T09:00:06.000Z", "message": {"role": "assistant", "content": [{"type": "tool_use", "id": "o1", "name": "Read", "input": {"file_path": "/tmp/fake/old-copy.json"}}]}}
+{"type": "user", "uuid": "54-old-r1", "isSidechain": false, "timestamp": "2026-09-20T09:00:07.000Z", "toolUseResult": {}, "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "o1", "content": "{}"}]}}

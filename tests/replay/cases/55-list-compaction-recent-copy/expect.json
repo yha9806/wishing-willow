@@ -1,0 +1,43 @@
+{
+  "note": "压缩重写进来的是上一轮刚执行过的那段话，时间只比本轮早 30 秒——时间挡不住，只能靠快照记下的消息编号：一段话里的「清单变化」只执行一次。执行两次，做完的 L1 会以 L2 的名义重新开着。",
+  "session_id": "test-sess-55",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "append": "transcript.turn-a.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json"
+    },
+    {
+      "append": "transcript.turn-b.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "开着 0 项"
+      ],
+      "context_excludes": [
+        "L2",
+        "合成事项丙"
+      ]
+    }
+  ]
+}

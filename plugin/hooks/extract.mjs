@@ -7,9 +7,9 @@
 
 import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
-  turnAssistantTexts,
+  turnAssistantRows,
 } from './_willow.mjs';
-import { parseOps, applyOps, readList, appendSnapshot } from './_list.mjs';
+import { parseOps, applyOps, readList, appendSnapshot, appliedRows } from './_list.mjs';
 
 try {
   const input = parseInput(readStdin());
@@ -33,12 +33,16 @@ try {
   // 长清单：这一轮的「清单变化：」块应用到上一份快照上，追加一份新的。旧清单读不出就不写——
   // 拿空清单盖掉它比读不出更糟；capture 会照实说读不出。清单出错不许拖垮下面声明的记录。
   try {
-    const ops = parseOps(turnAssistantTexts(input, prev));
+    // 已经执行过的消息不再执行：压缩会把它们原样重写进这一轮后面（见 appliedRows、turnSlice）。
+    const done = appliedRows(sessionId);
+    const fresh = turnAssistantRows(input, prev).filter((r) => r.uuid === null || !done.has(r.uuid));
+    const ops = parseOps(fresh.flatMap((r) => r.texts));
     if (ops.length) {
       const cur = readList(sessionId);
       if (!cur?.error) {
         const turn = { turnId: prev?.turnId ?? null, turnIndex: prev?.turnIndex ?? null };
-        appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn) });
+        const rows = fresh.filter((r) => r.uuid !== null && parseOps(r.texts).length).map((r) => r.uuid);
+        appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn), rows });
       }
     }
   } catch { /* 见上 */ }

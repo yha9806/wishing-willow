@@ -394,7 +394,7 @@ export const TOUCHED_KEEP = 100;
 export function touchedPaths(input, prev) {
   const path = input?.transcript_path;
   if (typeof path !== 'string' || !path || typeof prev?.transcriptOffset !== 'number') return [];
-  const text = slice(path, prev.transcriptOffset, 64 << 20);
+  const text = turnSlice(path, prev.transcriptOffset);
   const out = [];
   const add = (s) => {
     if (typeof s !== 'string') return;
@@ -431,7 +431,7 @@ export function mergeTouched(before, now) {
 export function findNext(input, prev) {
   const path = input?.transcript_path;
   if (typeof path === 'string' && path && typeof prev?.transcriptOffset === 'number') {
-    const text = slice(path, prev.transcriptOffset, 64 << 20);
+    const text = turnSlice(path, prev.transcriptOffset);
     if (text) {
       let last = null;
       for (const line of text.split('\n')) {
@@ -448,25 +448,65 @@ export function findNext(input, prev) {
 }
 
 /**
- * 这一轮助手写的全部文字，按顺序。有 capture 记下的偏移就从那里往后读聊天记录；
- * 读不到时退回 last_assistant_message（只有最后一段）。清单变化块可能写在任何一段里。
+ * 这一轮助手写的每一条消息：{uuid, texts}，按顺序。有 capture 记下的偏移就从那里往后读聊天记录；
+ * 读不到时退回 last_assistant_message（只有最后一段，没有 uuid）。清单变化块可能写在任何一段里。
+ * uuid 给清单用：同一条消息里的清单变化只执行一次，哪怕压缩把它又写进了后面的一轮（见 turnSlice）。
  */
-export function turnAssistantTexts(input, prev) {
+export function turnAssistantRows(input, prev) {
   const path = input?.transcript_path;
   if (typeof path === 'string' && path && typeof prev?.transcriptOffset === 'number') {
-    const text = slice(path, prev.transcriptOffset, 64 << 20);
+    const text = turnSlice(path, prev.transcriptOffset);
     if (text) {
       const out = [];
       for (const line of text.split('\n')) {
         if (!line.trim()) continue;
         let row;
         try { row = JSON.parse(line); } catch { continue; }
-        out.push(...assistantTexts(row));
+        const texts = assistantTexts(row);
+        if (texts.length) out.push({ uuid: typeof row.uuid === 'string' ? row.uuid : null, texts });
       }
       if (out.length) return out;
     }
   }
-  return typeof input?.last_assistant_message === 'string' ? [input.last_assistant_message] : [];
+  return typeof input?.last_assistant_message === 'string' ? [{ uuid: null, texts: [input.last_assistant_message] }] : [];
+}
+
+/** 这一轮助手写的全部文字，按顺序。 */
+export function turnAssistantTexts(input, prev) {
+  return turnAssistantRows(input, prev).flatMap((r) => r.texts);
+}
+
+// 压缩会把旧消息原样重写进聊天记录末尾。2026-09-24 实测：一轮中途自动压缩之后，3,836 行旧消息带着原来的 uuid
+// 和时间戳（最新的也比这一轮早三小时）追加在本轮偏移之后；结束钩子把它们当成这一轮，旧消息里 31 项清单操作又执行了一遍。
+// 从偏移往后读到的因此不全是这一轮：时间比这一段第一行早 COPY_SKEW_MS 以上的不算，同一个 uuid 只算第一次。
+// 第一行作锚而不用 capture 的时钟：偏移处的第一行一定是这一轮写的（副本总在它后面），用例里的时间也不必跟着真实时钟走。
+// 挡不住的：只比第一行早不到一分钟的副本（上一轮刚写完就压缩）——那种由清单快照记下的 uuid 挡（_list.mjs appliedRows）。
+export const COPY_SKEW_MS = 60_000;
+
+/** 偏移往后、属于这一轮的那些行，原样拼回文本。 */
+export function turnSlice(path, from) {
+  const text = slice(path, from, 64 << 20);
+  if (!text) return text;
+  const kept = [];
+  const seen = new Set();
+  let anchor = null;
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    let row = null;
+    try { row = JSON.parse(line); } catch { /* 截断的行：读方自己会跳过 */ }
+    const t = typeof row?.timestamp === 'string' ? Date.parse(row.timestamp) : NaN;
+    if (Number.isFinite(t)) {
+      if (anchor === null) anchor = t;
+      else if (t < anchor - COPY_SKEW_MS) continue;
+    }
+    const u = typeof row?.uuid === 'string' ? row.uuid : null;
+    if (u !== null) {
+      if (seen.has(u)) continue;
+      seen.add(u);
+    }
+    kept.push(line);
+  }
+  return kept.join('\n');
 }
 
 /** Read from `from` to EOF, at most `max` bytes. Returns '' on any failure. */
@@ -584,7 +624,7 @@ export function findDeclaration(input, prev) {
   // 首选：capture 在提交那一刻记下的偏移。从那里往后读就是这一轮，
   // 没有边界搜索，也没有「窗口不够大」这种失败模式。
   if (typeof path === 'string' && path && typeof prev?.transcriptOffset === 'number') {
-    const text = slice(path, prev.transcriptOffset, 64 << 20);
+    const text = turnSlice(path, prev.transcriptOffset);
     if (text) {
       const hit = scanRows(text);
       if (hit) return hit;

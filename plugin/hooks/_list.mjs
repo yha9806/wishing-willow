@@ -7,7 +7,8 @@
 // 编号由这里分配。一项只能靠明写的一行离开清单；没提到的原样留着，所以「悄悄消失」在写法上就不会发生。
 // 撤掉没写原因的不撤，做完没附证据的照记，引用了不存在的编号——都记为问题，下一轮说出来。
 //
-// 每轮有变化就往 <状态目录>/<会话>.list.jsonl 追加一行快照（{at, turnId, turnIndex, items, changes, problems}）。
+// 每轮有变化就往 <状态目录>/<会话>.list.jsonl 追加一行快照（{at, turnId, turnIndex, items, changes, problems, rows}）。
+// rows 是这一份的操作出自哪几条消息（uuid）：同一条消息只执行一次，压缩把它重写进后面的一轮也一样（见 appliedRows）。
 // 不用 .json 结尾：app 把状态目录顶层的每个 .json 都当成一个会话。
 
 import { readFileSync, appendFileSync, existsSync } from 'node:fs';
@@ -104,6 +105,26 @@ export function applyOps(prevItems, ops, turn) {
     changes.push(`${o.id} ${it.status === '等' ? `等 ${it.wait}` : it.status}`);
   }
   return { items, changes, problems };
+}
+
+/**
+ * 已经执行过清单变化的消息（所有快照的 rows 并起来）。压缩会把旧消息带着原来的 uuid 重写进聊天记录末尾；
+ * 比这一轮早一分钟以上的由 turnSlice 按时间挡掉，挡不住的那一分钟由这里按 uuid 挡。
+ * 读不出就是空集：那种时候 extract 本来就不写新快照（readList 报错）。
+ */
+export function appliedRows(sessionId) {
+  const out = new Set();
+  const p = listPath(sessionId);
+  if (!existsSync(p)) return out;
+  try {
+    for (const line of readFileSync(p, 'utf8').split('\n')) {
+      if (!line.trim()) continue;
+      let snap;
+      try { snap = JSON.parse(line); } catch { continue; }
+      for (const u of Array.isArray(snap?.rows) ? snap.rows : []) if (typeof u === 'string') out.add(u);
+    }
+  } catch { /* 见上 */ }
+  return out;
 }
 
 export function appendSnapshot(sessionId, snap) {

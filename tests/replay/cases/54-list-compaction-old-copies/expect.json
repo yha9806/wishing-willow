@@ -1,0 +1,45 @@
+{
+  "note": "一轮中途上下文被压缩，Claude Code 把一小时前的旧消息原样重写进聊天记录末尾（同一个 uuid、旧时间戳），本轮自己的一段话也被重写了一次。结束钩子只能算本轮新写的：旧消息里的「清单变化」不许再执行一遍，重写的同一段话只算一次，旧消息里工具碰过的路径也不算本轮的。清单是修复前写的（快照里没有消息编号），所以这里挡住旧消息的只能是时间。（2026-09-24 实测：一次压缩把 31 项旧操作重放进清单。）",
+  "session_id": "test-sess-54",
+  "steps": [
+    {
+      "copy": "legacy.list.jsonl",
+      "to": "test-sess-54.list.jsonl"
+    },
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "append": "transcript.turn-a.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成旧事项甲",
+        "L2 等你：合成新事项乙",
+        "开着 2 项"
+      ],
+      "context_excludes": [
+        "L3 在做",
+        "L3 等你",
+        "开着 3 项",
+        "开着 4 项"
+      ]
+    }
+  ],
+  "state_file": {
+    "touched": [
+      "/tmp/fake/new.json"
+    ]
+  }
+}
