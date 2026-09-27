@@ -663,6 +663,26 @@ enum ActivityExport {
 
     // MARK: 写盘
 
+    /// lintel 正文字段的上限（Validation.Limit.line）。超了整份活动被拒收，这场会话就从刘海上消失（09-27 实见：
+    /// 一场会话贴了三四万字的原话，body 与 popup 的 text 各超一次，rejects.jsonl 里连着几条）。
+    static let lintelLineLimit = 20_000
+
+    /// 写盘前的收尾：任何超过上限的字符串截短，末尾写明原来多长，看得出是截过的。短上限（64）的字段各自在造的地方截。
+    static func fitted(_ v: Any) -> Any {
+        switch v {
+        case let s as String:
+            guard s.count > lintelLineLimit else { return s }
+            let tail = L("…（原文 \(s.count) 字，截到这里）", "… (\(s.count) characters, cut here)")
+            return String(s.prefix(lintelLineLimit - tail.count)) + tail
+        case let d as [String: Any]:
+            return d.mapValues(fitted)
+        case let a as [Any]:
+            return a.map(fitted)
+        default:
+            return v
+        }
+    }
+
     static func encode(_ obj: Any) throws -> Data {
         try JSONSerialization.data(withJSONObject: obj, options: [.sortedKeys, .withoutEscapingSlashes])
     }
@@ -673,7 +693,7 @@ enum ActivityExport {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let id = activity["id"] as! String
         let url = dir.appendingPathComponent("\(id).json")
-        let data = try encode(activity)
+        let data = try encode(fitted(activity))
         if !force, let old = try? Data(contentsOf: url), old == data { return false }
         let tmp = dir.appendingPathComponent(".\(id).json.\(getpid()).tmp")
         try data.write(to: tmp)
