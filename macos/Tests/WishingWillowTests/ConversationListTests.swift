@@ -145,6 +145,11 @@ struct ConversationListTests {
         ])
         let a = try activity(d)
         #expect(listEvents(a).count == 1)
+        // 发出的每种事件都要在自带的登记里，否则 lintel 拒收整份活动（09-27：list 漏登记）。
+        let registered = Set(((ActivityExport.registration["events"] as? [String: Any]) ?? [:]).keys)
+        for e in (a["events"] as? [[String: Any]] ?? []) {
+            #expect(registered.contains(e["type"] as? String ?? ""), "没登记的事件类型：\(e["type"] ?? "nil")")
+        }
         let popup = try #require(a["popup"] as? [[String: Any]])
         #expect(popup.map { $0["label"] as? String } == ["打回", "等你", "撤掉"], "单纯做完一项（L1）不弹")
         #expect((popup[1]["text"] as? String)?.contains("看新 spec") == true)

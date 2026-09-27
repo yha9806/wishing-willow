@@ -25,6 +25,9 @@ enum ActivityExport {
                 "choice": ["attention": true],
                 "withdraw-interrupted": ["attention": false, "dismissExpandedAfter": 1.8],
                 "withdraw-queued": ["attention": false],
+                // 长清单出现新的等你、打回、撤掉、认可时发（spec V3）。09-27 发布前才发现漏登记：本机的登记表是手工加的，
+                // 照 README 用 --with-registry 登记的人，清单一变整份活动就被 lintel 拒收。
+                "list": ["attention": true],
             ],
             "nouns": [
                 "activities": L("会话", "Sessions"),
