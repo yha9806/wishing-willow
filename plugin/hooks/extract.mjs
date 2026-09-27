@@ -9,7 +9,7 @@ import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
   turnAssistantRows,
 } from './_willow.mjs';
-import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines } from './_list.mjs';
+import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine } from './_list.mjs';
 import { sessionLang } from './_lang.mjs';
 
 try {
@@ -39,7 +39,7 @@ try {
     const fresh = turnAssistantRows(input, prev).filter((r) => r.uuid === null || !done.has(r.uuid));
     // 这一轮已经用命令记过的行（listctl.mjs），回复末尾又写了一遍的，不再执行。
     const commanded = commandedLines(sessionId, prev?.turnId ?? null);
-    const ops = parseOps(fresh.flatMap((r) => r.texts)).filter((o) => !(o.raw && commanded.has(o.raw)));
+    const ops = parseOps(fresh.flatMap((r) => r.texts)).filter((o) => !(o.raw && commanded.has(normLine(o.raw))));
     if (ops.length) {
       const cur = readList(sessionId);
       if (!cur?.error) {

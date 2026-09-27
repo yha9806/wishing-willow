@@ -1,0 +1,56 @@
+{
+  "note": "回复末尾复述命令记过的项，不多记一项（09-27 面板 grill 第二轮 N6，实见 L22、L24）：以已有编号开头的新增行记成问题、不新增；只差反引号的同一行跳过。不带说明的转状态清掉旧说明（L15）。真正的新事照常记。",
+  "session_id": "test-sess-65",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1",
+        "新增 L2"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-move.json",
+      "stdout_includes": [
+        "L2 等你"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "开着 3 项",
+        "L3 以后：合成事项丙",
+        "L1 已在清单上，这一行是在复述它，没有新增"
+      ],
+      "context_excludes": [
+        "L4"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "status": "以后",
+      "text": "合成事项甲"
+    },
+    "L2": {
+      "status": "以后",
+      "note": null
+    },
+    "L3": {
+      "text": "合成事项丙"
+    },
+    "L4": null
+  }
+}

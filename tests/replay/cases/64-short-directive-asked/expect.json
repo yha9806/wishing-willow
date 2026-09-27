@@ -1,0 +1,35 @@
+{
+  "note": "短指令也要四行：「推吧」「你直接弄吧」「选 1」是批准、叫做、选择，读偏了代价最大（09-27 面板 grill 第二轮 N5：以前按分量 < 20 一律跳过）。纯确认「好的 继续吧」照旧不问。",
+  "session_id": "test-sess-64",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "请在本轮回复的最开头写四行"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "请在本轮回复的最开头写四行"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "empty"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-d.json",
+      "stdout": "inject",
+      "context_includes": [
+        "请在本轮回复的最开头写四行"
+      ]
+    }
+  ]
+}

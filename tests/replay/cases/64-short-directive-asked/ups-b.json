@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-64",
+  "prompt_id": "p64b",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "你直接弄吧"
+}

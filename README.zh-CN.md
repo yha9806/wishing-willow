@@ -162,7 +162,7 @@ flowchart LR
 
 | | |
 |---|---|
-| `UserPromptSubmit` | 把你的原话**逐字**写进 `~/.claude/willow/<会话>.json`。对有分量的请求，要求模型先写四行，并把清单上开着的项交给它。简短回复、斜杠命令、确认语跳过。 |
+| `UserPromptSubmit` | 把你的原话**逐字**写进 `~/.claude/willow/<会话>.json`。要求模型先写四行，并把清单上开着的项交给它。纯确认语（「好的」「可以」「谢谢」）、斜杠命令和系统信封跳过；「推吧」「先别发」这类短指令不跳过。 |
 | `Stop` | 读刚结束这一轮的聊天记录，在模型消息开头找声明。找到就记下理解和标签，找不到就留 `null`。同时执行回复里的「清单变化」，并清理进程已不在、一周没人碰的状态文件。 |
 | `SessionStart` | Claude Code 压缩上下文之后，把清单和它的规则交回给模型。 |
 | `SessionEnd` | 在状态文件里写下 `endedAt`，别的都不碰。 |
@@ -213,7 +213,7 @@ flowchart LR
 ## 测试
 
 ```bash
-node tests/replay/run.mjs      # 行为，63 个录制用例
+node tests/replay/run.mjs      # 行为，65 个录制用例
 node tests/contract/run.mjs    # 按 hooks.json 原样执行
 node tests/runtime/run.mjs     # 字段名，从本机装的 claude 二进制里读
 node tests/triggers/run.mjs    # 待触发清单的检查命令

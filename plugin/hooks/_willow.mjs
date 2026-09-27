@@ -151,36 +151,6 @@ export function writeState(sessionId, record) {
  */
 const ACK_ONLY = /^(?:[好可行]的?|可以|没问题|继续(?:吧)?|开始(?:吧)?|走吧|对|是的|嗯+|谢谢|多谢|辛苦了?|ok|okay|k|yes|yep|sure|thanks|thx|go|go ahead|continue|proceed|next|done|lgtm|\s|[，。、！？~…,.!?])+$/iu;
 
-/**
- * Rough information weight, not character count.
- *
- * Calibrated on real turns (made-up stand-in): "这一段什么意思 帮我讲讲" is 12 characters but a
- * complete request, while "explain this to me please" is 25 characters and the
- * same request. Counting characters bypasses the Chinese one and catches the
- * English one, which is backwards. A CJK character carries roughly 2.5x what a
- * Latin one does, so weigh accordingly.
- */
-function weigh(s) {
-  let w = 0;
-  for (const ch of s) {
-    const c = ch.codePointAt(0);
-    const cjk =
-      (c >= 0x3400 && c <= 0x9fff) ||   // CJK unified ideographs (+ ext A)
-      (c >= 0xf900 && c <= 0xfaff) ||   // compatibility ideographs
-      (c >= 0x3040 && c <= 0x30ff) ||   // kana
-      (c >= 0xac00 && c <= 0xd7af) ||   // hangul syllables
-      (c >= 0x20000 && c <= 0x3ffff);   // CJK ext B+
-    if (cjk) w += 2.5;
-    else if (/\s/.test(ch)) w += 0.5;
-    else w += 1;
-  }
-  return w;
-}
-
-// Deliberately low, with ACK_ONLY carrying the acknowledgements. The costs are
-// asymmetric: an unnecessary reminder costs a few dozen tokens, a missed one
-// costs a whole turn of work in the wrong direction. Err toward reminding.
-const MIN_WEIGHT = 20;
 
 /**
  * 信封：不是人敲进去的东西。
@@ -238,7 +208,9 @@ export function shouldBypass(prompt) {
   if (t.startsWith('/')) return true;              // slash command
   if (isSystemEnvelope(t)) return true;           // 系统塞进来的，不是人说的
   if (ACK_ONLY.test(t)) return true;               // purely an acknowledgement
-  if (weigh(t) < MIN_WEIGHT) return true;          // too slight to misread meaningfully
+  // 以前还按「分量」跳过短句（< 20，汉字算 2.5）：「推吧」「先别发」「选 1」「你直接弄吧」都被跳过，
+  // 而批准和叫停恰恰多是短句，读偏了代价最大（09-27 面板 grill 第二轮 N5）。现在只有纯确认（上面那条）不问。
+  // 代价不对称：多问一次几十个 token，少问一次可能是一整轮做错方向。
   return false;
 }
 

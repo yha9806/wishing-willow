@@ -162,7 +162,7 @@ flowchart LR
 
 | | |
 |---|---|
-| `UserPromptSubmit` | Writes your prompt **verbatim** to `~/.claude/willow/<session>.json`. For substantial requests, asks the model to open with the four lines, and hands it the open items of the list. Short replies, slash commands and acknowledgements are skipped. |
+| `UserPromptSubmit` | Writes your prompt **verbatim** to `~/.claude/willow/<session>.json`. Asks the model to open with the four lines, and hands it the open items of the list. Pure acknowledgements ("ok", "thanks"), slash commands and system envelopes are skipped; a short instruction such as "push it" or "don't send yet" is not. |
 | `Stop` | Reads the transcript of the turn that just ended and looks for the declaration at the top of the model's messages. Found → records the reading and the tag. Not found → leaves it `null`. Also applies a *list changes* block from the reply, and prunes state files whose process is gone and that nobody has touched for a week. |
 | `SessionStart` | After Claude Code compacts the conversation, hands the list and its rules back to the model. |
 | `SessionEnd` | Writes `endedAt` into the state file and touches nothing else. |
@@ -213,7 +213,7 @@ Hooks that mishandle input get in the way of real work, so every failure path ex
 ## Tests
 
 ```bash
-node tests/replay/run.mjs      # behaviour, 63 recorded cases
+node tests/replay/run.mjs      # behaviour, 65 recorded cases
 node tests/contract/run.mjs    # registration, exactly as hooks.json spells it
 node tests/runtime/run.mjs     # field names, read from the installed claude binary
 node tests/triggers/run.mjs    # the trigger list's check command

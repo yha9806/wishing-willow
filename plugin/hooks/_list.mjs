@@ -125,6 +125,13 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
   for (const o of ops) {
     if (o.op === 'bad') { problems.push(T(`看不懂这一行：${o.line}`, `Can't read this line: ${o.line}`)); continue; }
     if (o.op === 'add') {
+      // 「+ 以后：L23 发布前……」：正文以一个已有的编号开头，是在复述那一项，不是新事（09-27 面板 grill 第二轮 N6：
+      // 命令记过 L21、L23 之后，回复末尾又带着编号写了一遍，各多出一项）。不新增，记成问题，下一轮说出来。
+      const ref = /^(L\d+)(?![\d])/.exec(o.text);
+      if (ref && find(ref[1])) {
+        problems.push(T(`${ref[1]} 已在清单上，这一行是在复述它，没有新增`, `${ref[1]} is already on the list; this line restates it, so nothing was added`));
+        continue;
+      }
       const id = `L${next++}`;
       items.push({ id, text: o.text, status: o.status, wait: o.wait, basis: o.basis,
         sourceTurn: turn.turnId ?? null, since: turn.turnIndex ?? null, touched: turn.turnIndex ?? null });
@@ -138,7 +145,8 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
     if (o.op === 'done' && !o.note) problems.push(T(`${o.id} 做完没附证据`, `${o.id} done without evidence`));
     if (o.op === 'done') { it.status = '做完'; it.wait = null; it.evidence = o.note || null; }
     else if (o.op === 'drop') { it.status = '撤掉'; it.wait = null; it.reason = o.note; }
-    else { it.status = o.status; it.wait = o.wait; if (o.note) it.note = o.note; }
+    // 不带说明的转状态清掉旧说明：旧那句说的是上一个状态，留着面板就显示过期的话（L15，_list.mjs 原 119 行）。
+    else { it.status = o.status; it.wait = o.wait; if (o.note) it.note = o.note; else delete it.note; }
     it.touched = turn.turnIndex ?? it.touched;
     changes.push(`${o.id} ${label(it, lang)}`);
   }
@@ -169,6 +177,9 @@ export function appliedRows(sessionId) {
  * 这一轮用命令记过的行（listctl.mjs 写的快照：via = 'command'，lines 是原样的行）。
  * 回复末尾的「清单变化：」里再写一遍同一行，extract 跳过它——一行只算一次。
  */
+/** 比较「同一行」时不看 Markdown 的修饰（反引号、加粗）和多余空白：回复末尾复述命令记过的行时常带这些。 */
+export const normLine = (l) => String(l).replace(/[`*]/g, '').replace(/\s+/g, ' ').trim();
+
 export function commandedLines(sessionId, turnId) {
   const out = new Set();
   const p = listPath(sessionId);
@@ -179,7 +190,7 @@ export function commandedLines(sessionId, turnId) {
       let snap;
       try { snap = JSON.parse(line); } catch { continue; }
       if (snap?.via !== 'command' || snap.turnId !== turnId) continue;
-      for (const l of Array.isArray(snap.lines) ? snap.lines : []) if (typeof l === 'string') out.add(l);
+      for (const l of Array.isArray(snap.lines) ? snap.lines : []) if (typeof l === 'string') out.add(normLine(l));
     }
   } catch { /* 读不出就不跳：最坏是同一行记两次，比丢一行好认 */ }
   return out;
