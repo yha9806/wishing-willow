@@ -4,5 +4,5 @@
   "cwd": "/tmp/fake/project",
   "permission_mode": "default",
   "hook_event_name": "UserPromptSubmit",
-  "prompt": "场景之一不是唯一，同样也不局限于此场景。我们要大范围地找到这个问题里面的逻辑是什么，然后找到可以复用的解决方案。"
+  "prompt": "这不只是一个场景的事。先找出几个场景背后共同的规律，再给一个能反复用的办法。"
 }

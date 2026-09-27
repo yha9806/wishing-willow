@@ -10,7 +10,7 @@
   "state_file": {
     "decode": "去那个仓库里逐文件审计检查表与 spec，找漂移的具体证据",
     "promptField": "prompt",
-    "prompt_startswith": "场景之一不是唯一"
+    "prompt_startswith": "这不只是一个场景的事"
   },
   "state_keys": [
     "schema",

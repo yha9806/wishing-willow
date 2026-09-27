@@ -2,5 +2,5 @@
   "note": "长请求 → 应注入提醒；模型未写声明 → decode 必须为 null（读方据此推导 undeclared）",
   "capture": { "exit_code": 0, "stdout": "inject" },
   "extract": { "exit_code": 0 },
-  "state_file": { "decode": null, "prompt_startswith": "我们遇到一个用模型配合落地时的问题" }
+  "state_file": { "decode": null, "prompt_startswith": "我们在把一个小工具接进团队流程时卡住了" }
 }
