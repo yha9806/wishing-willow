@@ -66,6 +66,28 @@ final class WillowStore {
     /// 进行中各轮按回车的时刻。插件在 Stop 时会把 updatedAt 改写成结束时刻，起点只能在进行中记下。
     private var liveStart: [String: Date] = [:]
 
+    /// 一轮结束时上下文占了窗口的几成（lintel 数据条的走势线，分镜 53），按会话、旧 → 新。
+    /// 只记这个进程看见之后结束的轮，不回扫聊天记录：几十 MB 的记录整读一遍不值得为一条小折线花。
+    struct ContextPoint: Sendable, Equatable { let turn: String; var used: Double }
+    private(set) var contextByTurn: [String: [ContextPoint]] = [:]
+
+    private func noteContext(session: String, turn: String, _ p: TurnProgress) {
+        guard let u = p.lastUsage, u.context > 0 else { return }
+        let used = Double(u.context) / Double(ContextWindow.size(settingsModel: settingsModel, observed: u.context))
+        var xs = contextByTurn[session] ?? []
+        if let i = xs.firstIndex(where: { $0.turn == turn }) { xs[i].used = used } else { xs.append(ContextPoint(turn: turn, used: used)) }
+        contextByTurn[session] = Array(xs.suffix(399))
+    }
+
+    /// 走势线的点：结束了的各轮，最后补上进行中这一轮的现值（那一轮还没记）。
+    func contextSeries(for s: SessionState) -> [Double] {
+        var out = (contextByTurn[s.id] ?? []).map(\.used)
+        if let p = progress(for: s), let u = p.lastUsage, u.context > 0, (contextByTurn[s.id] ?? []).last?.turn != s.record.turnId {
+            out.append(Double(u.context) / Double(ContextWindow.size(settingsModel: settingsModel, observed: u.context)))
+        }
+        return out
+    }
+
     /// 这一轮的时间线：进行中（或刚撤回）用实时进度；结束了用结束时留下的那份。
     func timeline(for s: SessionState) -> TurnTimeline? {
         if let p = progress(for: s), let k = liveKey(s) {
@@ -256,6 +278,7 @@ final class WillowStore {
             finished[s.id] = FinishedTurn(turn: turn, timeline: TurnTimeline(
                 startedAt: started ?? p.firstWriteAt ?? s.record.updatedAt ?? Date(),
                 endedAt: s.record.turnEndedAt ?? p.lastEventAt ?? Date(), progress: p))
+            noteContext(session: s.id, turn: turn, p)
         }
     }
 
@@ -329,9 +352,11 @@ final class WillowStore {
             let start = liveStart[key] ?? p.firstWriteAt ?? s.record.updatedAt ?? Date()
             finished[s.id] = FinishedTurn(turn: parts[1], timeline: TurnTimeline(
                 startedAt: start, endedAt: s.record.turnEndedAt ?? p.lastEventAt ?? Date(), progress: p))
+            noteContext(session: parts[0], turn: parts[1], p)
             changed = true
         }
         finished = finished.filter { sid, f in sessions.contains { $0.id == sid && $0.record.turnId == f.turn } }
+        contextByTurn = contextByTurn.filter { sid, _ in sessions.contains { $0.id == sid } }
         liveStart = liveStart.filter { next[$0.key] != nil }
         liveProgress = next
         follower.forget(keeping: Set(next.keys))

@@ -2,11 +2,11 @@ import Testing
 import Foundation
 @testable import WishingWillow
 
-/// 折叠态左翼的合一状态图标，照 iPhone Duo 做。几何量自 dev.to「One icon, three signals」封面动图第 22–28 帧；
-/// 圆心按用户 2026-09-13 选的方案随状态换符号（Duo 原版圆心固定是 Wi-Fi 扇形）。
+/// 左翼圆心放哪个状态：导出写进活动的 `status.center` 由它定（圆心按用户 2026-09-13 选的方案随状态换符号）。
+/// 原在 DuoGlyphTests；2026-09-19 界面移除后，画法与几何的两条测试移植到 lintel，这一条测的是导出逻辑，留在这里。
 @MainActor
-@Suite("Duo 状态图标")
-struct DuoGlyphTests {
+@Suite("圆心状态")
+struct StatusCenterTests {
     init() { Lang.current = .zh }
 
     private func state(_ json: String, interruptedAt: Date? = nil) throws -> SessionState {
@@ -45,26 +45,5 @@ struct DuoGlyphTests {
         let interrupted = try state("{\(base),\"prompt\":\"一句够长的请求\",\"reminded\":true,\"decode\":null,\"turnEndedAt\":null}",
                                     interruptedAt: .now)
         #expect(StatusCenter.of(interrupted, progress: nil, withdrawn: false) == .withdrawn)
-    }
-
-    @Test("几何：外圈弧跨 230°、缺口居中在正下方；四个点全在缺口里、从左到右、等距")
-    func geometry() {
-        let half = (360 - DuoGeometry.arcSpan) / 2
-        #expect(DuoGeometry.arcSpan == 230)
-        #expect(DuoGeometry.arcStartDegrees == 90 + half)
-        #expect(DuoGeometry.dotAngles.count == 4)
-        #expect(DuoGeometry.dotAngles.allSatisfy { abs($0) < half })
-        #expect(DuoGeometry.dotAngles == DuoGeometry.dotAngles.sorted(by: >))
-        let gaps = zip(DuoGeometry.dotAngles, DuoGeometry.dotAngles.dropFirst()).map { $0 - $1 }
-        #expect(Set(gaps).count == 1)
-    }
-
-    @Test("底部四点 = 并行在跑的会话数：0 个不亮，1–4 亮对应个数，超过 4 个亮满")
-    func dotsCountSessions() {
-        #expect(DuoGeometry.litDots(running: 0) == 0)
-        #expect(DuoGeometry.litDots(running: 1) == 1)
-        #expect(DuoGeometry.litDots(running: 3) == 3)
-        #expect(DuoGeometry.litDots(running: 4) == 4)
-        #expect(DuoGeometry.litDots(running: 9) == 4)
     }
 }

@@ -51,14 +51,6 @@ struct StoreOrderingTests {
         #expect(store.sessions.first(where: { $0.id == "live" })?.isStale == false)
     }
 
-    @Test("钉住：声明到达时展开的是那个会话，不是排第一的")
-    func pinned() throws {
-        let store = try fixture()
-        store.reload()
-        let seen = SeenStore(ephemeral: true)
-        #expect(FocusRule.focus(store, seen, pinned: "done")?.id == "done")
-    }
-
     @Test("偏移为空（续接会话第一轮）也能实时读到这一轮")
     func nullOffset() throws {
         let d = try makeDir()

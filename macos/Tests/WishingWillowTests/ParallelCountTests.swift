@@ -46,19 +46,16 @@ struct ParallelCountTests {
 
         let store = WillowStore(directory: d)
         store.reload()
-        let par = FocusRule.parallel(store)
-        #expect(par.running == 4)
-        #expect(par.idle == 3)
+        let open = store.sessions.filter(\.isOpen)
+        let openRunning = open.filter(\.isRunning).count
+        let openIdle = open.filter { !$0.isRunning }.count
+        #expect(openRunning == 4)
+        #expect(openIdle == 3)
         let running = Set(store.sessions.filter(\.isRunning).map(\.id))
         #expect(running == ["answering", "longTool", "shortAsk", "sysNote"])
         // 在跑的会话就算超过 10 分钟没写记录，岛上也照样显示
-        #expect(FocusRule.live(store).contains { $0.id == "longTool" })
+        let longTool = try #require(store.sessions.first { $0.id == "longTool" })
+        #expect(longTool.isStale == false)
     }
 
-    @Test("文案说总数：不写「+N」「另有 N 个」")
-    func copy() {
-        #expect(FocusRule.parallelSummary(running: 1, idle: 0) == "只有这一个在跑")
-        #expect(FocusRule.parallelSummary(running: 3, idle: 0) == "共 3 个会话在跑")
-        #expect(FocusRule.parallelSummary(running: 3, idle: 2) == "共 3 个会话在跑 · 2 个空闲")
-    }
 }

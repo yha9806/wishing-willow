@@ -3,26 +3,11 @@ import Foundation
 @testable import WishingWillow
 
 /// 并行会话：Apple HIG 的做法是一个活动贴着摄像头占两翼，第二个活动分离成一个小胶囊。
-/// 两件事要钉住：声明到达时不顶掉正在展开的那个（排队），胶囊显示的是「另一个会话里有话说的那个」。
+/// 要钉住的是：胶囊显示的是「另一个会话里有话说的那个」。（排队那一条随刘海界面移到 lintel `OrderingTests.arrivalQueue`，2026-09-19。）
 @MainActor
 @Suite("并行会话：排队与第二个会话")
 struct MultiSessionTests {
     init() { Lang.current = .zh }
-
-    @Test("排队：没在展示就立刻展示；正在展示同一个不排；别的会话排在后面、不重复；取下一个时跳过已结束的")
-    func arrivalQueue() {
-        var q = ArrivalQueue()
-        #expect(q.offer("a", showing: nil) == true)
-        #expect(q.offer("a", showing: "a") == false)
-        #expect(q.waiting.isEmpty)
-        #expect(q.offer("b", showing: "a") == false)
-        #expect(q.offer("c", showing: "a") == false)
-        #expect(q.offer("b", showing: "a") == false)
-        #expect(q.waiting == ["b", "c"])
-        #expect(q.next(alive: ["c"]) == "c")
-        #expect(q.waiting.isEmpty)
-        #expect(q.next(alive: ["c"]) == nil)
-    }
 
     private let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
@@ -46,27 +31,6 @@ struct MultiSessionTests {
 
     private var ended: String { iso.format(Date().addingTimeInterval(-5)) }
 
-    @Test("第二个会话：排除主会话；插件坏了 > 正在跑 > 没看过的新声明；看过且空闲的不占胶囊")
-    func secondary() throws {
-        let seen = SeenStore(ephemeral: true)
-        let s = try store([
-            ["sessionId": "main", "decode": "读成了", "tag": "主会话", "turnEndedAt": ended],
-            ["sessionId": "fresh", "decode": "读成了", "tag": "新声明", "turnEndedAt": ended],
-            ["sessionId": "run"],
-        ])
-        let main = s.sessions.first { $0.id == "main" }
-        #expect(FocusRule.secondary(s, seen, primary: main)?.id == "run")
-        #expect(FocusRule.secondary(s, seen, primary: s.sessions.first { $0.id == "run" })?.id == "main")
-
-        let quiet = try store([
-            ["sessionId": "main", "decode": "读成了", "tag": "主会话", "turnEndedAt": ended],
-            ["sessionId": "idle", "decode": "读成了", "tag": "看过了", "turnEndedAt": ended, "turnId": "ti"],
-        ])
-        seen.markSeen(sessionId: "idle", turnId: "ti")
-        #expect(FocusRule.secondary(quiet, seen, primary: quiet.sessions.first { $0.id == "main" }) == nil)
-        #expect(FocusRule.secondary(quiet, seen, primary: nil)?.id == "main")
-    }
-
     @Test("胶囊内容：正在跑→计时；没看过的声明→标签（自标 ⚠ 单独记）；问了没写→没写")
     func pill() throws {
         let seen = SeenStore(ephemeral: true)
@@ -83,20 +47,4 @@ struct MultiSessionTests {
         #expect(pill("silent") == .silent)
     }
 
-    @Test("主会话无话可说而另一个在跑：把在跑的提成主会话——不留一个空刘海再挂一个胶囊")
-    func pairPromotes() throws {
-        let seen = SeenStore(ephemeral: true)
-        let s = try store([
-            ["sessionId": "done", "decode": "读成了", "tag": "看过了", "turnEndedAt": ended],
-            ["sessionId": "run"],
-        ])
-        seen.markSeen(sessionId: "done", turnId: "t0")
-        seen.markSeen(sessionId: "run", turnId: "t1")
-        #expect(FocusRule.focus(s, seen)?.id == "done")
-        let p = FocusRule.pair(s, seen, pinned: nil)
-        #expect(p.primary?.id == "run")
-        #expect(p.secondary == nil)
-        // 钉住的会话不被提换：你悬停展开的那个就是展开的那个。
-        #expect(FocusRule.pair(s, seen, pinned: "done").primary?.id == "done")
-    }
 }
