@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-63",
+  "prompt_id": "prompt-63-a",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "你批准的：核对配置\n我读成了：逐个核对三个配置文件\n我补上的：无\n标签：核对配置\n\n正文。\n\n清单变化：\n- \\+ 在做：合成事项甲\n- \\+ 以后：合成事项乙（依据：合成依据）\n- \\+ Later: synthetic item three\n\n下一步：等你看过"
+}

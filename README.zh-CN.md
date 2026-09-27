@@ -213,7 +213,7 @@ flowchart LR
 ## 测试
 
 ```bash
-node tests/replay/run.mjs      # 行为，62 个录制用例
+node tests/replay/run.mjs      # 行为，63 个录制用例
 node tests/contract/run.mjs    # 按 hooks.json 原样执行
 node tests/runtime/run.mjs     # 字段名，从本机装的 claude 二进制里读
 node tests/triggers/run.mjs    # 待触发清单的检查命令

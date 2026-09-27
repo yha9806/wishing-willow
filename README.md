@@ -213,7 +213,7 @@ Hooks that mishandle input get in the way of real work, so every failure path ex
 ## Tests
 
 ```bash
-node tests/replay/run.mjs      # behaviour, 62 recorded cases
+node tests/replay/run.mjs      # behaviour, 63 recorded cases
 node tests/contract/run.mjs    # registration, exactly as hooks.json spells it
 node tests/runtime/run.mjs     # field names, read from the installed claude binary
 node tests/triggers/run.mjs    # the trigger list's check command

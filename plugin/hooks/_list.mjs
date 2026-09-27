@@ -92,7 +92,8 @@ export function parseOps(texts) {
     if (typeof text !== 'string') continue;
     let inBlock = false;
     for (const raw of text.split('\n')) {
-      const line = raw.trim().replace(/^[-*]\s+/, '');
+      // 「\+」是 Markdown 列表里对 + 的转义（2026-09-27 实测：模型写了「- \+ Later: …」，这一行和块里其后的行都静默丢了）。
+      const line = raw.trim().replace(/^[-*]\s+/, '').replace(/^\\(?=\+)/, '');
       if (HEAD.test(line)) { inBlock = true; continue; }
       if (!inBlock) continue;
       let m;

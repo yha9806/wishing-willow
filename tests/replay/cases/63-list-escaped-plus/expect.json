@@ -1,0 +1,28 @@
+{
+  "note": "Markdown 列表里把 + 转义成「\\+」（2026-09-27 实测：英文实测那一轮的「- \\+ Later: …」静默丢了，连带块里其后的行）。转义的加号照样认，中英两种写法都是。",
+  "session_id": "test-sess-63",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "开着 3 项",
+        "L1 在做：合成事项甲",
+        "L2 以后：合成事项乙（依据：合成依据）",
+        "L3 以后：synthetic item three"
+      ],
+      "context_excludes": [
+        "看不懂这一行"
+      ]
+    }
+  ]
+}
