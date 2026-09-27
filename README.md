@@ -130,7 +130,7 @@ If you also use the [writing loop](https://github.com/yha9806/academic-writing-t
 Each item is in one of five states: **doing**, **waiting on you**, **waiting on something else** (CI, a reply, another session), **later**, and **done**. Claude changes the list only by writing lines, either in a *list changes* block at the end of a reply or with a command in the middle of a turn, so the notch updates at once. The hook numbers the items; Claude cannot renumber or silently delete one.
 
 - An item leaves only through a line that says so: *done* needs evidence (a commit, a CI run), *dropped* needs a reason. A line that points at an item that does not exist is recorded as a problem, not ignored.
-- When an item changes state with a note, the list shows the note — what is needed now — and keeps the original wording on hover.
+- Each row shows the item's number and its original wording; when it changes state with a note, the note — what is needed now — sits on a second line, and an item waiting on something else says what.
 - Evidence and predictions are kept apart: an item with a commit or a file behind it says so; one without is Claude's forecast.
 - The number on the notch counts only what was raised or moved in the last three turns. Something that has waited on you for ten turns without moving says so in the list.
 - Every reply ends with one line of the list, so it stays in view in the chat too. After Claude Code compacts the conversation, the hook hands the list and its rules back.
