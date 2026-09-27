@@ -230,3 +230,30 @@ struct ConversationListTests {
         #expect(ActivityExport.freshWaiting([item("L1", "等你", 0)], now: 3) == 0)
     }
 }
+
+@Suite("对话的名字（09-27 grill 4）")
+struct SessionTitleTests {
+    @Test("取最后一条 custom-title；截断的首行、别的行跳过；没有就是 nil")
+    func latest() {
+        let text = [
+            #"le":"被截断的半行"}"#,
+            #"{"type":"custom-title","customTitle":"旧名字","sessionId":"s"}"#,
+            #"{"type":"user","message":{"content":"提到 \"custom-title\" 的一句话"}}"#,
+            #"{"type":"custom-title","customTitle":"新名字","sessionId":"s"}"#,
+            #"{"type":"assistant","message":{}}"#,
+        ].joined(separator: "\n")
+        #expect(SessionTitle.latest(in: text) == "新名字")
+        #expect(SessionTitle.latest(in: #"{"type":"user"}"#) == nil)
+        #expect(SessionTitle.latest(in: #"{"type":"custom-title","customTitle":"  "}"#) == nil)
+    }
+
+    @Test("从文件末尾读：大文件只读尾部也拿得到最后一条")
+    func readsTail() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("willow-title-\(UUID().uuidString).jsonl")
+        let filler = String(repeating: #"{"type":"assistant","message":{"content":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}"# + "\n", count: 20_000)
+        let text = #"{"type":"custom-title","customTitle":"开头的名字"}"# + "\n" + filler + #"{"type":"custom-title","customTitle":"末尾的名字"}"# + "\n"
+        try text.write(to: url, atomically: true, encoding: .utf8)
+        #expect(SessionTitle.read(path: url.path) == "末尾的名字")
+        #expect(SessionTitle.read(path: url.path + ".missing") == nil)
+    }
+}

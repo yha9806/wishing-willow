@@ -74,6 +74,10 @@ enum ActivityExport {
             "events": events(s, store),
             "status": status(s, store),
         ]
+        // 对话的名字（桌面端的标题），不随每轮变；lintel 的名字上限 64 字，超了整份活动被拒收，这边先截短。
+        if let n = SessionTitleCache.shared.title(path: s.record.transcriptPath) {
+            a["name"] = n.count > 64 ? String(n.prefix(63)) + "…" : n
+        }
         // 进行中的一轮计时在走：许愿柳停了（来源进程退出），lintel 要能看出「没有消息」，不能让计时一直走下去。
         if turnLive(s) { a["heartbeatSeconds"] = 60 }
 
