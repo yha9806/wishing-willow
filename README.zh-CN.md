@@ -90,7 +90,7 @@ make autostart    # 现在就起 app，以后每次登录也起
 标签      改重试策略
 ```
 
-对每个有分量的请求，capture 钩子都要求 Claude 在回复开头先写这四行。在第二行开头标 ⚠ 是 Claude 自己的判断，它觉得前两行不一致时才标。
+对每个有分量的请求，capture 钩子都要求 Claude 在回复开头先写这四行。在第二行开头标 ⚠ 是 Claude 自己的判断，它觉得前两行不一致时才标。四行跟着你用的语言走：用英文写，Claude 被要求写的就是 You approved / How I read it / What I filled in / Tag，清单的写法也是英文。一个会话定下语言以后，要等你用另一种语言写一整条请求才换；设 `WILLOW_LANG=en` 或 `zh` 可以固定一种。
 
 - **你批准的**和**我读成了**都是 Claude 写的。刘海不显示「你批准的」，那个位置显示的是你的原话，逐字，由钩子写下，Claude 碰不到。
 - **我补上的**是用了一天之后加的。有一轮我问「有没有相关的 paper 发表过」，Claude 读成只查有没有人发表过相同主张；前两行彼此一致，也没有 ⚠，做完一轮我才补了一句「还要看会刊收不收」。「你批准的」也是 Claude 的措辞，会跟着理解一起偏；Claude 替你补上的默认值，要单独一行才看得见。
@@ -213,7 +213,7 @@ flowchart LR
 ## 测试
 
 ```bash
-node tests/replay/run.mjs      # 行为，58 个录制用例
+node tests/replay/run.mjs      # 行为，62 个录制用例
 node tests/contract/run.mjs    # 按 hooks.json 原样执行
 node tests/runtime/run.mjs     # 字段名，从本机装的 claude 二进制里读
 node tests/triggers/run.mjs    # 待触发清单的检查命令

@@ -1,0 +1,16 @@
+{
+  "note": "第一轮就是斜杠命令、没有会话语言时，按系统语言：系统是英文（LANG=en_US.UTF-8），有清单也用英文说。这里没有清单，所以只看状态里记下的语言。",
+  "session_id": "test-sess-62",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    }
+  ],
+  "env": {
+    "LANG": "en_US.UTF-8"
+  },
+  "state_file": {
+    "lang": "en"
+  }
+}

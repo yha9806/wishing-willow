@@ -90,7 +90,7 @@ What I filled in  widened "change the retry policy" to "rewrite the retry logic"
 Tag               Rewrite retry
 ```
 
-For every substantial request, the capture hook asks Claude to open its reply with these four lines. Putting ⚠ at the start of the second line is Claude's own call, made when it thinks the first two lines disagree.
+For every substantial request, the capture hook asks Claude to open its reply with these four lines. Putting ⚠ at the start of the second line is Claude's own call, made when it thinks the first two lines disagree. The lines follow the language you write in: write in Chinese and Claude is asked for 你批准的 / 我读成了 / 我补上的 / 标签 instead, and the list rules come in Chinese too. A session keeps its language until you send a whole request in the other one; `WILLOW_LANG=en` or `zh` fixes it.
 
 - **You approved** and **How I read it** are both written by Claude. The notch does not show *You approved*. In its place it shows your prompt verbatim, written by the hook where Claude cannot reach it.
 - **What I filled in** was added after a day of use. In one turn I asked whether related work had been published; Claude read it as a search for papers making the same claim, the first two lines agreed, there was no ⚠, and only after the turn did I say I also wanted to know whether the venue would take it. *You approved* is Claude's wording too, so it drifts along with the reading; the defaults Claude fills in need a line of their own to be seen.
@@ -213,7 +213,7 @@ Hooks that mishandle input get in the way of real work, so every failure path ex
 ## Tests
 
 ```bash
-node tests/replay/run.mjs      # behaviour, 58 recorded cases
+node tests/replay/run.mjs      # behaviour, 62 recorded cases
 node tests/contract/run.mjs    # registration, exactly as hooks.json spells it
 node tests/runtime/run.mjs     # field names, read from the installed claude binary
 node tests/triggers/run.mjs    # the trigger list's check command

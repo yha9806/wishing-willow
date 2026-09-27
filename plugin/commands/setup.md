@@ -39,16 +39,20 @@ next assistant message arrives.
 **What you'll see**
 
 ```
-你批准的  <your prompt, verbatim>
-我读成了  <how the model says it read you>
+You approved   <your prompt, verbatim>
+How I read it  <how the model says it read you>
 ```
 
 or, when the model didn't declare anything:
 
 ```
-你批准的  <your prompt, verbatim>
-⚠ 本轮未声明
+You approved   <your prompt, verbatim>
+⚠ no reading this turn
 ```
+
+The labels, and the lines Willow asks the model to write, follow the language you
+write in: a session in Chinese gets 你批准的 / 我读成了. Set `WILLOW_LANG=en` or
+`WILLOW_LANG=zh` to fix one language.
 
 The two rows are never compared for you. Whether they agree is yours to judge —
 that is the entire design.

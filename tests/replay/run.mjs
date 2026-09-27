@@ -40,7 +40,9 @@ function runHook(script, stdinPath, stateDir, extraEnv) {
   }
   const r = spawnSync('node', [entry], {
     input,
-    env: { ...process.env, WILLOW_STATE_DIR: stateDir, ...(extraEnv ?? {}) },
+    // 系统语言钉成中文（插件没从原话里定出语言时的退路），WILLOW_LANG 清空：用例结果不随跑测试那台机器的语言变。
+    // 要测英文系统的用例，在 expect.env 里自己写 LANG。
+    env: { ...process.env, LANG: 'zh_CN.UTF-8', LC_ALL: '', LC_MESSAGES: '', WILLOW_LANG: '', WILLOW_STATE_DIR: stateDir, ...(extraEnv ?? {}) },
     encoding: 'utf8',
     timeout: 10_000,
   });

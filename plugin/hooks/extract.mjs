@@ -10,6 +10,7 @@ import {
   turnAssistantRows,
 } from './_willow.mjs';
 import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines } from './_list.mjs';
+import { sessionLang } from './_lang.mjs';
 
 try {
   const input = parseInput(readStdin());
@@ -44,7 +45,7 @@ try {
       if (!cur?.error) {
         const turn = { turnId: prev?.turnId ?? null, turnIndex: prev?.turnIndex ?? null };
         const rows = fresh.filter((r) => r.uuid !== null && parseOps(r.texts).length).map((r) => r.uuid);
-        appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn), rows });
+        appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn, sessionLang(prev)), rows });
       }
     }
   } catch { /* 见上 */ }

@@ -13,6 +13,7 @@
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { stateDir } from './_willow.mjs';
+import { pick } from './_lang.mjs';
 
 const str = (x) => (typeof x === 'string' && x.trim() ? x.trim() : null);
 
@@ -20,7 +21,7 @@ const str = (x) => (typeof x === 'string' && x.trim() ? x.trim() : null);
  * 这一轮要替别的来源说的话。mode：'full'（普通轮）或 'always'（短确认、系统信封开始的一轮）。
  * 返回 null（没有要说的），或一段文字。读不出的留言文件照实说出来，不能当作没有。
  */
-export function inboxText(sessionId, promptId, mode) {
+export function inboxText(sessionId, promptId, mode, lang = 'zh') {
   const dir = join(stateDir(), 'inbox');
   if (!existsSync(dir)) return null;
   const entries = [];
@@ -39,6 +40,7 @@ export function inboxText(sessionId, promptId, mode) {
   }
   entries.sort((a, b) => b.p - a.p);
   const out = entries.map((x) => x.text);
-  if (bad.length) out.push(`【Wishing-Willow】留言读不出：${bad.join('、')}。这一轮没带上它们要说的话，不能当作没有。`);
+  if (bad.length) out.push(pick(lang, `【Wishing-Willow】留言读不出：${bad.join('、')}。这一轮没带上它们要说的话，不能当作没有。`,
+    `[Wishing-Willow] Messages that can't be read: ${bad.join(', ')}. This turn doesn't carry what they say; don't take that as there being none.`));
   return out.length ? out.join('\n\n') : null;
 }

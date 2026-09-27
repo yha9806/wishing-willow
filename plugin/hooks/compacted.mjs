@@ -9,10 +9,13 @@
 // 输出里认 hookSpecificOutput.additionalContext。
 
 import { readStdin, parseInput, readState, writeState, quietExit } from './_willow.mjs';
-import { listBlock, LIST_RULES, commandRule } from './_list.mjs';
+import { listBlock, listRules, commandRule } from './_list.mjs';
+import { sessionLang, pick } from './_lang.mjs';
 
-const HEAD = '【Wishing-Willow · 压缩后】上下文刚被压缩，这一轮开头交给你的清单和写法可能已经不在了，这里重交一份。'
+const HEAD_ZH = '【Wishing-Willow · 压缩后】上下文刚被压缩，这一轮开头交给你的清单和写法可能已经不在了，这里重交一份。'
   + '这一轮里已经做完或变了的事，照下面的写法在回复末尾补上。';
+const HEAD_EN = '[Wishing-Willow · After compaction] The context was just compacted, so the list and its rules handed to you at the start of this turn '
+  + 'may be gone. Here they are again. Anything already finished or changed this turn, add at the end of your reply as described below.';
 
 try {
   const input = parseInput(readStdin());
@@ -21,18 +24,19 @@ try {
   if (typeof sessionId !== 'string') quietExit();
 
   const prev = readState(sessionId);
+  const lang = sessionLang(prev);
   let list = null;
   try {
-    list = listBlock(sessionId, 'full', prev?.turnIndex ?? null, null).text;
+    list = listBlock(sessionId, 'full', prev?.turnIndex ?? null, null, lang).text;
   } catch {
-    list = '【Wishing-Willow · 清单】清单读不出，不能当作没有开着的事。';
+    list = pick(lang, '【Wishing-Willow · 清单】清单读不出，不能当作没有开着的事。', '[Wishing-Willow · List] The list can\'t be read. Don\'t take that as nothing being open.');
   }
   if (prev) writeState(sessionId, { ...prev, listShown: null, shown: null });
 
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
       hookEventName: 'SessionStart',
-      additionalContext: [HEAD, `${LIST_RULES}\n${commandRule(sessionId)}`, list].filter(Boolean).join('\n\n'),
+      additionalContext: [pick(lang, HEAD_ZH, HEAD_EN), `${listRules(lang)}\n${commandRule(sessionId, lang)}`, list].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);

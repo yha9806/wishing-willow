@@ -7,6 +7,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { sessionLang, pick } from '../hooks/_lang.mjs';
 
 const DIM = '\x1b[2m';
 const WARN = '\x1b[33m';
@@ -61,7 +62,7 @@ function main() {
     : null;
 
   if (!path || !existsSync(path)) {
-    process.stdout.write(`${DIM}🌿 willow · 待首轮${RESET}`);
+    process.stdout.write(`${DIM}🌿 willow · ${pick(sessionLang(null), '待首轮', 'waiting for the first turn')}${RESET}`);
     return;
   }
 
@@ -69,9 +70,11 @@ function main() {
   try {
     state = JSON.parse(readFileSync(path, 'utf8'));
   } catch {
-    process.stdout.write(`${DIM}🌿 willow · 状态不可读${RESET}`);
+    process.stdout.write(`${DIM}🌿 willow · ${pick(sessionLang(null), '状态不可读', 'state unreadable')}${RESET}`);
     return;
   }
+
+  const T = (zh, en) => pick(sessionLang(state), zh, en);
 
   // The status line lives in a narrow strip; leave room for the label and padding.
   const cols = Number(process.env.COLUMNS) || 100;
@@ -81,7 +84,7 @@ function main() {
   // this turn's input — the plugin is broken, not the model quiet. Say so
   // instead of rendering a blank row that looks like an ordinary turn.
   if (typeof state.prompt !== 'string' && state.promptField === null) {
-    process.stdout.write(`${WARN}⚠ willow 读不到本轮输入 · hook 字段名与此版本不符${RESET}`);
+    process.stdout.write(`${WARN}⚠ ${T('willow 读不到本轮输入 · hook 字段名与此版本不符', 'willow can\'t read this turn\'s input · hook field names don\'t match this version')}${RESET}`);
     return;
   }
 
@@ -101,10 +104,10 @@ function main() {
   const flagged = decode !== null && decode.startsWith('⚠');
   const tag = typeof state.tag === 'string' && state.tag.trim() ? state.tag.trim() : null;
 
-  const line1 = `${DIM}你批准的${RESET} ${asked}`;
+  const line1 = `${DIM}${T('你批准的', 'You approved')}${RESET} ${asked}`;
   const line2 = decode
-    ? `${DIM}我读成了${RESET} ${flagged ? WARN : ''}${truncate(decode, room - (tag ? width(tag) + 3 : 0))}${flagged ? RESET : ''}${tag ? ` ${DIM}[${tag}]${RESET}` : ''}`
-    : `${WARN}⚠ 本轮未声明${RESET}`;
+    ? `${DIM}${T('我读成了', 'How I read it')}${RESET} ${flagged ? WARN : ''}${truncate(decode, room - (tag ? width(tag) + 3 : 0))}${flagged ? RESET : ''}${tag ? ` ${DIM}[${tag}]${RESET}` : ''}`
+    : `${WARN}⚠ ${T('本轮未声明', 'no reading this turn')}${RESET}`;
 
   process.stdout.write(`${line1}\n${line2}`);
 }

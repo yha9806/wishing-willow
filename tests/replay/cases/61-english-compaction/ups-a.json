@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-61",
+  "prompt_id": "prompt-61-a",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "Go through the three synthetic config files in the fixture repo and list every field that does not match."
+}

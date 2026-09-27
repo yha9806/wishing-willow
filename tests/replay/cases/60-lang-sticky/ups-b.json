@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-60",
+  "prompt_id": "prompt-60-b",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "下面是报错，帮我看看\nTraceback (most recent call last):\n  File \"fixture.py\", line 3, in <module>\n    raise ValueError(\"synthetic failure raised by the fixture module while loading the three config files\")\nValueError: synthetic failure raised by the fixture module while loading the three config files"
+}

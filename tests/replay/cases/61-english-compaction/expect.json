@@ -1,0 +1,32 @@
+{
+  "note": "英文会话压缩后，重交的说明、清单规则和清单块都是英文。",
+  "session_id": "test-sess-61",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "compacted",
+      "input": "start-compact.json",
+      "stdout": "inject",
+      "context_includes": [
+        "[Wishing-Willow · After compaction]",
+        "List changes:",
+        "[Wishing-Willow · List] 3 open",
+        "L1 doing: synthetic item one",
+        "List: ◧ Doing L1"
+      ],
+      "context_excludes": [
+        "压缩后",
+        "清单变化",
+        "清单："
+      ]
+    }
+  ]
+}

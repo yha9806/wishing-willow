@@ -1,0 +1,57 @@
+{
+  "note": "会话语言有了以后不轻易换：中文会话里贴一大段英文报错（还带一句中文）仍是中文；短确认 ok 沿用中文；只有一整条没有汉字的英文请求才换成英文。",
+  "session_id": "test-sess-60",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "请在本轮回复的最开头写四行"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "请在本轮回复的最开头写四行",
+        "L1 在做：合成事项甲"
+      ],
+      "context_excludes": [
+        "Open this reply"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单：◧ 在做 L1 合成事项甲"
+      ],
+      "context_excludes": [
+        "List:"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-d.json",
+      "stdout": "inject",
+      "context_includes": [
+        "[Wishing-Willow] Open this reply with four lines",
+        "The other item is as listed in turn 1.",
+        "List: ◧ Doing L1"
+      ],
+      "context_excludes": [
+        "请在本轮回复的最开头写四行"
+      ]
+    }
+  ],
+  "state_file": {
+    "lang": "en"
+  }
+}

@@ -28,6 +28,7 @@
     "tag",
     "endedAt",
     "origin",
+    "lang",
     "turnEndedAt",
     "transcriptPath",
     "midTurn",

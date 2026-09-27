@@ -1,0 +1,72 @@
+{
+  "note": "英文原话的会话（2026-09-27 装机演练 F2）：四行提醒、清单规则、清单块、那一行清单、listctl 的回话都用英文；英文写的「List changes:」照样记进清单，磁盘上的状态值仍是中文键。短确认（ok）沿用英文。",
+  "session_id": "test-sess-59",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "[Wishing-Willow] Open this reply with four lines",
+        "You approved:",
+        "How I read it:",
+        "What I filled in:",
+        "Tag:",
+        "List changes:",
+        "\"+ Waiting on you: <item>\"",
+        "Next:",
+        "--session test-sess-59"
+      ],
+      "context_excludes": [
+        "请在本轮回复的最开头写四行",
+        "清单变化",
+        "【Wishing-Willow"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "[Wishing-Willow · List] 3 open (waiting on you 1, doing 1, waiting on other 1, later 0)",
+        "L1 doing: synthetic item one",
+        "L2 waiting on you: synthetic item two (basis: fixture)",
+        "L3 waiting on synthetic CI: synthetic item three",
+        "List: ◧ Doing L1 synthetic item one | □ Waiting on you 1: L2 synthetic item two | ⬚ Waiting on other 1"
+      ],
+      "context_excludes": [
+        "【Wishing-Willow · 清单】",
+        "清单："
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd.json",
+      "exit": 1,
+      "stdout_includes": [
+        "Recorded: L2 done",
+        "Problems: L9 doesn't exist",
+        "List: ◧ Doing L1 synthetic item one | ⬚ Waiting on other 1"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "List: ◧ Doing L1"
+      ],
+      "context_excludes": [
+        "Open this reply with four lines",
+        "清单："
+      ]
+    }
+  ],
+  "state_file": {
+    "lang": "en"
+  }
+}

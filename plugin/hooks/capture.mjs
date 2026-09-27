@@ -12,7 +12,8 @@ import {
 } from './_willow.mjs';
 import { triggerBlock } from './_triggers.mjs';
 import { inboxText } from './_inbox.mjs';
-import { listBlock, LIST_RULES, commandRule } from './_list.mjs';
+import { listBlock, listRules, commandRule } from './_list.mjs';
+import { promptLang, sessionLang, pick } from './_lang.mjs';
 
 /**
  * transcript 在此刻的字节长度 —— 也就是「本轮开始之前」的位置。
@@ -27,7 +28,7 @@ function transcriptLength(path) {
   try { return statSync(path).size; } catch { return null; }
 }
 
-const REMINDER =
+const REMINDER_ZH =
   // 第四行「我补上的」（2026-09-13 用户选定）：把默认值补进去的部分说出来。
   // 装上后一天的记录里，一个查文献的会话把「有没有相关 paper」读成只查撞车——两行彼此一致、没有 ⚠，
   // 做完一轮后用户才补「还要看会刊收不收」。「你批准的」也是模型写的，会跟着一起偏；补上的东西要单独一行才看得见。
@@ -37,9 +38,21 @@ const REMINDER =
   '我补上的：<请求里没说、由你替用户定下的部分——范围、对象、标准、先后、形式，逐项简写；确实没有就写「无」>\n' +
   '标签：<把「我读成了」压成 ≤6 个汉字（英文 ≤14 字符），动词+宾语；' +
   '禁止「继续 / 往下做 / 处理 / 优化 / 完善 / 推进 / 跟进」这类不含信息的词>\n' +
-  '前两行一致时也照写，保持平淡。不要解释这几行本身。\n' +
-  // 长清单的写法：压缩之后 compacted.mjs 要原样重交，所以只有一份（_list.mjs LIST_RULES）。
-  LIST_RULES;
+  '前两行一致时也照写，保持平淡。不要解释这几行本身。\n';
+
+// 英文版（2026-09-27 装机演练 F2）。四个标签与 README 一致；读的一侧（_willow.mjs）认 How I read it 与 Tag。
+const REMINDER_EN =
+  '[Wishing-Willow] Open this reply with four lines, then answer:\n' +
+  'You approved: <one sentence: what the user asked for>\n' +
+  'How I read it: <one sentence: the task you took this request to be; if it differs from the line above, start this line with ⚠>\n' +
+  'What I filled in: <what the request left unsaid and you decided for the user — scope, target, standard, order, form; brief, item by item; ' +
+  'write "nothing" if there truly is nothing>\n' +
+  'Tag: <"How I read it" squeezed to ≤14 characters (Chinese ≤6), verb + object; ' +
+  'no empty verbs such as "continue", "handle", "improve", "polish", "follow up">\n' +
+  'Write them even when the first two lines agree, and keep them plain. Don\'t comment on these lines.\n';
+
+// 长清单的写法：压缩之后 compacted.mjs 要原样重交，所以只有一份（_list.mjs listRules）。
+const reminder = (lang) => pick(lang, REMINDER_ZH, REMINDER_EN) + listRules(lang);
 
 // 标签那一行是给菜单栏／刘海那条常亮层用的：刘海 156pt，11pt 中文大约 14 个字，
 // 一句解码放不下。它必须由模型自己压，**不能由读方截断解码行** —— 实测
@@ -71,6 +84,10 @@ try {
   const origin = prompt === null ? null : (isSystemEnvelope(prompt) ? 'system' : 'user');
 
   const prev = readState(sessionId);
+
+  // 这一轮写给模型的话用哪种语言：人说的、够长的原话才作数；系统信封、斜杠命令、短确认沿用上一轮（_lang.mjs）。
+  const lang = origin === 'user' && !bypass ? promptLang(prompt, prev?.lang ?? null) : sessionLang(prev);
+  const T = (zh, en) => pick(lang, zh, en);
 
   // 上一轮还没结束（Stop 还没写下 turnEndedAt）而且是用户发起的。
   const inFlight = !!prev && prev.turnEndedAt === null && prev.origin === 'user';
@@ -115,7 +132,8 @@ try {
       const r = triggerBlock(input.cwd, prev?.touched ?? [], prev?.shown ?? null);
       if (r) { block = r.text; shown = r.shown; }
     } catch {
-      block = '【Wishing-Willow · 待触发】清单读不出。不能当作没有待触发的条目。（私有清单，勿写进公开仓）';
+      block = T('【Wishing-Willow · 待触发】清单读不出。不能当作没有待触发的条目。（私有清单，勿写进公开仓）',
+        '[Wishing-Willow · Triggers] The trigger list can\'t be read. Don\'t take that as nothing being due. (Private list; keep it out of public repos.)');
     }
   }
 
@@ -123,11 +141,11 @@ try {
   let list = null;
   let listShown = prev?.listShown ?? null;
   try {
-    const r = listBlock(sessionId, bypass ? 'always' : 'full', (prev?.turnIndex ?? -1) + 1, listShown);
+    const r = listBlock(sessionId, bypass ? 'always' : 'full', (prev?.turnIndex ?? -1) + 1, listShown, lang);
     list = r.text;
     listShown = r.shown;
   } catch {
-    list = '【Wishing-Willow · 清单】清单读不出，不能当作没有开着的事。';
+    list = T('【Wishing-Willow · 清单】清单读不出，不能当作没有开着的事。', '[Wishing-Willow · List] The list can\'t be read. Don\'t take that as nothing being open.');
   }
 
   writeState(sessionId, {
@@ -145,6 +163,7 @@ try {
     prompt,
     promptField,
     origin,
+    lang,                  // 写给模型的话用的语言（zh / en）；compacted、listctl、状态栏跟着它
     // 这一条是在上一轮进行中追加进来的（见上）。桌面端聊天记录只存一轮里第一次调用工具之前的文字和最后一段文字
     // （2026-09-13 实测），Claude 之后写的理解多半进不了文件——找不到不等于没写，读方显示「无法核对」。
     midTurn,
@@ -167,9 +186,10 @@ try {
   // 短确认、系统信封开始的一轮只带常驻的那一行——两边用同一条轮次规则。读不出照实说。
   let inbox = null;
   try {
-    inbox = inboxText(sessionId, input.prompt_id, bypass ? 'always' : 'full');
+    inbox = inboxText(sessionId, input.prompt_id, bypass ? 'always' : 'full', lang);
   } catch {
-    inbox = '【Wishing-Willow】留言读不出。这一轮没带上别的来源要说的话，不能当作没有。';
+    inbox = T('【Wishing-Willow】留言读不出。这一轮没带上别的来源要说的话，不能当作没有。',
+      '[Wishing-Willow] Messages from other sources can\'t be read. This turn doesn\'t carry them; don\'t take that as there being none.');
   }
 
   if (bypass && !block && !inbox && !list) quietExit();
@@ -180,8 +200,10 @@ try {
     hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit',
       // 规则文件读不出时，只认得 [SYSTEM NOTIFICATION 这一种信封：照实说出来，不静默。
-      additionalContext: (envelopeRulesProblem && !bypass ? `【Wishing-Willow】${envelopeRulesProblem}：后台通知等可能被当成你的话记下。\n` : '')
-        + [bypass ? null : `${REMINDER}\n${commandRule(sessionId)}`, block, list, inbox].filter(Boolean).join('\n\n'),
+      additionalContext: (envelopeRulesProblem && !bypass
+        ? T(`【Wishing-Willow】${envelopeRulesProblem}：后台通知等可能被当成你的话记下。\n`,
+          `[Wishing-Willow] ${envelopeRulesProblem}: background notifications may be recorded as the user's words.\n`) : '')
+        + [bypass ? null : `${reminder(lang)}\n${commandRule(sessionId, lang)}`, block, list, inbox].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);

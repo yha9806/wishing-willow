@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-59",
+  "prompt_id": "prompt-59-a",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "You approved: check the three synthetic config files.\nHow I read it: Compare the three config files field by field and list the mismatches.\nWhat I filled in: nothing\nTag: Check configs\n\nBody.\n\nList changes:\n+ Doing: synthetic item one\n+ Waiting on you: synthetic item two (basis: fixture)\n+ Waiting on synthetic CI: synthetic item three\n\nNext: wait for you to look"
+}
