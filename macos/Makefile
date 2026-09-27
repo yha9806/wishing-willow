@@ -1,4 +1,4 @@
-# Wishing-Willow 看板 —— 本机编译即用。
+# Wishing-Willow app —— 本机编译即用。它读会话、写成 lintel 活动；刘海由 lintel 画（github.com/vulca-org/lintel）。
 #
 # 不做签名和公证：本地编译出来的二进制不带 quarantine 属性，Gatekeeper 不拦。
 # 下载来的 .app 才需要那一套，而这个项目故意不走下载分发。
@@ -10,7 +10,7 @@ INSTALL  := /Applications/$(APP).app
 
 AGENT    := $(HOME)/Library/LaunchAgents/org.vulca.wishingwillow.plist
 
-.PHONY: all build app run install autostart autostart-off test snapshots clean
+.PHONY: all build app run register install autostart autostart-off test clean
 
 all: app
 
@@ -28,14 +28,18 @@ app: build
 run: app
 	@pkill -x "$(APP)" 2>/dev/null || true
 	@open "$(BUNDLE)"
-	@echo "→ 看菜单栏右侧的叶子图标"
+	@echo "→ 在后台运行；刘海上的会话由 lintel 画（没有 lintel 就什么也看不到）"
+
+# 在 lintel 的登记表里登记许愿柳（事件类型、名字）。装好 lintel 之后跑一次；app 更新后新增了事件类型也要再跑。
+register: app
+	@"$(BUNDLE)/Contents/MacOS/$(APP)" --lintel-register
 
 install: app
 	@rm -rf "$(INSTALL)"
 	@cp -R "$(BUNDLE)" "$(INSTALL)"
 	@echo "→ $(INSTALL)"
 
-# 登录后自动打开灵动岛。指向 build/ 里这一份：本机只留一份，`make app` 换掉的就是开机打开的那个，
+# 登录后自动打开 app。指向 build/ 里这一份：本机只留一份，`make app` 换掉的就是开机打开的那个，
 # 不会出现 /Applications 里的旧版和刚编译的新版各跑各的。只在登录时打开一次（RunAtLoad），不 KeepAlive——
 # 手动退出或录素材时关掉它，不会被立刻拉起来。装上时会立刻打开一次。
 autostart:
@@ -50,13 +54,6 @@ autostart-off:
 	@launchctl bootout gui/$$(id -u) "$(AGENT)" 2>/dev/null || true
 	@rm -f "$(AGENT)"
 	@echo "→ 已取消登录时自动打开"
-
-# 面板的四种状态各渲一张 PNG。不需要屏幕录制权限，也不接管屏幕。
-# 注意：离屏渲染没有活的合成器背景，玻璃层走的是退路（见 WillowGlass.swift），
-# 所以这些图证明布局、文案和状态，不证明玻璃效果。
-snapshots: build
-	@./$(BIN) --snapshot snapshots
-	@echo "→ macos/snapshots/"
 
 test:
 	@swift test 2>&1 | tee /tmp/willow-macos-test.log | grep -E '✔|✘|⊘|真实文件|Test run'

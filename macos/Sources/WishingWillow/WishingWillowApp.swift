@@ -16,12 +16,24 @@ enum Main {
             exit(LintelProducer.exportOnce(home: URL(fileURLWithPath: out, isDirectory: true),
                                            fixtures: args.contains("--fixtures"), withRegistry: args.contains("--with-registry")))
         }
-        // 常驻：照旧读 ~/.claude/willow 与会话记录，有变化就把会话重新导出成活动文件。
-        let app = NSApplication.shared
-        app.setActivationPolicy(.accessory)
         let env = ProcessInfo.processInfo.environment
         let home = env["LINTEL_HOME"].map { URL(fileURLWithPath: $0, isDirectory: true) }
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("lintel", isDirectory: true)
+        // --lintel-register：把许愿柳的登记（事件类型、名字、名词）写进 lintel 的登记表，然后退出。由你运行（`make register`），
+        // 常驻进程自己不写登记。和 `lintel register` 等价，但一次带全所有事件类型——手敲漏一个，那种事件一来整份活动就被拒收。
+        if args.contains("--lintel-register") {
+            do {
+                try LintelProducer.writeRegistry(home: home)
+                print(L("登记了", "Registered") + " \(ActivityExport.producerId) → \(home.appendingPathComponent("registry.json").path)")
+                exit(0)
+            } catch {
+                FileHandle.standardError.write(Data((L("登记失败：", "Registration failed: ") + "\(error)\n").utf8))
+                exit(1)
+            }
+        }
+        // 常驻：照旧读 ~/.claude/willow 与会话记录，有变化就把会话重新导出成活动文件。
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
         let loop = ProducerLoop(store: WillowStore(), home: home, log: args.contains("--producer-log"))
         loop.start()
         withExtendedLifetime(loop) { app.run() }
