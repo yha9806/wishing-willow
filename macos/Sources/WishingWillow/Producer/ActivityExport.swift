@@ -180,7 +180,15 @@ enum ActivityExport {
                 default: return nil   // 撤掉的，和认不出的状态
                 }
                 var text = x.text
-                if state == "other", let w = x.wait, !w.isEmpty { text += " · " + L("等 ", "waiting on ") + w }
+                // 状态变过、写了「现在要你做什么」的，主行放那一句，建项原句挪到 was（悬停可见）。09-27 grill 1：
+                // 面板上 L1 一直问「要不要先合 #79」，而 #79 早合了，要你做的已经是「CI 绿了合 #78」。
+                var was: String? = nil
+                if state != "done", let n = x.note?.trimmingCharacters(in: .whitespacesAndNewlines), !n.isEmpty, n != x.text {
+                    was = x.text
+                    text = n
+                } else if state == "other", let w = x.wait, !w.isEmpty {
+                    text += " · " + L("等 ", "waiting on ") + w
+                }
                 // 预测不带注（09-24 起）：面板上每行都挂一个预测标记是噪音。有证据的写证据，没写的就是还没有证据。
                 let note: String?
                 if state == "done" {
@@ -193,6 +201,7 @@ enum ActivityExport {
                     note = nil
                 }
                 var out: [String: Any] = ["id": x.id, "text": text, "state": state]
+                if let was { out["was"] = was }
                 // lintel 的注上限 64 字，超了整份活动被拒收、会话从刘海上消失（09-24 实见）：这边先截短。
                 if let note { out["note"] = note.count > 64 ? String(note.prefix(63)) + "…" : note }
                 if x.approved { out["approved"] = true }
@@ -343,11 +352,11 @@ enum ActivityExport {
     static func request(_ s: SessionState, _ tl: TurnTimeline?) -> [String: Any] {
         let system = s.record.isSystemMessage
         let start = tl?.startedAt ?? (s.declaration == .inProgress ? s.record.updatedAt : nil)
-        let value = [start.map(IslandExpandedContent.clock), system ? nil : s.prompt.map { L("\($0.count) 字", "\($0.count) chars") }]
+        let value = [start.map(IslandExpandedContent.clock), system ? nil : PromptSource.spoken(s.prompt).map { L("\($0.count) 字", "\($0.count) chars") }]
             .compactMap { $0 }.joined(separator: " · ")
         return section(system ? L("这一轮", "This turn") : L("你的要求", "Your request"), value: value.isEmpty ? nil : value, items: [
             para(system ? L("系统消息（\(PromptSource.describe(s.prompt))），不是你说的", "System message (\(PromptSource.describe(s.prompt))) — not from you")
-                        : (s.prompt.map(IslandExpandedContent.oneLine) ?? "—"),
+                        : (PromptSource.spoken(s.prompt).map(IslandExpandedContent.oneLine) ?? "—"),
                  system ? "inkSecondary" : "inkPrimary"),
         ])
     }
@@ -520,9 +529,10 @@ enum ActivityExport {
 
     static func line(_ label: String, _ text: String, _ tone: String) -> [String: Any] { ["label": label, "text": text, "tone": tone] }
 
-    static func askedLine(system: Bool, prompt: String?) -> [String: Any] {
+    /// midTurn：这一条是在 Claude 干活时追加进来的（09-27 grill 7：原先这个标记落在被接走的上一条上）。
+    static func askedLine(system: Bool, prompt: String?, midTurn: Bool = false) -> [String: Any] {
         system ? line(L("要求", "Asked"), L("系统消息（\(PromptSource.describe(prompt))），不是你说的", "System message (\(PromptSource.describe(prompt))) — not from you"), "inkTertiary")
-               : line(L("要求", "Asked"), prompt ?? "—", "inkPrimary")
+               : line(midTurn ? L("中途追加", "Sent mid-turn") : L("要求", "Asked"), PromptSource.spoken(prompt) ?? "—", "inkPrimary")
     }
 
     /// DetailView.decodeLine：「被打断」「问了没答」「没问」「不知道」是不同的话。
@@ -530,7 +540,10 @@ enum ActivityExport {
         let label = L("理解", "Read")
         if t.declared { return line(label, t.decode ?? "", t.flaggedByModel ? "orange" : "inkPrimary") }
         if t.interrupted == true { return line(label, L("被打断，没来得及写", "Interrupted before one was written"), "inkTertiary") }
-        if t.unverifiable { return line(label, L("中途追加，无法核对", "Sent mid-turn — can’t verify"), "inkTertiary") }
+        // 两种情形分开说（09-27 grill 7）：这一条本身是中途追加的 → 之后写的理解存不进记录，核对不了；
+        // 这一条是被你中途追加的下一条接走的 → 它没有自己的理解，回复是和下一条一起写的。
+        if t.unverifiable, t.midTurn == true { return line(label, L("中途追加，无法核对", "Sent mid-turn — can’t verify"), "inkTertiary") }
+        if t.unverifiable { return line(label, L("途中你又发了一条，这一轮和它合在一起回答", "You sent another message mid-turn; both were answered together"), "inkTertiary") }
         if t.reminded == true { return line(label, L("问了，Claude 没写理解", "Asked, but Claude wrote no reading"), "orange") }
         if t.reminded == false { return line(label, L("这一轮没问（太短或是系统消息）", "Not asked (too short, or a system message)"), "inkTertiary") }
         return line(label, L("不知道这一轮问没问", "Unknown whether this turn was asked"), "inkTertiary")
@@ -576,15 +589,15 @@ enum ActivityExport {
                 "id": t.id, "at": iso(t.at), "tag": opt(t.tag),
                 "badge": t.interrupted == true ? L("被打断", "Interrupted") : NSNull(),
                 "duration": t.duration.flatMap { $0 >= 1 ? DetailView.duration($0) : nil } ?? NSNull(),
-                "lines": [askedLine(system: t.isSystemMessage, prompt: t.prompt), readLine(t)],
-                "expandable": (t.prompt?.count ?? 0) > 36 || (t.decode?.count ?? 0) > 36,
+                "lines": [askedLine(system: t.isSystemMessage, prompt: t.prompt, midTurn: t.midTurn == true), readLine(t)],
+                "expandable": (PromptSource.spoken(t.prompt)?.count ?? 0) > 36 || (t.decode?.count ?? 0) > 36,
             ]
         }
         if turnLive(s), let turn = s.record.turnId, !entries.contains(where: { $0.turnId == turn }) {
             var live: [String: Any] = [
                 "at": iso(s.record.updatedAt), "tag": opt(p?.tag ?? s.tag), "badge": L("进行中", "Live"), "clockSince": iso(s.record.updatedAt),
                 "lines": [
-                    askedLine(system: s.record.isSystemMessage, prompt: s.prompt),
+                    askedLine(system: s.record.isSystemMessage, prompt: s.prompt, midTurn: s.record.midTurn == true),
                     p?.decode.map { line(L("理解", "Read"), $0, $0.hasPrefix("⚠") ? "orange" : "inkPrimary") }
                         ?? line(L("理解", "Read"), IslandExpandedContent.phase(p), "inkTertiary"),
                 ],

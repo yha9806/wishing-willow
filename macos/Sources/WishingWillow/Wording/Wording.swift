@@ -154,7 +154,7 @@ enum IslandExpandedContent {
             return [CompactLine(label: c.kind == .plan ? L("批准", "Approve") : L("等你", "Your turn"), text: oneLine(ask), tone: .accent, lines: 2),
                     CompactLine(label: "", text: L("回 Claude Code 里作答", "Answer it in Claude Code"), tone: .quiet, lines: 1)]
         }
-        let asked = s.record.isSystemMessage ? L("系统消息，不是你说的", "System message — not from you") : (s.prompt.map(oneLine) ?? "—")
+        let asked = s.record.isSystemMessage ? L("系统消息，不是你说的", "System message — not from you") : (PromptSource.spoken(s.prompt).map(oneLine) ?? "—")
         var read: String? = p?.decode
         if case .declared(let d) = s.declaration { read = d }
         let line2: CompactLine

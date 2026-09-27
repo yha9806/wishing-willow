@@ -27,10 +27,11 @@ struct ConversationListTests {
     }
 
     private func item(_ id: String, _ text: String, _ status: String, wait: String? = nil, basis: String = "预测",
-                      touched: Int = 8, evidence: String? = nil, approved: Bool = false) -> [String: Any] {
+                      touched: Int = 8, evidence: String? = nil, approved: Bool = false, note: String? = nil) -> [String: Any] {
         var x: [String: Any] = ["id": id, "text": text, "status": status, "wait": wait ?? NSNull(), "basis": basis,
                                 "sourceTurn": "t1", "since": 1, "touched": touched]
         if let evidence { x["evidence"] = evidence }
+        if let note { x["note"] = note }
         if approved { x["approvedTurn"] = "t5" }
         return x
     }
@@ -75,6 +76,30 @@ struct ConversationListTests {
         #expect(c["problems"] as? [String] == ["L9 不存在"])
         let labels = try #require(c["labels"] as? [String: String])
         #expect(labels["you"] == "等你" && labels["other"] == "等别的" && labels["later"] == "以后")
+    }
+
+    @Test("状态变过、写了现在要做什么的：主行是那一句，建项原句进 was；做完的不看 note；没写 note 的照旧（09-27 grill 1）")
+    func noteLeads() throws {
+        let d = try dir()
+        try writeList(d, [["turnIndex": 8, "items": [
+            item("L1", "合不合进 main，建议先合甲", "等你", note: "甲已合；乙 CI 绿了由你合"),
+            item("L2", "给分支开 PR", "等", wait: "CI", note: "PR 已开，CI 排队"),
+            item("L3", "核对 A4", "等", wait: "另一场会话"),
+            item("L4", "合并", "做完", evidence: "abc", note: "旧的一句"),
+            item("L5", "装新版", "等你"),
+        ], "changes": [], "problems": []]])
+        let c = try #require(chain(d))
+        let items = try #require(c["items"] as? [[String: Any]])
+        #expect(items[0]["text"] as? String == "甲已合；乙 CI 绿了由你合")
+        #expect(items[0]["was"] as? String == "合不合进 main，建议先合甲")
+        #expect(items[1]["text"] as? String == "PR 已开，CI 排队")
+        #expect(items[1]["was"] as? String == "给分支开 PR")
+        #expect(items[2]["text"] as? String == "核对 A4 · 等 另一场会话")
+        #expect(items[2]["was"] == nil)
+        #expect(items[3]["text"] as? String == "合并")
+        #expect(items[3]["was"] == nil)
+        #expect(items[4]["text"] as? String == "装新版")
+        #expect(items[4]["was"] == nil)
     }
 
     @Test("有等你的事：「等你 N」常驻——看过就缩回的标签看过后换成它，没有标签就直接是它")

@@ -117,6 +117,42 @@ enum PromptSource {
         return p.hasPrefix("<task-notification") || p.hasPrefix("[SYSTEM NOTIFICATION")
     }
 
+    /// 显示给你看的原话：去掉夹在里面的信封块（system-reminder 等），只留你说的。记录里仍是逐字原文，只有显示走这里。
+    /// 09-27 grill 6：轮次页把「<system-reminder>…Worktree path…</system-reminder> 继续……」整段当成了「要求」。
+    /// 哪些标签算信封，读插件自己的 envelopes.json（钩子判来历用的同一份，规则只有一份）；读不到就原样显示，不猜。
+    static func spoken(_ prompt: String?) -> String? { spoken(prompt, block: installedBlock) }
+
+    static func spoken(_ prompt: String?, block: NSRegularExpression?) -> String? {
+        guard let prompt, let block else { return prompt }
+        var rest = prompt, prev = ""
+        repeat {
+            prev = rest
+            rest = block.stringByReplacingMatches(in: rest, range: NSRange(rest.startIndex..., in: rest), withTemplate: "")
+        } while rest != prev
+        let t = rest.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? prompt : t
+    }
+
+    static let envelopeTags: [String]? = {
+        let root = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/plugins/cache/wishing-willow/willow")
+        let versions = (try? FileManager.default.contentsOfDirectory(atPath: root.path))?.sorted() ?? []
+        for v in versions.reversed() {
+            let url = root.appendingPathComponent(v).appendingPathComponent("hooks/envelopes.json")
+            if let d = try? Data(contentsOf: url),
+               let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+               let tags = o["tags"] as? [String], !tags.isEmpty { return tags }
+        }
+        return nil
+    }()
+
+    static func envelopeBlock(tags: [String]) -> NSRegularExpression? {
+        let alt = tags.map(NSRegularExpression.escapedPattern(for:)).joined(separator: "|")
+        return try? NSRegularExpression(pattern: "<(\(alt))\\b[^>]*>[\\s\\S]*?</\\1>", options: [.caseInsensitive])
+    }
+
+    nonisolated(unsafe) private static let installedBlock: NSRegularExpression? = envelopeTags.flatMap { envelopeBlock(tags: $0) }
+
     static func describe(_ prompt: String?) -> String {
         let p = prompt?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return p.hasPrefix("<task-notification") ? L("后台任务通知", "background task notice") : L("系统消息", "system message")

@@ -72,6 +72,35 @@ struct MidTurnAndDodgeTests {
         #expect(SessionChart.outcome(silent) == .silent)
     }
 
+    @Test("轮次卡：被中途追加接走的一轮不标「中途追加」；追加进来的那条要求标「中途追加」（09-27 grill 7）")
+    func midTurnCardLabels() throws {
+        func entry(_ json: String) throws -> TurnLogEntry {
+            try JSONDecoder().decode(TurnLogEntry.self, from: Data(json.utf8))
+        }
+        let superseded = try entry(#"{"prompt":"先合甲再合乙","reminded":true,"decode":null,"interrupted":false,"supersededAt":"2026-09-27T10:38:00.000Z","midTurn":false}"#)
+        let midTurn = try entry(#"{"prompt":"还有这件也要做","reminded":true,"decode":null,"interrupted":false,"midTurn":true}"#)
+        let midDeclared = try entry(#"{"prompt":"还有这件也要做","reminded":true,"decode":"合 PR 并排三件","interrupted":false,"midTurn":true}"#)
+        let sup = ActivityExport.readLine(superseded)["text"] as? String ?? ""
+        #expect(!sup.contains("中途追加"), "被接走的一轮本身不是中途追加的：\(sup)")
+        #expect(sup.contains("合在一起"))
+        #expect(ActivityExport.readLine(midTurn)["text"] as? String == "中途追加，无法核对")
+        #expect(ActivityExport.askedLine(system: false, prompt: midDeclared.prompt, midTurn: true)["label"] as? String == "中途追加")
+        #expect(ActivityExport.askedLine(system: false, prompt: superseded.prompt, midTurn: false)["label"] as? String == "要求")
+    }
+
+    @Test("显示的要求去掉信封块，只留人说的；整条都是信封就原样；没有规则就原样（09-27 grill 6）")
+    func spokenStripsEnvelopes() throws {
+        let block = PromptSource.envelopeBlock(tags: ["system-reminder", "task-notification"])
+        let raw = "<system-reminder>\nYou are operating in a git worktree.\nWorktree path: /x/y\n</system-reminder>\n\n继续三条线的工作。\n\n看一下现状"
+        #expect(PromptSource.spoken(raw, block: block) == "继续三条线的工作。\n\n看一下现状")
+        let mid = "先做这个<system-reminder>a</system-reminder>再做那个"
+        #expect(PromptSource.spoken(mid, block: block) == "先做这个再做那个")
+        let only = "<task-notification>done</task-notification>"
+        #expect(PromptSource.spoken(only, block: block) == only)
+        #expect(PromptSource.spoken(raw, block: nil) == raw)
+        #expect(PromptSource.spoken("<b>加粗</b>不是信封", block: block) == "<b>加粗</b>不是信封")
+    }
+
     @Test("排队消息被送达（先有 queued_command 附件）不算撤回；只有 remove 的才是撤回")
     func queuedDelivery() throws {
         var p = TurnProgress()

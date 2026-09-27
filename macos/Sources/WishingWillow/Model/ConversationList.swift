@@ -10,6 +10,8 @@ struct ListSnapshot {
         var wait: String?
         var basis: String?
         var evidence: String?
+        /// 最近一次转状态时写的那句（「L1 → 等你：…」冒号后面）。状态变过以后，它才是「现在要你做什么」。
+        var note: String? = nil
         var approved: Bool
         var touched: Int?
     }
@@ -52,7 +54,8 @@ enum ConversationList {
         let items = rows.compactMap { r -> ListSnapshot.Item? in
             guard let id = r["id"] as? String, let text = r["text"] as? String, let status = r["status"] as? String else { return nil }
             return .init(id: id, text: text, status: status, wait: r["wait"] as? String, basis: r["basis"] as? String,
-                         evidence: r["evidence"] as? String, approved: r["approvedTurn"] is String, touched: r["touched"] as? Int)
+                         evidence: r["evidence"] as? String, note: r["note"] as? String, approved: r["approvedTurn"] is String,
+                         touched: r["touched"] as? Int)
         }
         return .init(turnIndex: obj["turnIndex"] as? Int, turnId: obj["turnId"] as? String, at: obj["at"] as? String, items: items,
                      changes: obj["changes"] as? [String] ?? [], problems: obj["problems"] as? [String] ?? [])
