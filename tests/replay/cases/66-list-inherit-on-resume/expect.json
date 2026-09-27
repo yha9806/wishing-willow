@@ -1,0 +1,55 @@
+{
+  "note": "续接成新会话号后，新会话第一轮从聊天记录认出前身（抄来的消息 uuid 不变），继承前身清单最后一份快照；编号接着用，「几轮没动」按前身的轮次平移过来；只在第一轮说一次继承自哪里（L35，09-27 一场真实续接的会话实见）。",
+  "session_id": "test-sess-66",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "old-sess-66.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-66.list.jsonl"
+    },
+    {
+      "append": "new.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单继承自会话 old-sess-66",
+        "开着 2 项",
+        "L2 等你：合成事项乙（30 轮没动）",
+        "L3 以后：合成事项丙"
+      ],
+      "context_excludes": [
+        "合成事项甲"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L2 等你：合成事项乙"
+      ],
+      "context_excludes": [
+        "继承自"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "status": "做完"
+    },
+    "L2": {
+      "status": "等你",
+      "text": "合成事项乙"
+    },
+    "L3": {
+      "status": "以后"
+    },
+    "L4": null
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "note": "这场对话已经有自己的清单时，即使认得出前身也不继承、不覆盖（L35）。",
+  "session_id": "test-sess-68",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "old-sess-68.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-68.list.jsonl"
+    },
+    {
+      "copy": "own.list.jsonl",
+      "to": "test-sess-68.list.jsonl"
+    },
+    {
+      "append": "new.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：自己的合成事项"
+      ],
+      "context_excludes": [
+        "合成事项乙",
+        "继承自"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "text": "自己的合成事项"
+    },
+    "L2": null
+  }
+}

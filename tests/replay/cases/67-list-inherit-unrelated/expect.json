@@ -1,0 +1,27 @@
+{
+  "note": "同一项目目录里另一场有清单的对话，聊天记录里没有这场的消息：不是前身，不继承（L35）。",
+  "session_id": "test-sess-67",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "old-sess-67.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-67.list.jsonl"
+    },
+    {
+      "append": "new.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "合成事项乙",
+        "继承自",
+        "【Wishing-Willow · 清单】"
+      ]
+    }
+  ]
+}

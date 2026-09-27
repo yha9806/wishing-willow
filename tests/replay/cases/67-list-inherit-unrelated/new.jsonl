@@ -1,0 +1,2 @@
+{"type":"custom-title","customTitle":"合成会话","sessionId":"test-sess-67"}
+{"parentUuid":null,"type":"user","uuid":"bbbb0001-0000-4000-8000-000000000001","sessionId":"test-sess-67","timestamp":"2026-09-02T09:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"别处的合成请求"}]}}

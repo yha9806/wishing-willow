@@ -13,6 +13,7 @@ import {
 import { triggerBlock } from './_triggers.mjs';
 import { inboxText } from './_inbox.mjs';
 import { listBlock, listRules, commandRule } from './_list.mjs';
+import { inheritList } from './_inherit.mjs';
 import { promptLang, sessionLang, pick } from './_lang.mjs';
 
 /**
@@ -140,10 +141,21 @@ try {
   // 长清单：普通轮放开着的项（没变就只放要紧的，见 listBlock）；短确认、系统信封开始的一轮只放「等你」的。
   let list = null;
   let listShown = prev?.listShown ?? null;
+  // 续接成新会话号的对话，清单还在前身名下：每个会话查一次，没有自己的清单才继承（_inherit.mjs）。
+  let listInherit = prev?.listInherit ?? null;
+  if (!listInherit) {
+    try { listInherit = inheritList(sessionId, input.transcript_path, (prev?.turnIndex ?? -1) + 1); } catch (e) {
+      listInherit = { from: null, at: now, why: 'error', error: String(e?.message ?? e).slice(0, 200) };
+    }
+  }
   try {
     const r = listBlock(sessionId, bypass ? 'always' : 'full', (prev?.turnIndex ?? -1) + 1, listShown, lang);
     list = r.text;
     listShown = r.shown;
+    if (list && listInherit.from && !prev?.listInherit) {
+      list = T(`【Wishing-Willow · 清单】这场对话是续接的：清单继承自会话 ${listInherit.from}，编号接着用。\n`,
+        `[Wishing-Willow · List] This conversation was resumed: the list is carried over from session ${listInherit.from}, and the IDs continue.\n`) + list;
+    }
   } catch {
     list = T('【Wishing-Willow · 清单】清单读不出，不能当作没有开着的事。', '[Wishing-Willow · List] The list can\'t be read. Don\'t take that as nothing being open.');
   }
@@ -175,6 +187,7 @@ try {
     touched: prev?.touched ?? null,   // 本会话用工具动过的路径，extract 每轮并进来；跨轮带着走
     shown,                 // 这一轮说了哪些待触发条目、各在什么阶段；下一轮拿来说「本轮变化」
     listShown,             // 长清单上次完整列出是哪份快照、第几轮；没变就不重列（_list.mjs）
+    listInherit,           // 续接时从前身继承清单：查过一次就记下，{from, at, why}（_inherit.mjs）
     // 这一轮还没结束。extract 在 Stop 时写下时间戳。没有这一位，读方分不清
     // 「模型还在回答」和「答完了没写声明」—— 2026-09-12 用户实测：每一轮一开头
     // 灵动岛都冒一次橙色的「问了，模型没写声明」，而模型那时一个字都还没回。
