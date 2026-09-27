@@ -186,16 +186,12 @@ enum ActivityExport {
                 case "以后": state = "later"
                 default: return nil   // 撤掉的，和认不出的状态
                 }
-                var text = x.text
-                // 状态变过、写了「现在要你做什么」的，主行放那一句，建项原句挪到 was（悬停可见）。09-27 grill 1：
-                // 面板上 L1 一直问「要不要先合 #79」，而 #79 早合了，要你做的已经是「CI 绿了合 #78」。
-                var was: String? = nil
-                if state != "done", let n = x.note?.trimmingCharacters(in: .whitespacesAndNewlines), !n.isEmpty, n != x.text {
-                    was = x.text
-                    text = n
-                } else if state == "other", let w = x.wait, !w.isEmpty {
-                    text += " · " + L("等 ", "waiting on ") + w
-                }
+                // 标题留在 text；状态变过、写了「现在要你做什么」的，那一句进 now，lintel 画在第二行；「等别的」等什么进 wait。
+                // 09-27 grill 1 曾把那一句顶进 text、标题挪进 was：第二轮 N3 实拍，说明句多是增量写法，离开标题读不懂；
+                // N2：顶掉以后「· 等 X」也跟着没了。
+                let current: String? = state == "done" ? nil
+                    : x.note.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty || $0 == x.text ? nil : $0 }
+                let wait: String? = state == "other" ? x.wait.flatMap { $0.isEmpty ? nil : $0 } : nil
                 // 预测不带注（09-24 起）：面板上每行都挂一个预测标记是噪音。有证据的写证据，没写的就是还没有证据。
                 let note: String?
                 if state == "done" {
@@ -207,8 +203,10 @@ enum ActivityExport {
                 } else {
                     note = nil
                 }
-                var out: [String: Any] = ["id": x.id, "text": text, "state": state]
-                if let was { out["was"] = was }
+                var out: [String: Any] = ["id": x.id, "text": x.text, "state": state]
+                if let current { out["now"] = current }
+                // lintel 的 wait 上限 64 字，超了整份活动被拒收：先截短。
+                if let wait { out["wait"] = wait.count > 64 ? String(wait.prefix(63)) + "…" : wait }
                 // lintel 的注上限 64 字，超了整份活动被拒收、会话从刘海上消失（09-24 实见）：这边先截短。
                 if let note { out["note"] = note.count > 64 ? String(note.prefix(63)) + "…" : note }
                 if x.approved { out["approved"] = true }
