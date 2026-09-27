@@ -180,7 +180,7 @@ struct MidTurnAndDodgeTests {
         let cont = try #require(store.sessions.first { $0.id == "cont" })
         #expect(cont.declaration == .inProgress)
         #expect(cont.isRunning)
-        #expect(IslandExpandedContent.oneLine("推送到 GitHub 吧 接下来的问题：\n\n1. 动画") == "推送到 GitHub 吧 接下来的问题： 1. 动画")
+        #expect(IslandExpandedContent.oneLine("先把这段存好 然后看两件事：\n\n1. 标题") == "先把这段存好 然后看两件事： 1. 标题")
         // 没问理解的一轮：进度条整条是中性的「这一轮」，不画紫色「写出理解前」
         let t0 = Date(timeIntervalSince1970: 1_789_300_000)
         let quiet = TurnTimeline(startedAt: t0, endedAt: t0.addingTimeInterval(6), progress: TurnProgress())

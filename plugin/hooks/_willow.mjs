@@ -145,16 +145,16 @@ export function writeState(sessionId, record) {
 /**
  * Requests that should not be interrupted with a reminder.
  *
- * Calibrated against real turns from the conversation this plugin came out of:
- * "好的 继续吧 没问题" (9 chars) must pass through untouched, while
- * "可以继续吧 问题就是我需要你找到最优解 基于..." (40 chars) must not.
+ * Calibrated against real turns from the conversation this plugin came out of (the examples below are made-up
+ * stand-ins of the same shape): "好的 继续吧 没问题" (9 chars) must pass through untouched, while
+ * "可以继续 先把上一版的三个参数对一遍 再看要不要换方法..." (30 chars) must not.
  */
 const ACK_ONLY = /^(?:[好可行]的?|可以|没问题|继续(?:吧)?|开始(?:吧)?|走吧|对|是的|嗯+|谢谢|多谢|辛苦了?|ok|okay|k|yes|yep|sure|thanks|thx|go|go ahead|continue|proceed|next|done|lgtm|\s|[，。、！？~…,.!?])+$/iu;
 
 /**
  * Rough information weight, not character count.
  *
- * Calibrated on real turns: "这是什么意思 给我解释一下" is 13 characters but a
+ * Calibrated on real turns (made-up stand-in): "这一段什么意思 帮我讲讲" is 12 characters but a
  * complete request, while "explain this to me please" is 25 characters and the
  * same request. Counting characters bypasses the Chinese one and catches the
  * English one, which is backwards. A CJK character carries roughly 2.5x what a

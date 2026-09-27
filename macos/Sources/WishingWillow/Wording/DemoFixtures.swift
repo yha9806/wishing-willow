@@ -18,7 +18,7 @@ enum DemoFixtures {
     private static var files: [(String, String)] {
         let drifting = record(
             id: "sess-a", cwd: "/Users/me/dev/atlas", turn: 4,
-            prompt: "场景之一不是唯一，同样也不局限于此场景。我们要大范围地找到这个问题里面的逻辑是什么，然后找到可以复用的解决方案。",
+            prompt: "这不只是一个场景的事。先找出几个场景背后共同的规律，再给一个能反复用的办法。",
             promptField: .some("prompt"),
             decode: "⚠ 去那个仓库里逐文件审计检查表与 spec，找漂移的具体证据",
             tag: "审计仓库")
