@@ -56,7 +56,7 @@ struct StoreOrderingTests {
         let d = try makeDir()
         let tr = d.appendingPathComponent("resumed.transcript.jsonl")
         let now = Date()
-        let p = "你直接使用配音不行吗？"
+        let p = "换成合成配音可以吗？"
         let rows = [
             "{\"type\":\"user\",\"timestamp\":\"2026-09-11T18:00:00.000Z\",\"message\":{\"content\":\"前一天的请求\"}}",
             "{\"type\":\"assistant\",\"timestamp\":\"2026-09-11T18:00:05.000Z\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"我读成了：前一天的旧声明\"}]}}",

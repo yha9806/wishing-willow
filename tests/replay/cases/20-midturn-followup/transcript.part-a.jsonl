@@ -2,4 +2,4 @@
 {"type": "assistant", "isSidechain": false, "timestamp": "2026-09-13T10:50:05.000Z", "message": {"role": "assistant", "content": [{"type": "text", "text": "你批准的：修面板英文截断并重录素材。\n我读成了：先修面板里被截断的英文标签，再重录中英两套面板素材。\n标签：修截断重录"}]}}
 {"type": "assistant", "isSidechain": false, "timestamp": "2026-09-13T10:50:06.000Z", "message": {"role": "assistant", "content": [{"type": "tool_use", "id": "toolu_20a", "name": "Bash", "input": {"command": "swift build", "description": "Build"}}]}}
 {"type": "user", "isSidechain": false, "timestamp": "2026-09-13T10:50:40.000Z", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "toolu_20a", "content": "Build complete"}]}}
-{"type": "attachment", "isSidechain": false, "timestamp": "2026-09-13T10:50:20.000Z", "attachment": {"type": "queued_command", "prompt": "提交吧。然后 README 先改用从收起态直接点开这条路径录面板素材。", "commandMode": "prompt"}}
+{"type": "attachment", "isSidechain": false, "timestamp": "2026-09-13T10:50:20.000Z", "attachment": {"type": "queued_command", "prompt": "提交吧。然后把 README 的面板截图换成从收起态点开的那一版。", "commandMode": "prompt"}}

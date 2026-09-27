@@ -170,7 +170,7 @@ enum ActivityExport {
                     "error": L("清单读不出（\(why)），不能当作没有开着的事", "The list cannot be read (\(why)); that is not the same as nothing open")]
         case .snapshot(let snap):
             let now = s.record.turnIndex
-            // 这一轮还在跑：最近动过的那项「在做」写上第几步、几分钟（作者 09-24：「任务是要实时更新进度和内容的」）。
+            // 这一轮还在跑：最近动过的那项「在做」写上第几步、几分钟（作者 09-24 要求进度和内容实时更新）。
             let live = store.progress(for: s).flatMap { $0.interruptedAt == nil ? $0 : nil }
             let active = live == nil ? nil : activeDoing(snap.items)
             let items = snap.items.compactMap { x -> [String: Any]? in

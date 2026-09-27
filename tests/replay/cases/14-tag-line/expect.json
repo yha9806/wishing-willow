@@ -10,6 +10,6 @@
   "state_file": {
     "decode": "⚠ 起草那封跟进信，起草不发送，发送等你一句话。",
     "tag": "起草跟进信",
-    "prompt_startswith": "另外还有一个档案馆"
+    "prompt_startswith": "另外还有一个开源项目"
   }
 }

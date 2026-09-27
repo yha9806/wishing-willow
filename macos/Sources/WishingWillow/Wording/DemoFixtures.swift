@@ -76,8 +76,8 @@ enum DemoFixtures {
     /// 这个产品本该打破的那种沉默。
     static var sampleLog: String {
         let rows = [
-            #"{"turnId":"t0","at":"2026-09-12T16:10:00.000Z","endedAt":null,"interrupted":true,"reminded":true,"origin":"user","prompt":"我测试了一下 效果还行，还有这个我输入的新指令冒出了黄色文字。","decode":"先确认黄色文字是什么、为什么出现。","tag":"查黄色文字"}"#,
-            #"{"turnId":"t1","at":"2026-09-12T16:21:51.000Z","endedAt":"2026-09-12T16:26:40.000Z","reminded":true,"prompt":"继续吧，接下来怎么做？另外那个档案馆的外联要放进去吗？","decode":"⚠ 先把披露时限文件做掉，然后回答档案馆那条线该放在哪。","tag":"做披露文件"}"#,
+            #"{"turnId":"t0","at":"2026-09-12T16:10:00.000Z","endedAt":null,"interrupted":true,"reminded":true,"origin":"user","prompt":"我试了一下，整体可以；另外新输入的指令旁边多出一行黄色文字。","decode":"先确认黄色文字是什么、为什么出现。","tag":"查黄色文字"}"#,
+            #"{"turnId":"t1","at":"2026-09-12T16:21:51.000Z","endedAt":"2026-09-12T16:26:40.000Z","reminded":true,"prompt":"继续吧，接下来怎么做？另外那个开源项目的来信要放进去吗？","decode":"⚠ 先把发布说明写完，然后回答开源项目那封信该放在哪。","tag":"做披露文件"}"#,
             #"{"turnId":"t2","at":"2026-09-12T16:27:54.000Z","endedAt":"2026-09-12T16:28:02.000Z","reminded":false,"prompt":"好的 继续吧","decode":null,"tag":null}"#,
             #"{"turnId":"t2b","at":"2026-09-12T16:29:00.000Z","endedAt":"2026-09-12T16:29:04.000Z","interrupted":false,"reminded":false,"origin":"system","prompt":"<task-notification>\n<task-id>af705</task-id>","decode":null,"tag":null}"#,
             #"{"turnId":"t3","at":"2026-09-12T16:31:10.000Z","endedAt":"2026-09-12T16:33:05.000Z","reminded":true,"prompt":"把这个目录下所有脚本的错误处理过一遍，先不要改。","decode":null,"tag":null}"#,

@@ -9,6 +9,6 @@
   },
   "state_file": {
     "decode": "先把今天能做完的那件事做掉，再给这条线一个明确的处置，并把结论落成一份能留下的东西。",
-    "prompt_startswith": "好的 继续吧 然后这条线"
+    "prompt_startswith": "好的 继续吧 然后这个方向"
   }
 }

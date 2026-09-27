@@ -5,5 +5,5 @@
   "session_id": "test-sess-19",
   "prompt_id": "pb",
   "hook_event_name": "UserPromptSubmit",
-  "prompt": "就是有问题，就是返回来的黄色文字内容应该是有问题。"
+  "prompt": "对，就是那行黄色文字，内容看着不对。"
 }

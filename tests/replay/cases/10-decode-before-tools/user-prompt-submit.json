@@ -5,5 +5,5 @@
   "cwd": "/tmp/fake/project",
   "permission_mode": "default",
   "hook_event_name": "UserPromptSubmit",
-  "prompt": "好的 继续吧 然后这条线怎么办？我们做了这么多调研的成果呢？"
+  "prompt": "好的 继续吧 然后这个方向怎么办？前面攒下的那些资料呢？"
 }

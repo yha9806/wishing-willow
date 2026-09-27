@@ -5,5 +5,5 @@
   "session_id": "test-sess-19",
   "prompt_id": "pa",
   "hook_event_name": "UserPromptSubmit",
-  "prompt": "我测试了一下 效果还行，然后就是动画，还有这个我输入的新指令冒出了黄色文字。"
+  "prompt": "我试了一下，整体可以，动画还要再看；另外新输入的指令旁边多出一行黄色文字。"
 }

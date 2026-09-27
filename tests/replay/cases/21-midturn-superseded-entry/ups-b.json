@@ -5,5 +5,5 @@
   "session_id": "test-sess-21",
   "prompt_id": "pb",
   "hook_event_name": "UserPromptSubmit",
-  "prompt": "提交吧。然后 README 先改用从收起态直接点开这条路径录面板素材。"
+  "prompt": "提交吧。然后把 README 的面板截图换成从收起态点开的那一版。"
 }

@@ -264,7 +264,7 @@ final class WillowStore {
     private var reconstructTried: Set<String> = []
 
     /// 结束的一轮如果灵动岛当时没开着（重启、重新编译后才打开），就没留下时间线：悬停面板少一整块「Claude 做了」、
-    /// 数据条三格是「—」，同一块面板时有时无（用户 2026-09-13：「悬停打开的页面，里面的内容有的时候 UI 不一致」）。
+    /// 数据条三格是「—」，同一块面板时有时无（用户 2026-09-13 报告悬停展开的面板有时显示不一致）。
     /// 开着的会话每一轮补读一次：从这一轮的偏移读到文件末尾，一次最多 4 MB。
     private func reconstructFinished() {
         for s in sessions where s.isOpen && s.declaration != .inProgress && s.declaration != .interrupted {
