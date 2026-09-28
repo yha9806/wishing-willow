@@ -230,7 +230,9 @@ lintel 有自己的测试（在它的目录里 `make test`）。
 
 ## 发布片
 
-这一版的新片正在录。第一部片（2026 年 9 月）拍的是早先那个自己在刘海上画灵动岛的 app，挂在 [`v0.1-self-drawn`](https://github.com/yha9806/wishing-willow/tree/v0.1-self-drawn) 标签上，那一版在那里仍然能编译。
+https://github.com/user-attachments/assets/7c7da49b-6db4-47fa-8205-f8cd4455bb9b
+
+45 秒，配音是合成语音。画面里的会话是虚构的，讲的那件事是上面九轮读偏里的一轮。第一部片（2026 年 9 月）拍的是早先那个自己在刘海上画灵动岛的 app，挂在 [`v0.1-self-drawn`](https://github.com/yha9806/wishing-willow/tree/v0.1-self-drawn) 标签上，那一版在那里仍然能编译。
 
 ## 重新生成图片
 

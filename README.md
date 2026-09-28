@@ -230,7 +230,9 @@ lintel has its own tests (`make test` in its folder).
 
 ## Launch film
 
-A new film is being recorded for this version. The first film (September 2026) shows the earlier app, which drew its own island on the notch; it is attached to the [`v0.1-self-drawn`](https://github.com/yha9806/wishing-willow/tree/v0.1-self-drawn) tag, where that app still builds.
+https://github.com/user-attachments/assets/7c7da49b-6db4-47fa-8205-f8cd4455bb9b
+
+45 seconds, in Mandarin; the voice is synthetic. The session on screen is made up; the story it tells is one of the nine misread turns above. The first film (September 2026) shows the earlier app, which drew its own island on the notch; it is attached to the [`v0.1-self-drawn`](https://github.com/yha9806/wishing-willow/tree/v0.1-self-drawn) tag, where that app still builds.
 
 ## Regenerating the images
 
