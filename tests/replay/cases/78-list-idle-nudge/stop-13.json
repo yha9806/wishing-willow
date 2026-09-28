@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-78",
+  "prompt_id": "p78-13",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "下一步：合成"
+}

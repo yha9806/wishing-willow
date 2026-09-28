@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-78",
+  "prompt_id": "p78-21",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "合成仓库第 21 轮：把下一份配置核对完"
+}

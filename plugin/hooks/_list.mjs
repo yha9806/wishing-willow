@@ -326,6 +326,50 @@ export function sweepText(commits, due, lang = 'zh') {
     + 'nothing to write for what still holds.');
 }
 
+// 挂久了的项点一次名（09-28：一项「在做」连续 9 轮被标「N 轮没动」没人处理——每轮都在的被动标记会被读麻木；
+// 一项「等别的会话」挂了 184 轮，「等 X」连标记都没有）。门槛：在做 STALE_TURNS、等你 STALE_YOU_TURNS、等别的 STALE_WAIT_TURNS；
+// 点过以后，没动的轮数翻倍、并且至少又过 NUDGE_EVERY 轮才再点（在做 5→15→30、等你 10→20→40、等别的 20→40→80）：
+// 长期停着等外部的事不会每十轮点一次（按固定十轮，一个会话 170 轮里有 68 轮要点名）。改动过就重新算。
+// 「问过」与提交后核对共用一张记录（{编号: 轮次}），同一项一轮里不会被点两次。
+export const STALE_WAIT_TURNS = 20;
+export const NUDGE_EVERY = 10;
+const NUDGE_SHOW = 6;
+
+/** 该点名的项，各带 idle（没动的轮数）。asked 是 {编号: 上次问的轮次}。以后的不点。 */
+export function idleDue(items, turnIndex, asked) {
+  if (!Array.isArray(items) || typeof turnIndex !== 'number') return [];
+  const a = asked && typeof asked === 'object' ? asked : {};
+  const limit = { 在做: STALE_TURNS, 等你: STALE_YOU_TURNS, 等: STALE_WAIT_TURNS };
+  return items.filter((x) => {
+    const lim = limit[x.status];
+    if (!lim || typeof x.touched !== 'number' || turnIndex - x.touched < lim) return false;
+    const at = a[x.id];
+    if (typeof at !== 'number' || at < x.touched) return true;
+    const was = at - x.touched;
+    return turnIndex - x.touched >= Math.max(2 * was, was + NUDGE_EVERY);
+  }).map((x) => ({ ...x, idle: turnIndex - x.touched }));
+}
+
+/** 点名的那一句；没有该点的是 null。 */
+export function idleText(due, lang = 'zh') {
+  if (!due?.length) return null;
+  const T = (zh, en) => pick(lang, zh, en);
+  const one = (x) => T(`${x.id} ${brief(x.text, lang)}（${label(x, lang)}，${x.idle} 轮）`,
+    `${x.id} ${brief(x.text, lang)} (${label(x, lang)}, ${x.idle} turns)`);
+  const ids = due.slice(0, NUDGE_SHOW).map(one).join(T('、', ', '))
+    + (due.length > NUDGE_SHOW ? T(` 等 ${due.length} 项`, ` and ${due.length - NUDGE_SHOW} more`) : '');
+  return T(`这几项挂了很久没动，逐条核一次：${ids}。没在做的改成以后或「等 X」，前提变了的改题或撤掉，做完的写做完；`
+    + '仍然成立的不用写，挂得越久问得越稀。',
+  `These have not moved for a long time; check each once: ${ids}. Move what is not being done to later or "waiting on X", `
+    + 'retitle or drop what changed, mark done what is done; nothing to write for what still holds (the longer it waits, the less often it is asked).');
+}
+
+/** 「问过」的记录只留还开着的项。 */
+export function openAsked(asked, items) {
+  const open = new Set((items ?? []).filter((x) => !CLOSED.has(x.status) && x.status !== '以后').map((x) => x.id));
+  return Object.fromEntries(Object.entries(asked ?? {}).filter(([id]) => open.has(id)));
+}
+
 /**
  * 一轮中途改清单的那条命令（2026-09-24 作者要求进度和内容实时更新）。清单原来只在回复结束时记下，
  * 一轮做二十分钟，刘海上的清单二十分钟不动。命令一跑就追加一份快照，app 靠 FSEvents 一秒内读到。
@@ -468,5 +512,5 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = '
   }
   // 每条回复都带：短确认、系统信封开始的一轮也一样。
   tail.push(T(`回复末尾照写这一行（本轮有变化就先改好）：\n${inlineLine(open)}`, `End your reply with this line (update it first if the list changed this turn):\n${inlineLine(open, lang)}`));
-  return { text: [head, ...lines, ...tail].join('\n'), shown: full ? { snap, turn: turnIndex } : lastShown };
+  return { text: [head, ...lines, ...tail].join('\n'), shown: full ? { snap, turn: turnIndex } : lastShown, items: cur.items };
 }

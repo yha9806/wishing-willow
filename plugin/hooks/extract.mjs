@@ -8,7 +8,7 @@
 import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
   turnAssistantRows, turnLastAt, turnFirstAt, turnCommits } from './_willow.mjs';
-import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine, nextProblem, heldProblem, sweepDue, sweepText } from './_list.mjs';
+import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine, nextProblem, heldProblem, sweepDue, sweepText, openAsked } from './_list.mjs';
 import { sessionLang } from './_lang.mjs';
 
 try {
@@ -71,10 +71,8 @@ try {
       if (commits.length && typeof ti === 'number') {
         const due = sweepDue(latest.items, ti, swept);
         sweep = sweepText(commits, due, sessionLang(prev));
-        // 只留还在等你的项：做完、撤掉的不必再记它上次什么时候核过。
-        const open = new Set(latest.items.filter((x) => x.status === '等你').map((x) => x.id));
-        swept = Object.fromEntries(Object.entries({ ...(swept ?? {}), ...Object.fromEntries(due.map((x) => [x.id, ti])) })
-          .filter(([id]) => open.has(id)));
+        // 只留还开着的项：做完、撤掉的不必再记它上次什么时候问过（这张记录也管挂久了的点名，见 idleDue）。
+        swept = openAsked({ ...(swept ?? {}), ...Object.fromEntries(due.map((x) => [x.id, ti])) }, latest.items);
       }
     }
   } catch { /* 不判 */ }

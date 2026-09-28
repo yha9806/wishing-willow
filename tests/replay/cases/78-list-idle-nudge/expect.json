@@ -1,0 +1,393 @@
+{
+  "note": "清单上的项挂了很久没动（在做 5 轮、等你 10 轮、等别的 20 轮），下一轮点名核一次；点过以后，没动的轮数翻倍并且至少又过 10 轮才再点，改动过就重新算；以后的不点。L5 一直不动：第 5、15、30 轮点（按固定十轮会在第 25 轮点）；L3 第 20 轮点、第 30 轮不点（下一次是第 40 轮）。第 7 轮 L1 改题、第 12 轮 L2 改状态，各自重新算。09-28：一项「在做」连续 9 轮被标「N 轮没动」没人处理，一项「等别的会话」挂了 184 轮没有任何提醒。",
+  "session_id": "test-sess-78",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-00.json"
+    },
+    {
+      "append": "transcript.turn-00.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-00.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-01.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "挂了很久没动，逐条核一次："
+      ]
+    },
+    {
+      "append": "transcript.turn-01.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-01.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-02.json"
+    },
+    {
+      "append": "transcript.turn-02.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-02.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-03.json"
+    },
+    {
+      "append": "transcript.turn-03.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-03.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-04.json"
+    },
+    {
+      "append": "transcript.turn-04.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-04.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-05.json",
+      "stdout": "inject",
+      "context_includes": [
+        "挂了很久没动，逐条核一次：L1 合成事项甲（在做，5 轮）、L5 合成事项戊（在做，5 轮）。"
+      ]
+    },
+    {
+      "append": "transcript.turn-05.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-05.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-06.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "挂了很久没动，逐条核一次："
+      ]
+    },
+    {
+      "append": "transcript.turn-06.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-06.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-07.json"
+    },
+    {
+      "append": "transcript.turn-07.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-07.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-08.json"
+    },
+    {
+      "append": "transcript.turn-08.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-08.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-09.json"
+    },
+    {
+      "append": "transcript.turn-09.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-09.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-10.json",
+      "stdout": "inject",
+      "context_includes": [
+        "挂了很久没动，逐条核一次：L2 合成事项乙（等你，10 轮）。"
+      ]
+    },
+    {
+      "append": "transcript.turn-10.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-10.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-11.json"
+    },
+    {
+      "append": "transcript.turn-11.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-11.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-12.json",
+      "stdout": "inject",
+      "context_includes": [
+        "挂了很久没动，逐条核一次：L1 合成事项甲（改）（在做，5 轮）。"
+      ]
+    },
+    {
+      "append": "transcript.turn-12.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-12.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-13.json"
+    },
+    {
+      "append": "transcript.turn-13.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-13.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-14.json"
+    },
+    {
+      "append": "transcript.turn-14.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-14.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-15.json",
+      "stdout": "inject",
+      "context_includes": [
+        "挂了很久没动，逐条核一次：L5 合成事项戊（在做，15 轮）。"
+      ]
+    },
+    {
+      "append": "transcript.turn-15.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-15.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-16.json"
+    },
+    {
+      "append": "transcript.turn-16.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-16.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-17.json"
+    },
+    {
+      "append": "transcript.turn-17.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-17.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-18.json"
+    },
+    {
+      "append": "transcript.turn-18.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-18.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-19.json"
+    },
+    {
+      "append": "transcript.turn-19.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-19.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-20.json",
+      "stdout": "inject",
+      "context_includes": [
+        "挂了很久没动，逐条核一次：L3 合成事项丙（等 合成仓库维护者，20 轮）。"
+      ]
+    },
+    {
+      "append": "transcript.turn-20.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-20.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-21.json"
+    },
+    {
+      "append": "transcript.turn-21.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-21.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-22.json",
+      "stdout": "inject",
+      "context_includes": [
+        "挂了很久没动，逐条核一次：L1 合成事项甲（改）（在做，15 轮）、L2 合成事项乙（等你，10 轮）。"
+      ]
+    },
+    {
+      "append": "transcript.turn-22.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-22.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-23.json"
+    },
+    {
+      "append": "transcript.turn-23.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-23.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-24.json"
+    },
+    {
+      "append": "transcript.turn-24.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-24.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-25.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "挂了很久没动，逐条核一次："
+      ]
+    },
+    {
+      "append": "transcript.turn-25.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-25.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-26.json"
+    },
+    {
+      "append": "transcript.turn-26.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-26.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-27.json"
+    },
+    {
+      "append": "transcript.turn-27.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-27.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-28.json"
+    },
+    {
+      "append": "transcript.turn-28.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-28.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-29.json"
+    },
+    {
+      "append": "transcript.turn-29.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-29.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-30.json",
+      "stdout": "inject",
+      "context_includes": [
+        "挂了很久没动，逐条核一次：L5 合成事项戊（在做，30 轮）。"
+      ],
+      "context_excludes": [
+        "L3 合成事项丙（等"
+      ]
+    },
+    {
+      "append": "transcript.turn-30.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-30.json"
+    }
+  ]
+}
