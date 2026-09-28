@@ -592,13 +592,16 @@ enum ActivityExport {
             out["historyNote"] = "\(IslandExpandedContent.clock(first))–\(IslandExpandedContent.clock(last)) · " + L("\(entries.count) 轮", "\(entries.count) turns")
         }
         out["history"] = entries.reversed().map { t -> [String: Any] in
-            [
+            var turn: [String: Any] = [
                 "id": t.id, "at": iso(t.at), "tag": opt(t.tag),
                 "badge": t.interrupted == true ? L("被打断", "Interrupted") : NSNull(),
                 "duration": t.duration.flatMap { $0 >= 1 ? DetailView.duration($0) : nil } ?? NSNull(),
                 "lines": [askedLine(system: t.isSystemMessage, prompt: t.prompt, midTurn: t.midTurn == true), readLine(t)],
                 "expandable": (PromptSource.spoken(t.prompt)?.count ?? 0) > 36 || (t.decode?.count ?? 0) > 36,
             ]
+            // 系统消息开始的一轮（后台任务通知等）：宿主画成一行细条，不和真实的轮次一样占整张卡（09-28 面板 grill 第三轮 R3）。
+            if t.isSystemMessage { turn["quiet"] = true }
+            return turn
         }
         if turnLive(s), let turn = s.record.turnId, !entries.contains(where: { $0.turnId == turn }) {
             var live: [String: Any] = [

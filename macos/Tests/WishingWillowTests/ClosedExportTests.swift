@@ -45,4 +45,24 @@ struct ClosedExportTests {
         #expect(b["heartbeatSeconds"] as? Int == 60)
         #expect(((b["status"] as? [String: Any])?["clock"] as? [String: Any])?["style"] as? String == "live")
     }
+
+    @Test("系统消息开始的一轮标 quiet，宿主画成一行细条；你说的一轮不标（09-28 面板 grill 第三轮 R3）")
+    func quietSystemTurns() throws {
+        let s = try store(pid: 99_999_999)
+        let t0 = Date().addingTimeInterval(-3 * 86_400 - 600)
+        let rows: [[String: Any]] = [
+            ["turnId": "a", "at": iso.format(t0), "endedAt": iso.format(t0.addingTimeInterval(60)), "reminded": false,
+             "origin": "system", "prompt": "<task-notification>合成的后台任务完成</task-notification>"],
+            ["turnId": "b", "at": iso.format(t0.addingTimeInterval(120)), "endedAt": iso.format(t0.addingTimeInterval(200)),
+             "reminded": true, "origin": "user", "prompt": "把合成仓库里三个配置文件对一遍", "decode": "对齐三个合成配置", "tag": "对配置"],
+        ]
+        let log = rows.map { String(data: try! JSONSerialization.data(withJSONObject: $0), encoding: .utf8)! }.joined(separator: "\n") + "\n"
+        try log.write(to: s.directory.appendingPathComponent("s.log.jsonl"), atomically: true, encoding: .utf8)
+        s.reload()
+        let history = try #require((ActivityExport.activities(s)["s"]?["detail"] as? [String: Any])?["history"] as? [[String: Any]])
+        let byId = Dictionary(uniqueKeysWithValues: history.compactMap { h in (h["id"] as? String).map { ($0, h) } })
+        let sys = try #require(history.first { ($0["lines"] as? [[String: Any]])?.first?["text"] as? String == "系统消息（后台任务通知），不是你说的" })
+        #expect(sys["quiet"] as? Bool == true)
+        #expect(history.filter { $0["quiet"] as? Bool == true }.count == 1, "\(byId.keys)")
+    }
 }
