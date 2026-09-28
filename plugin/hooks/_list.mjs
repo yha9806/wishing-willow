@@ -25,7 +25,8 @@ const LIST_RULES_ZH =
   '这一轮让清单有变化时——出现了要做或要等的事、做完了、换了状态、撤掉——' +
   '在「下一步：」那一行之前写「清单变化：」，下面一行一条：「+ 在做：<事>」「+ 等你：<事>」「+ 等 <什么>：<事>」「+ 以后：<事>」新增' +
   '（有事实依据时在末尾加「（依据：<提交号、文件或 CI>）」，不加就算预测）；「L3 做完：<证据>」「L3 → 等你：<为什么>」' +
-  '「L3 撤掉：<原因>」「L3 认可」（用户这一轮认可了它）。没提到的项原样留着；清单没有变化就不写这一块。\n' +
+  '「L3 撤掉：<原因>」「L3 认可」（用户这一轮认可了它）「L3 改题：<新标题>」（事情变了、原标题读起来像还悬着时）。' +
+  '标题一行写完（约 40 字内），背景写进依据或说明。没提到的项原样留着；清单没有变化就不写这一块。\n' +
   '回复的最后一行写「下一步：<这一轮之后等用户什么，或你接着做什么>」。';
 
 // 英文版（2026-09-27 装机演练 F2）。与中文版逐条对应；写法两种都认（parseOps）。
@@ -36,7 +37,9 @@ const LIST_RULES_EN =
   + 'write "List changes:" before the "Next:" line, one change per line: "+ Doing: <item>", "+ Waiting on you: <item>", '
   + '"+ Waiting on <what>: <item>", "+ Later: <item>" to add one (end it with "(basis: <commit, file or CI>)" when a fact backs it; '
   + 'without that it counts as a forecast); "L3 done: <evidence>", "L3 → waiting on you: <why>", "L3 dropped: <reason>", '
-  + '"L3 approved" (the user approved it this turn). Items you don\'t mention stay as they are; if the list didn\'t change, leave the block out.\n'
+  + '"L3 approved" (the user approved it this turn), "L3 retitled: <new title>" (when things changed and the old title reads as still open). '
+  + 'Keep a title to one line (about 80 characters); background goes in the basis or the note. '
+  + 'Items you don\'t mention stay as they are; if the list didn\'t change, leave the block out.\n'
   + 'End the reply with one line: "Next: <what you wait on the user for after this turn, or what you do next>".';
 
 export const listRules = (lang) => pick(lang, LIST_RULES_ZH, LIST_RULES_EN);
@@ -52,6 +55,15 @@ const MOVE = new RegExp(`^(L\\d+)\\s*(?:→|->)\\s*${STATUS}\\s*(?:[：:]\\s*(.*
 const DROP = /^(L\d+)\s*(?:撤掉|dropped)\s*(?:[：:]\s*(.*))?$/i;
 const LATER = /^(L\d+)\s*(?:挪到以后|moved to later)\s*(?:[：:]\s*(.*))?$/i;
 const APPROVE = /^(L\d+)\s*(?:认可|approved)\s*$/i;
+const RETITLE = /^(L\d+)\s*(?:改题|retitled?)\s*[：:]\s*(\S.*)$/i;
+// 标题一行写完：中文约 40 字、英文约 80 个字符（CJK 记 1、其余记 0.5）。09-28 面板 grill 第三轮 R1：
+// 建项时写成三到五行的问句，事情定了标题还在问，面板上比「现在那句」显眼得多。
+export const TITLE_MAX = 40;
+export function titleWidth(t) {
+  let w = 0;
+  for (const c of String(t)) w += c.codePointAt(0) >= 0x2e80 ? 1 : 0.5;
+  return w;
+}
 const HEAD = /^(?:清单变化|List changes)\s*[：:]\s*$/i;
 const BASIS = /[（(]\s*(?:依据|basis)\s*[：:]\s*([^）)]+)[）)]\s*$/i;
 
@@ -106,6 +118,7 @@ export function parseOps(texts) {
       else if ((m = DROP.exec(line))) ops.push({ op: 'drop', id: m[1], note: (m[2] ?? '').trim() });
       else if ((m = LATER.exec(line))) ops.push({ op: 'move', id: m[1], status: '以后', wait: null, note: (m[2] ?? '').trim() });
       else if ((m = APPROVE.exec(line))) ops.push({ op: 'approve', id: m[1] });
+      else if ((m = RETITLE.exec(line))) ops.push({ op: 'retitle', id: m[1], text: m[2].trim() });
       else if (/^(\+|L\d+)/.test(line)) ops.push({ op: 'bad', line });
       else inBlock = false;   // 空行、「下一步：」、正文：块到此为止
       if (ops.length > before) ops[ops.length - 1].raw = line;   // 用命令记过的行，回复末尾再写一遍时认得出
@@ -136,11 +149,23 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
       items.push({ id, text: o.text, status: o.status, wait: o.wait, basis: o.basis,
         sourceTurn: turn.turnId ?? null, since: turn.turnIndex ?? null, touched: turn.turnIndex ?? null });
       changes.push(T(`新增 ${id}`, `added ${id}`));
+      if (titleWidth(o.text) > TITLE_MAX) {
+        problems.push(T(`${id} 的标题太长（一行写完，约 40 字内），背景写进依据或说明；可以「${id} 改题：…」改短`,
+          `${id}'s title is too long (keep it to one line, about 80 characters); put background in the basis or the note, or shorten it with "${id} retitled: …"`));
+      }
       continue;
     }
     const it = find(o.id);
     if (!it) { problems.push(T(`${o.id} 不存在`, `${o.id} doesn't exist`)); continue; }
     if (o.op === 'approve') { it.approvedTurn = turn.turnId ?? null; changes.push(T(`${o.id} 认可`, `${o.id} approved`)); continue; }
+    if (o.op === 'retitle') {
+      // 建项原句留在 firstText：面板和记录都还能查到当初是怎么写的。
+      if (it.firstText === undefined) it.firstText = it.text;
+      it.text = o.text;
+      it.touched = turn.turnIndex ?? it.touched;
+      changes.push(T(`${o.id} 改题`, `${o.id} retitled`));
+      continue;
+    }
     if (o.op === 'drop' && !o.note) { problems.push(T(`${o.id} 撤掉没写原因，没撤`, `${o.id} dropped without a reason, so not dropped`)); continue; }
     if (o.op === 'done' && !o.note) problems.push(T(`${o.id} 做完没附证据`, `${o.id} done without evidence`));
     if (o.op === 'done') { it.status = '做完'; it.wait = null; it.evidence = o.note || null; }

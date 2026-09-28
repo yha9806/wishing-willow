@@ -1,0 +1,58 @@
+{
+  "note": "清单项可以改标题（09-28 面板 grill 第三轮 R1：事情定了，建项时写的问句标题还在问）；建项原句留在 firstText。新增项标题太长照常新增，同时报一条问题提示改短；只写「改题：」不写新标题的看不懂、不改。",
+  "session_id": "test-sess-69",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "exit": 1,
+      "stdout_includes": [
+        "新增 L1",
+        "新增 L2",
+        "L1 的标题太长"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-retitle.json",
+      "stdout_includes": [
+        "L1 改题"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-bad.json",
+      "exit": 1,
+      "stdout_includes": [
+        "看不懂这一行"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 等你：对齐三个合成配置文件",
+        "L2 以后：合成事项乙",
+        "「L3 改题：<新标题>」"
+      ],
+      "context_excludes": [
+        "要不要现在就把"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "text": "对齐三个合成配置文件",
+      "firstText": "合成事项甲：要不要现在就把三个合成配置文件逐字段对齐、先对哪一个、对完之后要不要同步到第四个合成仓库，等你定",
+      "status": "等你"
+    },
+    "L2": {
+      "text": "合成事项乙"
+    }
+  }
+}
