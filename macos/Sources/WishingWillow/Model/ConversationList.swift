@@ -14,6 +14,8 @@ struct ListSnapshot {
         var note: String? = nil
         var approved: Bool
         var touched: Int?
+        /// 挡着什么：它一落地就能放开的项或外部的事（09-28 spec 清单与下一步的分工 D1）。
+        var blocks: [String] = []
     }
 
     var turnIndex: Int?
@@ -55,7 +57,7 @@ enum ConversationList {
             guard let id = r["id"] as? String, let text = r["text"] as? String, let status = r["status"] as? String else { return nil }
             return .init(id: id, text: text, status: status, wait: r["wait"] as? String, basis: r["basis"] as? String,
                          evidence: r["evidence"] as? String, note: r["note"] as? String, approved: r["approvedTurn"] is String,
-                         touched: r["touched"] as? Int)
+                         touched: r["touched"] as? Int, blocks: r["blocks"] as? [String] ?? [])
         }
         return .init(turnIndex: obj["turnIndex"] as? Int, turnId: obj["turnId"] as? String, at: obj["at"] as? String, items: items,
                      changes: obj["changes"] as? [String] ?? [], problems: obj["problems"] as? [String] ?? [])

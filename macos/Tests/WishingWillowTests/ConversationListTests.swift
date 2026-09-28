@@ -27,12 +27,14 @@ struct ConversationListTests {
     }
 
     private func item(_ id: String, _ text: String, _ status: String, wait: String? = nil, basis: String = "预测",
-                      touched: Int = 8, evidence: String? = nil, approved: Bool = false, note: String? = nil) -> [String: Any] {
+                      touched: Int = 8, evidence: String? = nil, approved: Bool = false, note: String? = nil,
+                      blocks: [String]? = nil) -> [String: Any] {
         var x: [String: Any] = ["id": id, "text": text, "status": status, "wait": wait ?? NSNull(), "basis": basis,
                                 "sourceTurn": "t1", "since": 1, "touched": touched]
         if let evidence { x["evidence"] = evidence }
         if let note { x["note"] = note }
         if approved { x["approvedTurn"] = "t5" }
+        if let blocks { x["blocks"] = blocks }
         return x
     }
 
@@ -54,7 +56,7 @@ struct ConversationListTests {
         try writeList(d, [
             ["turnIndex": 3, "items": [item("L1", "旧快照里的事", "在做")], "changes": [], "problems": []],
             ["turnIndex": 8, "items": [
-                item("L1", "合并 PR", "做完", evidence: "main 8d68286"),
+                item("L1", "合并 PR", "做完", evidence: "main 8d68286", blocks: ["L2", "投稿"]),
                 item("L2", "重画分镜", "在做", touched: 2),
                 item("L3", "装新版", "等你", basis: "ops 9cdaa73", approved: true),
                 item("L4", "核对 A4", "等", wait: "另一场会话的下一条消息"),
@@ -73,6 +75,8 @@ struct ConversationListTests {
         #expect(items[2]["note"] as? String == "依据 ops 9cdaa73", "旁注写明是依据")
         #expect(items[2]["approved"] as? Bool == true)
         #expect(items[3]["text"] as? String == "核对 A4")
+        #expect(items[0]["blocks"] as? [String] == ["L2", "投稿"], "挡着什么照导出（09-28 spec D1）")
+        #expect(items[1]["blocks"] == nil, "没写挡着的不带这一栏")
         #expect(items[3]["wait"] as? String == "另一场会话的下一条消息")
         #expect(c["problems"] as? [String] == ["L9 不存在"])
         let labels = try #require(c["labels"] as? [String: String])

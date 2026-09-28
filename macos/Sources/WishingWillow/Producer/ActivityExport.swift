@@ -208,6 +208,8 @@ enum ActivityExport {
                 if let current { out["now"] = current }
                 // lintel 的 wait 上限 64 字，超了整份活动被拒收：先截短。
                 if let wait { out["wait"] = wait.count > 64 ? String(wait.prefix(63)) + "…" : wait }
+                // 挡着什么（lintel blocks：字符串数组、每个 ≤64 字、最多 16 个；超了整份活动被拒收，这边先截）。
+                if !x.blocks.isEmpty { out["blocks"] = x.blocks.prefix(16).map { $0.count > 64 ? String($0.prefix(63)) + "…" : $0 } }
                 // lintel 的注上限 64 字，超了整份活动被拒收、会话从刘海上消失（09-24 实见）：这边先截短。
                 if let note { out["note"] = note.count > 64 ? String(note.prefix(63)) + "…" : note }
                 if x.approved { out["approved"] = true }
