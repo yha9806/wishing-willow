@@ -1,0 +1,58 @@
+{
+  "note": "一项可以写挡着什么（09-28 spec 清单与下一步的分工 D1）：新增时末尾带「（挡着：…）」，或单独一行「L2 挡着：…」；编号只认这场对话里有的，外部的事照写。注入的清单里带「挡着」，末尾给按挡着多少排的候选。",
+  "session_id": "test-sess-73",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1",
+        "新增 L2"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-bad.json",
+      "exit": 1,
+      "stdout_includes": [
+        "L2 挡着的 L9 不存在"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-ok.json",
+      "stdout_includes": [
+        "L2 挡着 投稿"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项甲（挡着 L2、投稿）（依据：合成依据）",
+        "L2 以后：合成事项乙（挡着 投稿）",
+        "按挡着的多少：L1（挡着 2 件）、L2（挡着 1 件）",
+        "「L3 挡着：L5、L7」"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "blocks": [
+        "L2",
+        "投稿"
+      ],
+      "basis": "合成依据"
+    },
+    "L2": {
+      "blocks": [
+        "投稿"
+      ]
+    }
+  }
+}

@@ -37,6 +37,7 @@
     "touched",
     "shown",
     "listShown",
-    "listInherit"
+    "listInherit",
+    "nextProblem"
   ]
 }

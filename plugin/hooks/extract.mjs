@@ -9,7 +9,7 @@ import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
   turnAssistantRows, turnLastAt,
 } from './_willow.mjs';
-import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine } from './_list.mjs';
+import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine, nextProblem } from './_list.mjs';
 import { sessionLang } from './_lang.mjs';
 
 try {
@@ -53,8 +53,15 @@ try {
     }
   } catch { /* 见上 */ }
 
+  // 「下一步」有没有点到清单上开着的项（spec D2）：有问题下一轮在【清单】里说出来。读不出清单就不判。
+  let nextIssue = null;
+  try {
+    const latest = readList(sessionId);
+    if (latest && !latest.error) nextIssue = nextProblem(next, latest.items, sessionLang(prev));
+  } catch { /* 不判 */ }
+
   if (prev) {
-    writeState(sessionId, { ...prev, decode, tag, plan, next, touched, turnEndedAt: endedAt, updatedAt: endedAt });
+    writeState(sessionId, { ...prev, decode, tag, plan, next, touched, turnEndedAt: endedAt, updatedAt: endedAt, nextProblem: nextIssue });
     // 只在 capture 跑过的时候记日志：没有 capture 就没有原话，也没有「问没问」，
     // 记一条三个字段都是 null 的东西只会让统计更难看懂。
     appendTurnLog(sessionId, {

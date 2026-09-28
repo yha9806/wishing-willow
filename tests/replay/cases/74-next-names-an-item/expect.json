@@ -1,0 +1,42 @@
+{
+  "note": "清单上有开着的项时，「下一步」要点名其中一项（09-28 spec D2）：没点编号，下一轮在【清单】里说出来；点了开着的项就不说。",
+  "session_id": "test-sess-74",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "上一轮的「下一步」没点清单上的编号",
+        "下一步：Lx <这件事>——<为什么是它>"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "上一轮的「下一步」没点清单上的编号"
+      ]
+    }
+  ]
+}

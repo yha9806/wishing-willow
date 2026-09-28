@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-74",
+  "prompt_id": "p74c",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "把合成仓库第五个配置文件也照同样的格式对一遍"
+}

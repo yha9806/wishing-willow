@@ -25,10 +25,12 @@ const LIST_RULES_ZH =
   '这一轮让清单有变化时——出现了要做或要等的事、做完了、换了状态、撤掉——' +
   '在「下一步：」那一行之前写「清单变化：」，下面一行一条：「+ 在做：<事>」「+ 等你：<事>」「+ 等 <什么>：<事>」「+ 以后：<事>」新增' +
   '（有事实依据时在末尾加「（依据：<提交号、文件或 CI>）」，不加就算预测）；「L3 做完：<证据>」「L3 → 等你：<为什么>」' +
-  '「L3 撤掉：<原因>」「L3 认可」（用户这一轮认可了它）「L3 改题：<新标题>」（事情变了、原标题读起来像还悬着时）。' +
+  '「L3 撤掉：<原因>」「L3 认可」（用户这一轮认可了它）「L3 改题：<新标题>」（事情变了、原标题读起来像还悬着时）' +
+  '「L3 挡着：L5、L7」（它一落地就能放开哪几项；也可以写外部的事，如「投稿」；写「无」清空）。' +
   '标题一行写完（约 40 字内），背景写进依据或说明。编号只在这场对话里算数，提到别的对话的编号要带上对话名（「会话甲的 L3」）。' +
   '没提到的项原样留着；清单没有变化就不写这一块。\n' +
-  '回复的最后一行写「下一步：<这一轮之后等用户什么，或你接着做什么>」。';
+  '回复的最后一行写「下一步：Lx <这件事>——<为什么是它>」：清单上还有开着的项时，点名其中一项，说它为什么排第一（挡着别的、在等你、快到期）；' +
+  '清单上没有开着的项时，写这一轮之后等用户什么，或你接着做什么。';
 
 // 英文版（2026-09-27 装机演练 F2）。与中文版逐条对应；写法两种都认（parseOps）。
 const LIST_RULES_EN =
@@ -39,10 +41,12 @@ const LIST_RULES_EN =
   + '"+ Waiting on <what>: <item>", "+ Later: <item>" to add one (end it with "(basis: <commit, file or CI>)" when a fact backs it; '
   + 'without that it counts as a forecast); "L3 done: <evidence>", "L3 → waiting on you: <why>", "L3 dropped: <reason>", '
   + '"L3 approved" (the user approved it this turn), "L3 retitled: <new title>" (when things changed and the old title reads as still open). '
+  + '"L3 blocks: L5, L7" (what it frees once it lands; an outside event such as "submission" is fine; "none" clears it). '
   + 'Keep a title to one line (about 80 characters); background goes in the basis or the note. '
   + 'IDs are only meaningful inside this conversation; when you mention another conversation\'s ID, name the conversation ("session A\'s L3"). '
   + 'Items you don\'t mention stay as they are; if the list didn\'t change, leave the block out.\n'
-  + 'End the reply with one line: "Next: <what you wait on the user for after this turn, or what you do next>".';
+  + 'End the reply with one line: "Next: Lx <the item> — <why it comes first>": while the list has open items, name one and say why it comes first (it blocks others, it waits on the user, it is due); '
+  + 'when nothing is open, say what you wait on the user for after this turn, or what you do next.';
 
 export const listRules = (lang) => pick(lang, LIST_RULES_ZH, LIST_RULES_EN);
 
@@ -56,6 +60,15 @@ const DONE = /^(L\d+)\s*(?:做完|done)\s*(?:[：:]\s*(.*))?$/i;
 const MOVE = new RegExp(`^(L\\d+)\\s*(?:→|->)\\s*${STATUS}\\s*(?:[：:]\\s*(.*))?$`, 'i');
 const DROP = /^(L\d+)\s*(?:撤掉|dropped)\s*(?:[：:]\s*(.*))?$/i;
 const LATER = /^(L\d+)\s*(?:挪到以后|moved to later)\s*(?:[：:]\s*(.*))?$/i;
+// 一项挡着什么（09-28 spec「清单与下一步的分工」D1）：它一落地就能放开的项，或外部的事（投稿）。
+const BLOCKS = /^(L\d+)\s*(?:挡着|blocks)\s*[：:]\s*(.+)$/i;
+const BLOCKS_TAIL = /[（(]\s*(?:挡着|blocks)\s*[：:]\s*([^）)]+)[）)]\s*$/i;
+const TARGETS = /\s*[、,，;；]\s*|\s+(?=L\d)/;
+export function splitTargets(t) {
+  const v = String(t).trim();
+  if (/^(无|none|nothing|-)$/i.test(v)) return [];
+  return v.split(TARGETS).map((x) => x.trim()).filter(Boolean);
+}
 const APPROVE = /^(L\d+)\s*(?:认可|approved)\s*$/i;
 const RETITLE = /^(L\d+)\s*(?:改题|retitled?)\s*[：:]\s*(\S.*)$/i;
 // 标题一行写完：中文约 40 字、英文约 80 个字符（CJK 记 1、其余记 0.5）。09-28 面板 grill 第三轮 R1：
@@ -113,9 +126,16 @@ export function parseOps(texts) {
       let m;
       const before = ops.length;
       if ((m = ADD.exec(line))) {
-        const b = BASIS.exec(m[2]);
-        ops.push({ op: 'add', ...status(m[1]), text: (b ? m[2].slice(0, b.index) : m[2]).trim(), basis: b ? b[1].trim() : '预测' });
-      } else if ((m = DONE.exec(line))) ops.push({ op: 'done', id: m[1], note: (m[2] ?? '').trim() });
+        // 末尾的「（依据：…）」「（挡着：…）」两种都可以有，先后不论。
+        let text = m[2], basis = '预测', blocks = null;
+        for (let k = 0; k < 2; k++) {
+          const b = BASIS.exec(text);
+          if (b) { basis = b[1].trim(); text = text.slice(0, b.index); continue; }
+          const t = BLOCKS_TAIL.exec(text);
+          if (t) { blocks = splitTargets(t[1]); text = text.slice(0, t.index); }
+        }
+        ops.push({ op: 'add', ...status(m[1]), text: text.trim(), basis, ...(blocks ? { blocks } : {}) });
+      } else if ((m = BLOCKS.exec(line))) ops.push({ op: 'blocks', id: m[1], targets: splitTargets(m[2]) }); else if ((m = DONE.exec(line))) ops.push({ op: 'done', id: m[1], note: (m[2] ?? '').trim() });
       else if ((m = MOVE.exec(line))) ops.push({ op: 'move', id: m[1], ...status(m[2]), note: (m[3] ?? '').trim() });
       else if ((m = DROP.exec(line))) ops.push({ op: 'drop', id: m[1], note: (m[2] ?? '').trim() });
       else if ((m = LATER.exec(line))) ops.push({ op: 'move', id: m[1], status: '以后', wait: null, note: (m[2] ?? '').trim() });
@@ -149,7 +169,8 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
       }
       const id = `L${next++}`;
       items.push({ id, text: o.text, status: o.status, wait: o.wait, basis: o.basis,
-        sourceTurn: turn.turnId ?? null, since: turn.turnIndex ?? null, touched: turn.turnIndex ?? null });
+        sourceTurn: turn.turnId ?? null, since: turn.turnIndex ?? null, touched: turn.turnIndex ?? null,
+        ...(o.blocks && o.blocks.length ? { blocks: o.blocks } : {}) });
       changes.push(T(`新增 ${id}`, `added ${id}`));
       if (titleWidth(o.text) > TITLE_MAX) {
         problems.push(T(`${id} 的标题太长（一行写完，约 40 字内），背景写进依据或说明；可以「${id} 改题：…」改短`,
@@ -160,6 +181,16 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
     const it = find(o.id);
     if (!it) { problems.push(T(`${o.id} 不存在`, `${o.id} doesn't exist`)); continue; }
     if (o.op === 'approve') { it.approvedTurn = turn.turnId ?? null; changes.push(T(`${o.id} 认可`, `${o.id} approved`)); continue; }
+    if (o.op === 'blocks') {
+      // 编号只认这场对话里有的；外部的事（投稿、截止）照写。写「无」清空。
+      const missing = o.targets.filter((t) => /^L\d+$/.test(t) && !find(t));
+      for (const t of missing) problems.push(T(`${o.id} 挡着的 ${t} 不存在`, `${o.id} blocks ${t}, which doesn't exist`));
+      const kept = o.targets.filter((t) => !missing.includes(t));
+      if (kept.length) it.blocks = kept; else delete it.blocks;
+      it.touched = turn.turnIndex ?? it.touched;
+      changes.push(kept.length ? T(`${o.id} 挡着 ${kept.join('、')}`, `${o.id} blocks ${kept.join(', ')}`) : T(`${o.id} 不再挡着别的`, `${o.id} blocks nothing now`));
+      continue;
+    }
     if (o.op === 'retitle') {
       // 建项原句留在 firstText：面板和记录都还能查到当初是怎么写的。
       if (it.firstText === undefined) it.firstText = it.text;
@@ -286,6 +317,31 @@ export function inlineLine(open, lang = 'zh') {
 
 export const REFRESH_TURNS = 10;
 
+/** 开着的项里写了「挡着」的，按挡着的开着的项与外部事件的多少排，取前三（spec D2 的候选，只给数不替模型选）。 */
+export function blockCandidates(items) {
+  const open = new Set(items.filter((x) => !CLOSED.has(x.status)).map((x) => x.id));
+  return items.filter((x) => open.has(x.id) && x.blocks?.length)
+    .map((x) => ({ id: x.id, n: x.blocks.filter((t) => !/^L\d+$/.test(t) || open.has(t)).length }))
+    .filter((c) => c.n > 0)
+    .sort((a, b) => b.n - a.n || Number(a.id.slice(1)) - Number(b.id.slice(1)))
+    .slice(0, 3);
+}
+
+/**
+ * 回复最后一行「下一步」有没有点到清单上开着的项（spec D2）。清单上没有开着的项、或这一轮没写「下一步」时不管。
+ * 返回要在下一轮说出来的问题，没有问题是 null。
+ */
+export function nextProblem(next, items, lang = 'zh') {
+  const T = (zh, en) => pick(lang, zh, en);
+  if (typeof next !== 'string' || !next.trim() || !Array.isArray(items)) return null;
+  if (!items.some((x) => !CLOSED.has(x.status))) return null;
+  const ids = [...next.matchAll(/(?<![A-Za-z0-9])L(\d+)(?!\d)/g)].map((m) => `L${m[1]}`);
+  if (!ids.length) return T('上一轮的「下一步」没点清单上的编号', 'Last turn\'s "Next:" named no list ID');
+  const openIds = ids.filter((id) => items.some((x) => x.id === id && !CLOSED.has(x.status)));
+  if (!openIds.length) return T(`上一轮的「下一步」点的 ${ids.join('、')} 不是开着的项`, `Last turn's "Next:" named ${ids.join(', ')}, which is not open`);
+  return null;
+}
+
 /**
  * 这一轮注入的清单：{text, shown}。mode：'full'（普通轮）或 'always'（短确认、系统信封：只放等你的）。
  *
@@ -312,11 +368,13 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = '
     const idle = idleOf(x);
     if (lang === 'en') {
       return `${x.id} ${label(x, lang)}: ${x.text}`
+        + (x.blocks?.length ? ` (blocks ${x.blocks.join(', ')})` : '')
         + (x.basis && x.basis !== '预测' ? ` (basis: ${x.basis})` : '')
         + (x.approvedTurn ? ' (approved)' : '')
         + (idle >= staleAt(x) ? ` (untouched for ${idle} turns)` : '');
     }
     return `${x.id} ${label(x)}：${x.text}`
+      + (x.blocks?.length ? `（挡着 ${x.blocks.join('、')}）` : '')
       + (x.basis && x.basis !== '预测' ? `（依据：${x.basis}）` : '')
       + (x.approvedTurn ? '（已认可）' : '')
       + (idle >= staleAt(x) ? `（${idle} 轮没动）` : '');
@@ -331,6 +389,11 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = '
   const tail = [];
   if (!full && mode === 'full' && rest > 0) tail.push(T(`其余 ${rest} 项和第 ${lastShown.turn} 轮列出的一样。`, rest === 1 ? `The other item is as listed in turn ${lastShown.turn}.` : `The other ${rest} are as listed in turn ${lastShown.turn}.`));
   if (problems.length) tail.push(T(`上一次清单变化的问题：${problems.join('；')}`, `Problems with the last list changes: ${problems.join('; ')}`));
+  const cands = blockCandidates(cur.items);
+  if (cands.length) {
+    tail.push(T(`按挡着的多少：${cands.map((c) => `${c.id}（挡着 ${c.n} 件）`).join('、')}`,
+      `By what they block: ${cands.map((c) => `${c.id} (blocks ${c.n})`).join(', ')}`));
+  }
   // 每条回复都带：短确认、系统信封开始的一轮也一样。
   tail.push(T(`回复末尾照写这一行（本轮有变化就先改好）：\n${inlineLine(open)}`, `End your reply with this line (update it first if the list changed this turn):\n${inlineLine(open, lang)}`));
   return { text: [head, ...lines, ...tail].join('\n'), shown: full ? { snap, turn: turnIndex } : lastShown };

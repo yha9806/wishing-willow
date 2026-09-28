@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, readdir
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const SCHEMA = 14;   // 11：加 plan、next（计划块与「下一步」）、touched（本会话动过的路径）、shown（上一轮说过的待触发条目）；12：加 listShown（长清单上次完整列出）；13：加 lang（写给模型的话用的语言）；14：加 listInherit（续接时从前身继承清单）
+export const SCHEMA = 15;   // 11：加 plan、next（计划块与「下一步」）、touched（本会话动过的路径）、shown（上一轮说过的待触发条目）；12：加 listShown（长清单上次完整列出）；13：加 lang（写给模型的话用的语言）；14：加 listInherit（续接时从前身继承清单）；15：加 nextProblem（「下一步」没点清单编号）
 
 /** Where state lives. Overridable so tests never touch the real directory. */
 export function stateDir() {
