@@ -66,11 +66,11 @@ struct ConversationListTests {
         let items = try #require(c["items"] as? [[String: Any]])
         #expect(items.map { $0["id"] as? String } == ["L1", "L2", "L3", "L4", "L5"])
         #expect(items.map { $0["state"] as? String } == ["done", "doing", "you", "other", "later"])
-        #expect(items[0]["note"] as? String == "main 8d68286")
+        #expect(items[0]["note"] as? String == "证据 main 8d68286", "旁注写明是证据")
         #expect(items[1]["note"] == nil, "预测不写字：有证据的写证据，没写的就是还没有证据")
         #expect(items[4]["note"] == nil)
         #expect(items[1]["idle"] as? Int == 7, "在做 7 轮没动（当前第 9 轮、上次动在第 2 轮）")
-        #expect(items[2]["note"] as? String == "ops 9cdaa73")
+        #expect(items[2]["note"] as? String == "依据 ops 9cdaa73", "旁注写明是依据")
         #expect(items[2]["approved"] as? Bool == true)
         #expect(items[3]["text"] as? String == "核对 A4")
         #expect(items[3]["wait"] as? String == "另一场会话的下一条消息")
@@ -223,9 +223,9 @@ struct ConversationListTests {
     @Test("进度的注：第几步、几分钟；不到一分钟写刚开始")
     func progressNote() {
         let now = Date(timeIntervalSince1970: 1_000_000)
-        #expect(ActivityExport.progressNote(steps: 12, since: now.addingTimeInterval(-190), now: now) == "第 12 步 · 3 分钟")
-        #expect(ActivityExport.progressNote(steps: 2, since: now.addingTimeInterval(-20), now: now) == "第 2 步 · 刚开始")
-        #expect(ActivityExport.progressNote(steps: 0, since: nil, now: now) == "第 0 步 · 刚开始")
+        #expect(ActivityExport.progressNote(steps: 12, since: now.addingTimeInterval(-190), now: now) == "本轮 12 次操作 · 3 分钟")
+        #expect(ActivityExport.progressNote(steps: 2, since: now.addingTimeInterval(-20), now: now) == "本轮 2 次操作 · 刚开始")
+        #expect(ActivityExport.progressNote(steps: 0, since: nil, now: now) == "本轮 0 次操作 · 刚开始")
     }
 
     @Test("刘海上的「等你 N」只数新的（最近 3 轮提出或动过）；不知道轮次的算新的，宁可多数")

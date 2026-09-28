@@ -194,12 +194,13 @@ enum ActivityExport {
                 let wait: String? = state == "other" ? x.wait.flatMap { $0.isEmpty ? nil : $0 } : nil
                 // 预测不带注（09-24 起）：面板上每行都挂一个预测标记是噪音。有证据的写证据，没写的就是还没有证据。
                 let note: String?
+                // 旁注一栏装三种东西，写明是哪种：lintel 不猜（09-28 面板 grill 第三轮 R2：一段没标签的等宽字，看不出是依据）。
                 if state == "done" {
-                    note = x.evidence.flatMap { $0.isEmpty ? nil : $0 } ?? L("没附证据", "no evidence given")
+                    note = x.evidence.flatMap { $0.isEmpty ? nil : L("证据 ", "evidence ") + $0 } ?? L("没附证据", "no evidence given")
                 } else if x.id == active, let p = live {
                     note = progressNote(steps: p.steps.count, since: s.record.updatedAt, now: Date())
                 } else if let b = x.basis, !b.isEmpty, b != "预测" {
-                    note = b
+                    note = L("依据 ", "basis ") + b
                 } else {
                     note = nil
                 }
@@ -242,11 +243,12 @@ enum ActivityExport {
         return best?.id
     }
 
-    /// 「第 12 步 · 3 分钟」。步数是这一轮的工具调用数；分钟从这一轮开始算，不到一分钟写「刚开始」。
+    /// 「本轮 12 次操作 · 3 分钟」。操作数是这一轮的工具调用数；分钟从这一轮开始算，不到一分钟写「刚开始」。
+    /// 原来写「第 12 步」，读者不知道「步」是工具调用还是清单上的步骤（09-28 面板 grill 第三轮 R4）。
     static func progressNote(steps: Int, since: Date?, now: Date) -> String {
         let minutes = since.map { Int(now.timeIntervalSince($0) / 60) } ?? 0
         let time = minutes < 1 ? L("刚开始", "just started") : L("\(minutes) 分钟", "\(minutes) min")
-        return L("第 \(steps) 步 · ", "step \(steps) · ") + time
+        return L("本轮 \(steps) 次操作 · ", "\(steps) tool calls this turn · ") + time
     }
 
     // MARK: 排序字段
