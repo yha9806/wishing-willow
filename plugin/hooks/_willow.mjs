@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, readdir
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const SCHEMA = 16;   // 16：加 listHeld（一轮很长、清单变化全攒到末尾）与 listAuthorSeen（作者面板改动说到哪）；11：加 plan、next（计划块与「下一步」）、touched（本会话动过的路径）、shown（上一轮说过的待触发条目）；12：加 listShown（长清单上次完整列出）；13：加 lang（写给模型的话用的语言）；14：加 listInherit（续接时从前身继承清单）；15：加 nextProblem（「下一步」没点清单编号）
+export const SCHEMA = 17;   // 17：加 listSweep（上一轮提交过时请模型逐条核的等你）与 listSwept（各项上次核的轮次）；16：加 listHeld（一轮很长、清单变化全攒到末尾）与 listAuthorSeen（作者面板改动说到哪）；11：加 plan、next（计划块与「下一步」）、touched（本会话动过的路径）、shown（上一轮说过的待触发条目）；12：加 listShown（长清单上次完整列出）；13：加 lang（写给模型的话用的语言）；14：加 listInherit（续接时从前身继承清单）；15：加 nextProblem（「下一步」没点清单编号）
 
 /** Where state lives. Overridable so tests never touch the real directory. */
 export function stateDir() {
@@ -383,6 +383,49 @@ export function touchedPaths(input, prev) {
       for (const k of PATH_KEYS) add(b.input[k]);
       if (typeof b.input.command === 'string') {
         for (const m of b.input.command.matchAll(PATH_IN_COMMAND)) add(m[1]);
+      }
+    }
+  }
+  return out;
+}
+
+// 提交回执：git commit（及 cherry-pick、revert、amend）成功时打印的第一行「[分支 哈希] 说明」，分支可以是 detached HEAD，
+// 根提交多一个「(root-commit)」。
+const COMMIT_RECEIPT = /^\[([^\]\n]+?) (?:\(root-commit\) )?([0-9a-f]{7,40})\] /gm;
+// 命令里的 git commit（git -C <仓> commit、git -c k=v commit 也算；commit-tree 不算）。
+const COMMIT_CMD = /\bgit(?:\s+(?:-[Cc]\s+\S+|--\S+))*\s+commit(?![-\w])/;
+// 安静提交（-q）不打印回执，本机常见写法是紧跟 git log --oneline -1：取结果里第一行开头的提交号。
+const ONELINE = /^([0-9a-f]{7,40}) /m;
+const NOTHING = /nothing to commit|no changes added to commit|nothing added to commit/;
+
+/**
+ * 这一轮做成的 git 提交：[{hash, branch}]，按先后；hash 读不到时是 null。两条路：
+ * - 跑 git 的那次工具调用，结果里有提交回执：算，整条命令报错也算（「git commit … && git push」推送失败时整条报错，提交已经做成）；
+ * - 命令里有 git commit、结果没报错、也没有「nothing to commit」：算（09-28 实测：一个会话一天几十次提交全是 commit -q，没有一条回执）。
+ * 别的命令打印出同样一行不算。读不到聊天记录就返回 []。
+ */
+export function turnCommits(input, prev) {
+  const path = input?.transcript_path;
+  if (typeof path !== 'string' || !path || typeof prev?.transcriptOffset !== 'number') return [];
+  const text = turnSlice(path, prev.transcriptOffset);
+  const gitCalls = new Map();   // 工具调用 id → 命令里有没有 git commit
+  const out = [];
+  const add = (hash, branch) => { if (hash === null || !out.some((c) => c.hash === hash)) out.push({ hash, branch }); };
+  for (const line of text.split('\n')) {
+    if (!line.includes('tool_use') && !line.includes('tool_result')) continue;
+    let row;
+    try { row = JSON.parse(line); } catch { continue; }
+    if (row?.isSidechain === true || !Array.isArray(row?.message?.content)) continue;
+    for (const b of row.message.content) {
+      if (row.type === 'assistant' && b?.type === 'tool_use' && typeof b.input?.command === 'string'
+        && /\bgit\b/.test(b.input.command)) gitCalls.set(b.id, COMMIT_CMD.test(b.input.command));
+      if (row.type !== 'user' || b?.type !== 'tool_result' || !gitCalls.has(b.tool_use_id)) continue;
+      const body = typeof b.content === 'string' ? b.content
+        : Array.isArray(b.content) ? b.content.filter((c) => c?.type === 'text').map((c) => c.text).join('\n') : '';
+      const receipts = [...body.matchAll(COMMIT_RECEIPT)];
+      for (const m of receipts) add(m[2], m[1]);
+      if (!receipts.length && gitCalls.get(b.tool_use_id) && b.is_error !== true && !NOTHING.test(body)) {
+        add(ONELINE.exec(body)?.[1] ?? null, null);
       }
     }
   }

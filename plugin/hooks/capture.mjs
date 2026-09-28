@@ -160,6 +160,8 @@ try {
         `\n${prev.nextProblem}: end this turn with "Next: Lx <the item> — <why it comes first>".`);
     }
     if (list && prev?.listHeld) list += `\n${prev.listHeld}。`;
+    // 上一轮提交过：之前记下的等你逐条核一遍（extract 算好的一句，见 _list.mjs sweepDue）。
+    if (list && prev?.listSweep) list += `\n${prev.listSweep}`;
     // 作者在 lintel 面板里做的改动（spec 清单实时 C）：上一轮开始以来的都说一遍，模型不用从清单里自己找。
     // 从上一次 capture 起算：extract 会把 updatedAt 改成一轮结束的时刻，作者在一轮进行中点的会被漏掉。
     const byAuthor = authorChanges(sessionId, prev?.listAuthorSeen ?? prev?.updatedAt ?? now);
@@ -205,6 +207,8 @@ try {
     listInherit,           // 续接时从前身继承清单：查过一次就记下，{from, at, why}（_inherit.mjs）
     nextProblem: null,     // 上一轮「下一步」没点清单上开着的项时的问题，extract 写、下一轮 capture 说（spec D2）
     listHeld: null,        // 上一轮很长、清单变化全攒到回复末尾时的问题，extract 写、下一轮 capture 说（spec 清单实时 A）
+    listSweep: null,       // 上一轮提交过时请模型逐条核的等你，extract 写、下一轮 capture 说一次（_list.mjs sweepDue）
+    listSwept: prev?.listSwept ?? null,   // {编号: 上次核的轮次}：同一项核过后几轮内不再问
     listAuthorSeen: now,   // 这一刻之前作者在面板里的改动都已经说过；下一轮只说这之后的（spec 清单实时 C）
     // 这一轮还没结束。extract 在 Stop 时写下时间戳。没有这一位，读方分不清
     // 「模型还在回答」和「答完了没写声明」—— 2026-09-12 用户实测：每一轮一开头

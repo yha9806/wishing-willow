@@ -1,0 +1,113 @@
+{
+  "note": "一轮有提交之后，下一轮请模型逐条核「之前记下、那一轮没碰过」的等你（09-28：一张清单 9 项等你里 6 项过时，前提被新提交取代、条件已满足，没人回头看）。提交的认法：跑 git 的那次调用结果里有回执「[分支 哈希]」（整条命令报错也算：提交成功、推送失败），或命令里有 git commit、结果没报错也没有 nothing to commit（安静提交 -q，提交号取 git log --oneline 的第一行，读不到就只报次数）。别的命令打印出回执样的一行不算。同一项核过后 5 轮内不再问，它被改动过就重新算。",
+  "session_id": "test-sess-77",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "append": "transcript.turn-a.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "上一轮提交了"
+      ]
+    },
+    {
+      "append": "transcript.turn-b.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "上一轮提交了 1a2b3c4。",
+        "等你 1 项，逐条核它是否还成立：L1 合成事项甲。"
+      ],
+      "context_excludes": [
+        "9f9f9f9",
+        "逐条核它是否还成立：L1 合成事项甲、"
+      ]
+    },
+    {
+      "append": "transcript.turn-c.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-c.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-d.json",
+      "stdout": "inject",
+      "context_includes": [
+        "上一轮提交了 2b2b2b2。",
+        "等你 1 项，逐条核它是否还成立：L2 合成事项乙（新）。"
+      ],
+      "context_excludes": [
+        "逐条核它是否还成立：L1"
+      ]
+    },
+    {
+      "append": "transcript.turn-d.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-d.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-e.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "上一轮提交了"
+      ]
+    },
+    {
+      "append": "transcript.turn-e.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-e.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-f.json",
+      "stdout": "inject",
+      "context_includes": [
+        "上一轮提交了 3c3c3c3。",
+        "等你 2 项，逐条核它是否还成立：L1 合成事项甲（改）、L4 合成事项丁。"
+      ]
+    },
+    {
+      "append": "transcript.turn-f.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-f.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-g.json",
+      "stdout": "inject",
+      "context_includes": [
+        "上一轮提交了 1 次。之前记下、那一轮没碰过的等你 1 项，逐条核它是否还成立：L5 合成事项戊。"
+      ]
+    }
+  ]
+}

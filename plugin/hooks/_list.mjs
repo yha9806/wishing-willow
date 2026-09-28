@@ -291,6 +291,41 @@ export function heldProblem(ops, commandedCount, startedMs, endedMs, lang) {
     `Last turn ran ${mins} minutes and ${n} list changes (done, dropped, moved) waited until the end of the reply, so the notch stayed stale: record them with the command as they happen`);
 }
 
+// 一轮有提交之后核一遍等你（09-28：一张清单 9 项等你里 6 项过时——前提被新提交取代、条件已经满足、默认做法已经落稿，
+// 每项都只在记下它的那一轮被看过，「落稿后扫一遍」只是一条记在别处的规矩）。同一项核过后 SWEEP_EVERY 轮内不再问，
+// 它被改动过就重新算：每轮都提交的会话里每轮把每项点一遍，这一行很快就没人读了。
+export const SWEEP_EVERY = 5;
+const SWEEP_SHOW = 6;
+
+/** 该核的等你：这一轮之前记下、这一轮没碰过、改动以来没核过或核过已 SWEEP_EVERY 轮。swept 是 {编号: 上次核的轮次}。 */
+export function sweepDue(items, turnIndex, swept) {
+  if (!Array.isArray(items) || typeof turnIndex !== 'number') return [];
+  const s = swept && typeof swept === 'object' ? swept : {};
+  return items.filter((x) => {
+    if (x.status !== '等你' || x.touched === turnIndex) return false;
+    const at = s[x.id];
+    return typeof at !== 'number' || (typeof x.touched === 'number' && at < x.touched) || turnIndex - at >= SWEEP_EVERY;
+  });
+}
+
+/** 下一轮开头说的那一句；没有提交或没有该核的是 null。commits 是 turnCommits 的结果。 */
+export function sweepText(commits, due, lang = 'zh') {
+  if (!commits?.length || !due?.length) return null;
+  const T = (zh, en) => pick(lang, zh, en);
+  // 安静提交读不到提交号（turnCommits 的 hash 为 null）：有号的列前三个，其余只报个数。
+  const known = commits.filter((c) => c.hash).slice(0, 3).map((c) => c.hash.slice(0, 7));
+  const hashes = !known.length ? T(`${commits.length} 次`, `${commits.length} time${commits.length === 1 ? '' : 's'}`)
+    : known.join(T('、', ', ')) + (commits.length > known.length
+      ? T(` 等 ${commits.length} 个`, ` and ${commits.length - known.length} more`) : '');
+  const ids = due.slice(0, SWEEP_SHOW).map((x) => `${x.id} ${brief(x.text, lang)}`).join(T('、', ', '))
+    + (due.length > SWEEP_SHOW ? T(` 等 ${due.length} 项`, ` and ${due.length - SWEEP_SHOW} more`) : '');
+  return T(`上一轮提交了 ${hashes}。之前记下、那一轮没碰过的等你 ${due.length} 项，逐条核它是否还成立：${ids}。`
+    + '前提被这些提交取代的改题或撤掉，条件已经满足的改状态或做完；仍成立的不用写。',
+  `Last turn committed ${hashes}. ${due.length} item(s) waiting on the user were recorded earlier and not touched in that turn; `
+    + `check each still holds: ${ids}. Retitle or drop what the commits superseded, move or finish what they satisfied; `
+    + 'nothing to write for what still holds.');
+}
+
 /**
  * 一轮中途改清单的那条命令（2026-09-24 作者要求进度和内容实时更新）。清单原来只在回复结束时记下，
  * 一轮做二十分钟，刘海上的清单二十分钟不动。命令一跑就追加一份快照，app 靠 FSEvents 一秒内读到。

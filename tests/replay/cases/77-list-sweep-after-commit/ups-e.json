@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-77",
+  "prompt_id": "p77e",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "把合成仓库第 e 轮的配置核对完，改好就提交"
+}

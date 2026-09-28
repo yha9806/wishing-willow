@@ -7,8 +7,8 @@
 
 import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
-  turnAssistantRows, turnLastAt, turnFirstAt } from './_willow.mjs';
-import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine, nextProblem, heldProblem } from './_list.mjs';
+  turnAssistantRows, turnLastAt, turnFirstAt, turnCommits } from './_willow.mjs';
+import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine, nextProblem, heldProblem, sweepDue, sweepText } from './_list.mjs';
 import { sessionLang } from './_lang.mjs';
 
 try {
@@ -58,14 +58,30 @@ try {
   } catch { /* 见上 */ }
 
   // 「下一步」有没有点到清单上开着的项（spec D2）：有问题下一轮在【清单】里说出来。读不出清单就不判。
+  // 这一轮提交过：之前记下、这一轮没碰过的等你，下一轮请模型逐条核一遍（sweepDue）。清单在这一轮的变化应用之后读。
   let nextIssue = null;
+  let sweep = null;
+  let swept = prev?.listSwept ?? null;
   try {
     const latest = readList(sessionId);
-    if (latest && !latest.error) nextIssue = nextProblem(next, latest.items, sessionLang(prev));
+    if (latest && !latest.error) {
+      nextIssue = nextProblem(next, latest.items, sessionLang(prev));
+      const commits = turnCommits(input, prev);
+      const ti = prev?.turnIndex;
+      if (commits.length && typeof ti === 'number') {
+        const due = sweepDue(latest.items, ti, swept);
+        sweep = sweepText(commits, due, sessionLang(prev));
+        // 只留还在等你的项：做完、撤掉的不必再记它上次什么时候核过。
+        const open = new Set(latest.items.filter((x) => x.status === '等你').map((x) => x.id));
+        swept = Object.fromEntries(Object.entries({ ...(swept ?? {}), ...Object.fromEntries(due.map((x) => [x.id, ti])) })
+          .filter(([id]) => open.has(id)));
+      }
+    }
   } catch { /* 不判 */ }
 
   if (prev) {
-    writeState(sessionId, { ...prev, decode, tag, plan, next, touched, turnEndedAt: endedAt, updatedAt: endedAt, nextProblem: nextIssue, listHeld: held });
+    writeState(sessionId, { ...prev, decode, tag, plan, next, touched, turnEndedAt: endedAt, updatedAt: endedAt, nextProblem: nextIssue, listHeld: held,
+      listSweep: sweep, listSwept: swept });
     // 只在 capture 跑过的时候记日志：没有 capture 就没有原话，也没有「问没问」，
     // 记一条三个字段都是 null 的东西只会让统计更难看懂。
     appendTurnLog(sessionId, {

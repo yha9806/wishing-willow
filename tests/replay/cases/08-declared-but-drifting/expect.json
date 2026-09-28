@@ -40,6 +40,8 @@
     "listInherit",
     "nextProblem",
     "listHeld",
-    "listAuthorSeen"
+    "listAuthorSeen",
+    "listSweep",
+    "listSwept"
   ]
 }
