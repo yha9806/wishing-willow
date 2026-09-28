@@ -1,0 +1,10 @@
+{
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "session_id": "test-sess-70",
+  "prompt_id": "00000000-0000-4000-8000-000000000070",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "对完了，合成字段有两处对不上。\n\n下一步：等你看这两处"
+}

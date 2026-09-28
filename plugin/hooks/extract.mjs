@@ -7,7 +7,7 @@
 
 import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
-  turnAssistantRows,
+  turnAssistantRows, turnLastAt,
 } from './_willow.mjs';
 import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine } from './_list.mjs';
 import { sessionLang } from './_lang.mjs';
@@ -29,7 +29,10 @@ try {
 
   // Only ever touch `decode` and the timestamp. `prompt` stays exactly as
   // capture.mjs wrote it — this hook has no business rewriting what you said.
-  const endedAt = new Date().toISOString();
+  // 结束时刻取这一轮最后一条消息的时间；取不到，或它不早于此刻，才用钩子跑的时刻（turnLastAt）。
+  const nowMs = Date.now();
+  const lastMs = turnLastAt(input, prev);
+  const endedAt = new Date(lastMs !== null && lastMs < nowMs ? lastMs : nowMs).toISOString();
 
   // 长清单：这一轮的「清单变化：」块应用到上一份快照上，追加一份新的。旧清单读不出就不写——
   // 拿空清单盖掉它比读不出更糟；capture 会照实说读不出。清单出错不许拖垮下面声明的记录。

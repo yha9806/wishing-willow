@@ -1,0 +1,19 @@
+{
+  "note": "一轮的结束时刻取聊天记录里这一轮最后一条消息的时间，不取结束钩子跑的时刻：09-28 一轮凌晨答完、机器睡着，钩子早上才跑，面板上这一轮写成「7 小时 37 分」（面板 grill 第三轮 R8）。",
+  "transcript_two_phase": true,
+  "capture": {
+    "exit_code": 0,
+    "stdout": "inject"
+  },
+  "extract": {
+    "exit_code": 0
+  },
+  "state_file": {
+    "tag": "对配置",
+    "turnEndedAt": "2026-09-12T16:03:00.000Z"
+  },
+  "log_last": {
+    "endedAt": "2026-09-12T16:03:00.000Z",
+    "tag": "对配置"
+  }
+}

@@ -443,6 +443,28 @@ export function turnAssistantRows(input, prev) {
   return typeof input?.last_assistant_message === 'string' ? [{ uuid: null, texts: [input.last_assistant_message] }] : [];
 }
 
+/**
+ * 这一轮在聊天记录里最后一条消息的时刻（毫秒），取不到是 null。结束钩子本身的时刻不可靠：
+ * 09-28 实测一轮凌晨一点多就答完，机器睡着，结束钩子到早上八点醒来才跑，面板上这一轮写「7 小时 37 分」。
+ * 读的是 turnSlice 给的这一段，压缩重写进来的旧副本已经挡掉。
+ */
+export function turnLastAt(input, prev) {
+  const path = input?.transcript_path;
+  if (typeof path !== 'string' || !path || typeof prev?.transcriptOffset !== 'number') return null;
+  const text = turnSlice(path, prev.transcriptOffset);
+  if (!text) return null;
+  let last = null;
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    let row;
+    try { row = JSON.parse(line); } catch { continue; }
+    if (row?.type !== 'assistant' && row?.type !== 'user') continue;
+    const t = Date.parse(row.timestamp ?? '');
+    if (Number.isFinite(t) && (last === null || t > last)) last = t;
+  }
+  return last;
+}
+
 /** 这一轮助手写的全部文字，按顺序。 */
 export function turnAssistantTexts(input, prev) {
   return turnAssistantRows(input, prev).flatMap((r) => r.texts);
