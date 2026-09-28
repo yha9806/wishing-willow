@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-75",
+  "prompt_id": "p75d",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "最后核对合成仓库的第三个配置文件"
+}

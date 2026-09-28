@@ -38,6 +38,8 @@
     "shown",
     "listShown",
     "listInherit",
-    "nextProblem"
+    "nextProblem",
+    "listHeld",
+    "listAuthorSeen"
   ]
 }

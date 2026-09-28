@@ -1,0 +1,53 @@
+{
+  "note": "作者在 lintel 面板里点的改动由 app 调 listctl --by author 写（09-28 spec 清单实时 C）：下一轮在【清单】里告诉模型「你在面板里改了」；只说一次；--by 只认 author。",
+  "session_id": "test-sess-76",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-author.json",
+      "stdout_includes": [
+        "L1 做完"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-bad-by.json",
+      "exit": 2
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "你在面板里改了：L1 做完"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "你在面板里改了"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "note": "一轮 ≥5 分钟、回复末尾的清单变化里有做完或换状态、这一轮一次都没用命令记（09-28 spec 清单实时 A）：下一轮说出来。中途用命令记过、或短轮，都不说。一轮多长按记录里这一轮首尾两条消息的时刻算。",
+  "session_id": "test-sess-75",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "append": "transcript.turn-a.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "都攒到了回复末尾"
+      ]
+    },
+    {
+      "append": "transcript.turn-b.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "上一轮做了 7 分钟，1 处清单变化",
+        "都攒到了回复末尾"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-c.json",
+      "stdout_includes": [
+        "L2 做完"
+      ]
+    },
+    {
+      "append": "transcript.turn-c.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-c.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-d.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "都攒到了回复末尾"
+      ]
+    },
+    {
+      "append": "transcript.turn-d.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-d.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-e.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "都攒到了回复末尾"
+      ]
+    }
+  ]
+}

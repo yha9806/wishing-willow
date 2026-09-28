@@ -255,6 +255,43 @@ export function commandedLines(sessionId, turnId) {
 }
 
 /**
+ * 作者在 lintel 面板里做的改动（09-28 spec「清单实时」C）：app 调 listctl --by author 写的快照，via = 'author'。
+ * 列出某一刻之后的，下一轮在【清单】里告诉模型「你在面板里改了什么」。
+ */
+export function authorChanges(sessionId, sinceIso) {
+  const out = [];
+  const p = listPath(sessionId);
+  if (!existsSync(p)) return out;
+  try {
+    for (const line of readFileSync(p, 'utf8').split('\n')) {
+      if (!line.trim()) continue;
+      let snap;
+      try { snap = JSON.parse(line); } catch { continue; }
+      if (snap?.via !== 'author' || (sinceIso && !(String(snap.at) > sinceIso))) continue;
+      for (const c of Array.isArray(snap.changes) ? snap.changes : []) if (typeof c === 'string') out.push(c);
+    }
+  } catch { /* 读不出就不说：最坏是模型下一轮才从清单本身看到变化 */ }
+  return out;
+}
+
+/** 一轮做了这么久，清单变化却全攒到回复末尾，就说出来（09-28 spec「清单实时」A）。 */
+export const HELD_MS = 5 * 60 * 1000;
+
+/**
+ * 回复末尾的「清单变化」里有做完、撤掉或换状态，这一轮却一次都没用命令记过清单，而且一轮 ≥ 5 分钟：
+ * 这些变化本该发生时就记下（刘海一直是旧的）。新增不算——新增常常就是回复末尾才想清楚的。
+ */
+export function heldProblem(ops, commandedCount, startedMs, endedMs, lang) {
+  if (commandedCount > 0 || !Number.isFinite(startedMs) || !Number.isFinite(endedMs)) return null;
+  const mins = Math.floor((endedMs - startedMs) / 60000);
+  if (endedMs - startedMs < HELD_MS) return null;
+  const n = ops.filter((o) => o.op === 'done' || o.op === 'drop' || o.op === 'move').length;
+  if (!n) return null;
+  return pick(lang, `上一轮做了 ${mins} 分钟，${n} 处清单变化（做完、撤掉、换状态）都攒到了回复末尾，刘海上一直是旧的：发生时就用命令记`,
+    `Last turn ran ${mins} minutes and ${n} list changes (done, dropped, moved) waited until the end of the reply, so the notch stayed stale: record them with the command as they happen`);
+}
+
+/**
  * 一轮中途改清单的那条命令（2026-09-24 作者要求进度和内容实时更新）。清单原来只在回复结束时记下，
  * 一轮做二十分钟，刘海上的清单二十分钟不动。命令一跑就追加一份快照，app 靠 FSEvents 一秒内读到。
  * 会话号直接写进命令：跑命令的 shell 不知道自己属于哪个会话。

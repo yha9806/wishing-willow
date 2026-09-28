@@ -12,7 +12,7 @@ import {
 } from './_willow.mjs';
 import { triggerBlock } from './_triggers.mjs';
 import { inboxText } from './_inbox.mjs';
-import { listBlock, listRules, commandRule } from './_list.mjs';
+import { listBlock, listRules, commandRule, authorChanges } from './_list.mjs';
 import { inheritList } from './_inherit.mjs';
 import { promptLang, sessionLang, pick } from './_lang.mjs';
 
@@ -159,6 +159,14 @@ try {
       list += T(`\n${prev.nextProblem}：这一轮的最后一行写成「下一步：Lx <这件事>——<为什么是它>」。`,
         `\n${prev.nextProblem}: end this turn with "Next: Lx <the item> — <why it comes first>".`);
     }
+    if (list && prev?.listHeld) list += `\n${prev.listHeld}。`;
+    // 作者在 lintel 面板里做的改动（spec 清单实时 C）：上一轮开始以来的都说一遍，模型不用从清单里自己找。
+    // 从上一次 capture 起算：extract 会把 updatedAt 改成一轮结束的时刻，作者在一轮进行中点的会被漏掉。
+    const byAuthor = authorChanges(sessionId, prev?.listAuthorSeen ?? prev?.updatedAt ?? now);
+    if (list && byAuthor.length) {
+      list += T(`\n你在面板里改了：${byAuthor.join('、')}（这些是你本人点的，照此更新计划）。`,
+        `\nYou changed on the panel: ${byAuthor.join(', ')} (you clicked these yourself; plan accordingly).`);
+    }
     if (list && listInherit.from && !prev?.listInherit?.from) {
       list = T(`【Wishing-Willow · 清单】这场对话是续接的：清单继承自会话 ${listInherit.from}，编号接着用。\n`,
         `[Wishing-Willow · List] This conversation was resumed: the list is carried over from session ${listInherit.from}, and the IDs continue.\n`) + list;
@@ -196,6 +204,8 @@ try {
     listShown,             // 长清单上次完整列出是哪份快照、第几轮；没变就不重列（_list.mjs）
     listInherit,           // 续接时从前身继承清单：查过一次就记下，{from, at, why}（_inherit.mjs）
     nextProblem: null,     // 上一轮「下一步」没点清单上开着的项时的问题，extract 写、下一轮 capture 说（spec D2）
+    listHeld: null,        // 上一轮很长、清单变化全攒到回复末尾时的问题，extract 写、下一轮 capture 说（spec 清单实时 A）
+    listAuthorSeen: now,   // 这一刻之前作者在面板里的改动都已经说过；下一轮只说这之后的（spec 清单实时 C）
     // 这一轮还没结束。extract 在 Stop 时写下时间戳。没有这一位，读方分不清
     // 「模型还在回答」和「答完了没写声明」—— 2026-09-12 用户实测：每一轮一开头
     // 灵动岛都冒一次橙色的「问了，模型没写声明」，而模型那时一个字都还没回。

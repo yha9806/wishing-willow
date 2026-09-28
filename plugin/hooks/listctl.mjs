@@ -21,21 +21,25 @@ function fail(msg, code = 2) {
 }
 
 let sessionId = null;
+// --by author：作者在 lintel 面板里点的（app 代为调用，spec 清单实时 C）。快照记 via = 'author'，下一轮告诉模型。
+let by = null;
 let lines = [];
 const argv = process.argv.slice(2);
 if (argv.length) {
   for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === '--session') { sessionId = argv[i + 1] ?? null; i += 1; } else lines.push(argv[i]);
+    if (argv[i] === '--session') { sessionId = argv[i + 1] ?? null; i += 1; } else if (argv[i] === '--by') { by = argv[i + 1] ?? null; i += 1; } else lines.push(argv[i]);
   }
 } else {
   try {
     const o = JSON.parse(readFileSync(0, 'utf8'));
     sessionId = typeof o?.session_id === 'string' ? o.session_id : null;
     lines = Array.isArray(o?.lines) ? o.lines.filter((x) => typeof x === 'string') : [];
+    by = typeof o?.by === 'string' ? o.by : null;
   } catch { fail(T('没有参数，stdin 也不是 {session_id, lines}', 'no arguments, and stdin is not {session_id, lines}')); }
 }
 lines = lines.flatMap((l) => l.split('\n')).map((l) => l.trim()).filter(Boolean);
 
+if (by !== null && by !== 'author') fail(T('--by 只认 author', '--by only accepts author'));
 if (!sessionId || !/^[A-Za-z0-9._-]+$/.test(sessionId)) fail(T('要 --session <会话号>', 'needs --session <session id>'));
 if (!lines.length) fail(T('没有要记的行', 'no lines to record'));
 const prev = readState(sessionId);
@@ -59,7 +63,7 @@ if (cur?.error) fail(T(`清单文件读不出（${cur.error}），没写——�
 const turn = { turnId: prev.turnId ?? null, turnIndex: prev.turnIndex ?? null };
 const r = applyOps(cur?.items, ops, turn, lang);
 appendSnapshot(sessionId, {
-  at: new Date().toISOString(), ...turn, ...r, rows: [], via: 'command', lines: known.map((o) => o.raw),
+  at: new Date().toISOString(), ...turn, ...r, rows: [], via: by === 'author' ? 'author' : 'command', lines: known.map((o) => o.raw),
 });
 const open = r.items.filter((x) => x.status !== '做完' && x.status !== '撤掉');
 process.stdout.write([

@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-75",
+  "prompt_id": "p75b",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "接着核对合成仓库的第一个配置文件"
+}

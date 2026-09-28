@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, readdir
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const SCHEMA = 15;   // 11：加 plan、next（计划块与「下一步」）、touched（本会话动过的路径）、shown（上一轮说过的待触发条目）；12：加 listShown（长清单上次完整列出）；13：加 lang（写给模型的话用的语言）；14：加 listInherit（续接时从前身继承清单）；15：加 nextProblem（「下一步」没点清单编号）
+export const SCHEMA = 16;   // 16：加 listHeld（一轮很长、清单变化全攒到末尾）与 listAuthorSeen（作者面板改动说到哪）；11：加 plan、next（计划块与「下一步」）、touched（本会话动过的路径）、shown（上一轮说过的待触发条目）；12：加 listShown（长清单上次完整列出）；13：加 lang（写给模型的话用的语言）；14：加 listInherit（续接时从前身继承清单）；15：加 nextProblem（「下一步」没点清单编号）
 
 /** Where state lives. Overridable so tests never touch the real directory. */
 export function stateDir() {
@@ -448,6 +448,24 @@ export function turnAssistantRows(input, prev) {
  * 09-28 实测一轮凌晨一点多就答完，机器睡着，结束钩子到早上八点醒来才跑，面板上这一轮写「7 小时 37 分」。
  * 读的是 turnSlice 给的这一段，压缩重写进来的旧副本已经挡掉。
  */
+/** 这一轮第一条消息的时刻（毫秒）：量一轮多长用它，不用 capture 跑的时刻（回放与真实记录一致）。读不到返回 null。 */
+export function turnFirstAt(input, prev) {
+  const path = input?.transcript_path;
+  if (typeof path !== 'string' || !path || typeof prev?.transcriptOffset !== 'number') return null;
+  const text = turnSlice(path, prev.transcriptOffset);
+  if (!text) return null;
+  let first = null;
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    let row;
+    try { row = JSON.parse(line); } catch { continue; }
+    if (row?.type !== 'assistant' && row?.type !== 'user') continue;
+    const t = Date.parse(row.timestamp ?? '');
+    if (Number.isFinite(t) && (first === null || t < first)) first = t;
+  }
+  return first;
+}
+
 export function turnLastAt(input, prev) {
   const path = input?.transcript_path;
   if (typeof path !== 'string' || !path || typeof prev?.transcriptOffset !== 'number') return null;
