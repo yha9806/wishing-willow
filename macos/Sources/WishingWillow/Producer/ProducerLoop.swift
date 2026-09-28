@@ -9,6 +9,8 @@ final class ProducerLoop {
     private let store: WillowStore
     private let dir: URL
     private var heartbeat: Timer?
+    private var inboxTimer: Timer?
+    private let inbox: URL
     private var written: Set<String> = []
     /// 演示与测量用：每次写出文件记一行（时刻 + 活动 id + 事件 id），不写原话。
     private let log: Bool
@@ -16,6 +18,7 @@ final class ProducerLoop {
     init(store: WillowStore, home: URL, log: Bool) {
         self.store = store
         self.dir = home.appendingPathComponent("producers/\(ActivityExport.producerId)/activities", isDirectory: true)
+        self.inbox = home.appendingPathComponent("producers/\(ActivityExport.producerId)/inbox", isDirectory: true)
         self.log = log
     }
 
@@ -33,6 +36,20 @@ final class ProducerLoop {
         t.tolerance = 2
         RunLoop.main.add(t, forMode: .common)
         heartbeat = t
+        // 作者在面板里点的清单动作（spec 清单实时 C）：每秒读一次收件。执行后清单文件变了，store 自己会重读、重新导出。
+        let i = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.drainInbox() }
+        }
+        i.tolerance = 0.2
+        RunLoop.main.add(i, forMode: .common)
+        inboxTimer = i
+    }
+
+    private func drainInbox() {
+        let log = self.log
+        ListInbox.drain(inbox: inbox, stateDir: WillowStore.defaultDirectory) { line in
+            if log { FileHandle.standardError.write(Data("\(Self.stamp()) \(line)\n".utf8)) }
+        }
     }
 
     private func export(reason: String, heartbeat: Bool = false) {

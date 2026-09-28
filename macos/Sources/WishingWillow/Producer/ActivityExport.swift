@@ -215,6 +215,8 @@ enum ActivityExport {
                 if x.approved { out["approved"] = true }
                 if state == "doing", let n = now, let t = x.touched, n - t >= 5 { out["idle"] = n - t }
                 if state == "you", let n = now, let t = x.touched, n - t >= staleWaitingTurns { out["idle"] = n - t }
+                // 作者在面板里能直接点的（09-28 spec「清单实时」C）：第一个是复选框。lintel 原样写回本来源的收件，ListInbox 处理。
+                if state != "done" { out["actions"] = ListInbox.actions(item: x.id, state: state) }
                 return out
             }
             return ["items": items, "problems": Array(snap.problems.prefix(16)), "labels": labels]
