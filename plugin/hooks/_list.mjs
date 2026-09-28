@@ -26,7 +26,8 @@ const LIST_RULES_ZH =
   '在「下一步：」那一行之前写「清单变化：」，下面一行一条：「+ 在做：<事>」「+ 等你：<事>」「+ 等 <什么>：<事>」「+ 以后：<事>」新增' +
   '（有事实依据时在末尾加「（依据：<提交号、文件或 CI>）」，不加就算预测）；「L3 做完：<证据>」「L3 → 等你：<为什么>」' +
   '「L3 撤掉：<原因>」「L3 认可」（用户这一轮认可了它）「L3 改题：<新标题>」（事情变了、原标题读起来像还悬着时）。' +
-  '标题一行写完（约 40 字内），背景写进依据或说明。没提到的项原样留着；清单没有变化就不写这一块。\n' +
+  '标题一行写完（约 40 字内），背景写进依据或说明。编号只在这场对话里算数，提到别的对话的编号要带上对话名（「会话甲的 L3」）。' +
+  '没提到的项原样留着；清单没有变化就不写这一块。\n' +
   '回复的最后一行写「下一步：<这一轮之后等用户什么，或你接着做什么>」。';
 
 // 英文版（2026-09-27 装机演练 F2）。与中文版逐条对应；写法两种都认（parseOps）。
@@ -39,6 +40,7 @@ const LIST_RULES_EN =
   + 'without that it counts as a forecast); "L3 done: <evidence>", "L3 → waiting on you: <why>", "L3 dropped: <reason>", '
   + '"L3 approved" (the user approved it this turn), "L3 retitled: <new title>" (when things changed and the old title reads as still open). '
   + 'Keep a title to one line (about 80 characters); background goes in the basis or the note. '
+  + 'IDs are only meaningful inside this conversation; when you mention another conversation\'s ID, name the conversation ("session A\'s L3"). '
   + 'Items you don\'t mention stay as they are; if the list didn\'t change, leave the block out.\n'
   + 'End the reply with one line: "Next: <what you wait on the user for after this turn, or what you do next>".';
 
