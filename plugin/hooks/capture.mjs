@@ -143,7 +143,10 @@ try {
   let listShown = prev?.listShown ?? null;
   // 续接成新会话号的对话，清单还在前身名下：每个会话查一次，没有自己的清单才继承（_inherit.mjs）。
   let listInherit = prev?.listInherit ?? null;
-  if (!listInherit) {
+  // 「新会话」「没有聊天记录」不是最终结论：续接时第一次 capture 可能比 Claude Code 抄旧消息还早
+  // （09-28 实见，早 0.2 秒），那一次判成新会话，记下来就再也不查了。这两种下一轮再查；
+  // 真正的新会话每轮只多读一次记录开头，第一条消息满五分钟后查一次就定为「没有前身」。
+  if (!listInherit || listInherit.why === 'fresh' || listInherit.why === 'no-transcript') {
     try { listInherit = inheritList(sessionId, input.transcript_path, (prev?.turnIndex ?? -1) + 1); } catch (e) {
       listInherit = { from: null, at: now, why: 'error', error: String(e?.message ?? e).slice(0, 200) };
     }
@@ -152,7 +155,7 @@ try {
     const r = listBlock(sessionId, bypass ? 'always' : 'full', (prev?.turnIndex ?? -1) + 1, listShown, lang);
     list = r.text;
     listShown = r.shown;
-    if (list && listInherit.from && !prev?.listInherit) {
+    if (list && listInherit.from && !prev?.listInherit?.from) {
       list = T(`【Wishing-Willow · 清单】这场对话是续接的：清单继承自会话 ${listInherit.from}，编号接着用。\n`,
         `[Wishing-Willow · List] This conversation was resumed: the list is carried over from session ${listInherit.from}, and the IDs continue.\n`) + list;
     }

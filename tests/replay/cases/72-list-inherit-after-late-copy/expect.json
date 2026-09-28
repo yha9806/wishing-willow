@@ -1,0 +1,40 @@
+{
+  "note": "续接时结束钩子之前的第一次 capture 可能比 Claude Code 抄旧消息还早（09-28 实见：检查在 10:24:33.922Z，最早一行 10:24:34.121Z），那时判成「新会话」。「新会话」不是最终结论：下一轮再查，旧消息抄进来以后照样继承，并在那一轮说一次继承自哪里（L35 后续）。",
+  "session_id": "test-sess-72",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "old-sess-72.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-72.list.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "context_excludes": [
+        "合成事项乙",
+        "继承自"
+      ]
+    },
+    {
+      "append": "new.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单继承自会话 old-sess-72",
+        "L2 等你：合成事项乙"
+      ]
+    }
+  ],
+  "list_items": {
+    "L2": {
+      "status": "等你",
+      "text": "合成事项乙"
+    }
+  }
+}

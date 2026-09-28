@@ -1,0 +1,5 @@
+{"type":"custom-title","customTitle":"合成会话","sessionId":"old-sess-72"}
+{"parentUuid":null,"type":"user","uuid":"aaaa0001-0000-4000-8000-000000000001","sessionId":"old-sess-72","timestamp":"2026-09-01T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"合成请求一"}]}}
+{"parentUuid":null,"type":"assistant","uuid":"aaaa0002-0000-4000-8000-000000000002","sessionId":"old-sess-72","timestamp":"2026-09-01T10:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"合成回答一"}]}}
+{"parentUuid":null,"type":"user","uuid":"aaaa0003-0000-4000-8000-000000000003","sessionId":"old-sess-72","timestamp":"2026-09-01T10:05:00.000Z","message":{"role":"user","content":[{"type":"text","text":"合成请求二"}]}}
+{"parentUuid":null,"type":"assistant","uuid":"aaaa0004-0000-4000-8000-000000000004","sessionId":"old-sess-72","timestamp":"2026-09-01T10:05:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"合成回答二"}]}}
