@@ -1,0 +1,47 @@
+{
+  "note": "会话语言有了以后，只有一个汉字或一个英文词的原话不作数（_lang.mjs 注释说「太短的不作数」，此前只有确认列表里的词这样；不在列表里的单字「修」会把英文会话翻成中文）。一整句照常换。",
+  "session_id": "test-sess-71",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "[Wishing-Willow] Open this reply with four lines"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "[Wishing-Willow] Open this reply with four lines"
+      ],
+      "context_excludes": [
+        "请在本轮回复的最开头写四行"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "请在本轮回复的最开头写四行"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-d.json",
+      "stdout": "inject",
+      "context_includes": [
+        "请在本轮回复的最开头写四行"
+      ],
+      "context_excludes": [
+        "Open this reply"
+      ]
+    }
+  ],
+  "state_file": {
+    "lang": "zh"
+  }
+}

@@ -35,7 +35,9 @@ export function systemLang() {
 /**
  * 按这一轮的原话定语言。prev 是这个会话上一轮定下的（没有就是 null）。
  * 有了会话语言以后要换，得换得明白：中文会话里贴一大段英文日志，只要还有一个汉字就不换；
- * 英文会话里提到一个中文名字，汉字比英文词少就不换。太短的（「好」「ok」）不作数，沿用上一轮。
+ * 英文会话里提到一个中文名字，汉字比英文词少就不换。太短的不作数，沿用上一轮：只有一个汉字或一个英文词的
+ * （「修」「push」）。「好」「ok」这类确认在 capture 里就被跳过、到不了这里；不在确认列表里的单字以前会把英文会话翻成中文
+ * （L21：注释说不作数，代码没做到）。
  */
 export function promptLang(prompt, prev) {
   const f = forced();
@@ -43,6 +45,7 @@ export function promptLang(prompt, prev) {
   if (typeof prompt !== 'string') return prev ?? systemLang();
   const han = (prompt.match(/\p{Script=Han}/gu) ?? []).length;
   const words = (prompt.match(/[A-Za-z]+/g) ?? []).length;
+  if ((prev === 'zh' || prev === 'en') && han <= 1 && words <= 1) return prev;
   if (prev === 'zh') return han === 0 && words >= 3 ? 'en' : 'zh';
   if (prev === 'en') return han > 0 && han >= words ? 'zh' : 'en';
   if (han === 0 && words === 0) return systemLang();
