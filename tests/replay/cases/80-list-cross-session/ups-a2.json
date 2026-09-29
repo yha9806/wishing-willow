@@ -1,0 +1,9 @@
+{
+  "session_id": "aaaaaaaa-0000-4000-8000-000000000080",
+  "prompt_id": "p80a2",
+  "transcript_path": "/dev/null",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "合成仓库这一轮：把下一份配置核对完"
+}

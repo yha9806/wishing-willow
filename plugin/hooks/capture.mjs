@@ -14,6 +14,7 @@ import { triggerBlock } from './_triggers.mjs';
 import { inboxText } from './_inbox.mjs';
 import { listBlock, listRules, commandRule, authorChanges, idleDue, idleText, openAsked } from './_list.mjs';
 import { inheritList } from './_inherit.mjs';
+import { linkNews, selfLine } from './_links.mjs';
 import { promptLang, sessionLang, pick } from './_lang.mjs';
 
 /**
@@ -142,6 +143,7 @@ try {
   let list = null;
   let listShown = prev?.listShown ?? null;
   let listSwept = prev?.listSwept ?? null;   // {编号: 上次问的轮次}：提交后核对与挂久点名共用
+  let listLinks = prev?.listLinks ?? null;   // {编号: 上次说的结论}：挂在别的对话编号上的项（_links.mjs）
   // 续接成新会话号的对话，清单还在前身名下：每个会话查一次，没有自己的清单才继承（_inherit.mjs）。
   let listInherit = prev?.listInherit ?? null;
   // 「新会话」「没有聊天记录」不是最终结论：续接时第一次 capture 可能比 Claude Code 抄旧消息还早
@@ -172,6 +174,12 @@ try {
         list += `\n${said}`;
         listSwept = openAsked({ ...(listSwept ?? {}), ...Object.fromEntries(due.map((x) => [x.id, turn])) }, r.items);
       }
+    }
+    // 挂在别的对话编号上的项：那边做完或撤掉，就在这里说一次（_links.mjs）。只读别的会话的清单。
+    if (list && Array.isArray(r.items)) {
+      const news = linkNews(r.items, sessionId, listLinks, lang);
+      listLinks = news.said;
+      if (news.lines.length) list += `\n${news.lines.join('\n')}`;
     }
     // 作者在 lintel 面板里做的改动（spec 清单实时 C）：上一轮开始以来的都说一遍，模型不用从清单里自己找。
     // 从上一次 capture 起算：extract 会把 updatedAt 改成一轮结束的时刻，作者在一轮进行中点的会被漏掉。
@@ -220,6 +228,7 @@ try {
     listHeld: null,        // 上一轮很长、清单变化全攒到回复末尾时的问题，extract 写、下一轮 capture 说（spec 清单实时 A）
     listSweep: null,       // 上一轮提交过时请模型逐条核的等你，extract 写、下一轮 capture 说一次（_list.mjs sweepDue）
     listSwept,             // {编号: 上次问的轮次}：提交后核对与挂久点名共用，问过的几轮内不再问
+    listLinks,             // {编号: 上次说的结论}：挂在别的对话编号上的项，同一结论只说一次（_links.mjs）
     listAuthorSeen: now,   // 这一刻之前作者在面板里的改动都已经说过；下一轮只说这之后的（spec 清单实时 C）
     // 这一轮还没结束。extract 在 Stop 时写下时间戳。没有这一位，读方分不清
     // 「模型还在回答」和「答完了没写声明」—— 2026-09-12 用户实测：每一轮一开头
@@ -249,7 +258,7 @@ try {
       additionalContext: (envelopeRulesProblem && !bypass
         ? T(`【Wishing-Willow】${envelopeRulesProblem}：后台通知等可能被当成你的话记下。\n`,
           `[Wishing-Willow] ${envelopeRulesProblem}: background notifications may be recorded as the user's words.\n`) : '')
-        + [bypass ? null : `${reminder(lang)}\n${commandRule(sessionId, lang)}`, block, list, inbox].filter(Boolean).join('\n\n'),
+        + [bypass ? null : `${reminder(lang)}\n${commandRule(sessionId, lang)}\n${selfLine(sessionId, lang)}`, block, list, inbox].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);

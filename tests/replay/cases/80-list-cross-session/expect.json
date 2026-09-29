@@ -1,0 +1,69 @@
+{
+  "note": "挂到别的对话的编号上：「等 <那场对话会话号前 8 位> 的 L3」挂在那边的一项上；那一项做完或撤掉时，这边下一轮说一次（带证据或原因），说过不再说。那场对话续接成新会话号时顺着继承记录找过去。引用的会话本机没有清单，也说一次。每场对话的提醒里看得到自己的会话号。09-28：一项「等 AWT 会话」挂了 184 轮，那边早已带证据做完，这边没有任何信号。",
+  "session_id": "aaaaaaaa-0000-4000-8000-000000000080",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a1.json",
+      "stdout": "inject",
+      "context_includes": [
+        "这场对话的会话号是 aaaaaaaa"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b1.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-b-add.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-a-add.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a2.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L3 等的会话 dddddddd 在本机没有清单"
+      ],
+      "context_excludes": [
+        "已做完（证据",
+        "已撤掉（原因"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-b-done.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a3.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 等的 bbbbbbbb 的 L1 已做完（证据：合成证据一）"
+      ],
+      "context_excludes": [
+        "L3 等的会话 dddddddd",
+        "L2 等的 bbbbbbbb"
+      ]
+    },
+    {
+      "copy": "c.list.jsonl",
+      "to": "cccccccc-0000-4000-8000-000000000080.list.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a4.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L2 等的 bbbbbbbb 的 L2 已撤掉（原因：合成原因）"
+      ],
+      "context_excludes": [
+        "L1 等的 bbbbbbbb 的 L1 已做完"
+      ]
+    }
+  ]
+}

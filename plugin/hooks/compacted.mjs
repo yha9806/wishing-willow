@@ -10,6 +10,7 @@
 
 import { readStdin, parseInput, readState, writeState, quietExit } from './_willow.mjs';
 import { listBlock, listRules, commandRule } from './_list.mjs';
+import { selfLine } from './_links.mjs';
 import { sessionLang, pick } from './_lang.mjs';
 
 const HEAD_ZH = '【Wishing-Willow · 压缩后】上下文刚被压缩，这一轮开头交给你的清单和写法可能已经不在了，这里重交一份。'
@@ -36,7 +37,7 @@ try {
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
       hookEventName: 'SessionStart',
-      additionalContext: [pick(lang, HEAD_ZH, HEAD_EN), `${listRules(lang)}\n${commandRule(sessionId, lang)}`, list].filter(Boolean).join('\n\n'),
+      additionalContext: [pick(lang, HEAD_ZH, HEAD_EN), `${listRules(lang)}\n${commandRule(sessionId, lang)}\n${selfLine(sessionId, lang)}`, list].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);
