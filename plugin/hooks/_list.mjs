@@ -80,6 +80,24 @@ export function titleWidth(t) {
   return w;
 }
 const HEAD = /^(?:清单变化|List changes)\s*[：:]\s*$/i;
+// 标题里写了会被新提交取代的东西（09-28：「领先 31 个提交」「c2210ee 连同改动说明……」——事情还成立，标题先过时了）。
+// 提交号：7–40 位十六进制、既有数字又有字母（deadbeef、日期、纯数字不算）；提交数：「N 个提交」「N commits」。只报不拦，要求挪进依据。
+const HASH_IN_TITLE = /(?<![0-9A-Za-z])(?=[0-9a-f]*[0-9])(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}(?![0-9A-Za-z])/;
+const COUNT_IN_TITLE = /\d+\s*个(?:本地|新)?提交|\d+\s+commits?\b/i;
+// 「（依据：…」起到末尾不算标题正文：依据里套了括号时解析拆不开，整段依据会留在标题里——那是照规矩写的依据，不该再催。
+const BASIS_TAIL = /[（(]\s*(?:依据|basis)\s*[：:][\s\S]*$/i;
+export function volatileProblem(id, text, lang = 'zh') {
+  const T = (zh, en) => pick(lang, zh, en);
+  const head = String(text).replace(BASIS_TAIL, '');
+  const h = HASH_IN_TITLE.exec(head);
+  if (h) {
+    return T(`${id} 的标题里有提交号 ${h[0]}：新提交一来它就过时了，写进依据（可以「${id} 改题：…」去掉它）`,
+      `${id}'s title carries a commit id (${h[0]}): the next commit makes it stale; put it in the basis (drop it with "${id} retitled: …")`);
+  }
+  const c = COUNT_IN_TITLE.exec(head);
+  return c ? T(`${id} 的标题里写了提交数（${c[0]}）：数会变，写进依据`,
+    `${id}'s title carries a commit count (${c[0]}): the count changes; put it in the basis`) : null;
+}
 const BASIS = /[（(]\s*(?:依据|basis)\s*[：:]\s*([^）)]+)[）)]\s*$/i;
 
 export function listPath(sessionId) {
@@ -176,6 +194,8 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
         problems.push(T(`${id} 的标题太长（一行写完，约 40 字内），背景写进依据或说明；可以「${id} 改题：…」改短`,
           `${id}'s title is too long (keep it to one line, about 80 characters); put background in the basis or the note, or shorten it with "${id} retitled: …"`));
       }
+      const v = volatileProblem(id, o.text, lang);
+      if (v) problems.push(v);
       continue;
     }
     const it = find(o.id);
@@ -197,6 +217,8 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
       it.text = o.text;
       it.touched = turn.turnIndex ?? it.touched;
       changes.push(T(`${o.id} 改题`, `${o.id} retitled`));
+      const v = volatileProblem(o.id, o.text, lang);
+      if (v) problems.push(v);
       continue;
     }
     if (o.op === 'drop' && !o.note) { problems.push(T(`${o.id} 撤掉没写原因，没撤`, `${o.id} dropped without a reason, so not dropped`)); continue; }

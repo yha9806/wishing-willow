@@ -137,6 +137,7 @@ Each item is in one of five states: **doing**, **waiting on you**, **waiting on 
 - An item can say what it blocks: `L3 blocks: L5, L7`, or an outside event such as a submission. The list the hook hands Claude ranks the open items by how many others they hold up, as a count. It does not pick for Claude.
 - Every reply ends with one line of the list, then `Next: Lx <the item> — <why it comes first>`. If the list has open items and that line names none of them, or names one that is already done, the next turn raises it as a problem.
 - When an item's situation changes and its title would read as still open, Claude retitles it (`L3 retitled: …`). The row then shows the new title; the first wording stays in the list file.
+- A title that carries a commit id or a commit count goes stale with the next commit while the item still stands, so writing one is recorded as a problem and raised next turn: that belongs in the basis. A commit id here is 7 to 40 hex characters with both a digit and a letter, standing alone.
 - IDs count only inside one conversation. An item from another conversation is cited with that conversation's name.
 - You can change it too. In the lintel window, the checkbox in front of an open item marks it done, and right-clicking gives *done*, *drop* and *move to later*. The app writes your click into the list within about a second, marked as yours, and the next turn tells Claude what you changed on the panel.
 - A change that happens mid-turn should be recorded when it happens. If a turn ran five minutes or more and every *done*, *drop* or *move* was saved for the end of the reply, the next turn raises it.
@@ -219,14 +220,14 @@ Hooks that mishandle input get in the way of real work, so every failure path ex
 ## Tests
 
 ```bash
-node tests/replay/run.mjs      # behaviour, 78 recorded cases
+node tests/replay/run.mjs      # behaviour, 79 recorded cases
 node tests/contract/run.mjs    # registration, exactly as hooks.json spells it
 node tests/runtime/run.mjs     # field names, read from the installed claude binary
 node tests/triggers/run.mjs    # the trigger list's check command
 cd macos && swift test         # the app: 66 tests in 20 suites
 ```
 
-**replay** runs the hooks against recorded turns and checks the resulting state: drifts with and without a declaration, a declaration buried before a dozen tool calls, an earlier turn's declaration that must *not* be reused, bypass paths, malformed input, English labels, system envelopes, quoted declarations, interrupted and mid-turn messages, and the list — added, moved, done with and without evidence, changed mid-turn by command, changed by the author on the panel, saved to the end of a long turn, checked again after a commit, named when it has not moved for long, handed back after a compaction, carried over to a resumed session, what an item blocks, and a `Next:` line that names no open item. One case pins the exact key set of the state file, so no field that scores the two lines can be added by accident. The requests in these cases are made up, in the shape of real ones.
+**replay** runs the hooks against recorded turns and checks the resulting state: drifts with and without a declaration, a declaration buried before a dozen tool calls, an earlier turn's declaration that must *not* be reused, bypass paths, malformed input, English labels, system envelopes, quoted declarations, interrupted and mid-turn messages, and the list — added, moved, done with and without evidence, changed mid-turn by command, changed by the author on the panel, saved to the end of a long turn, checked again after a commit, named when it has not moved for long, a commit id in a title, handed back after a compaction, carried over to a resumed session, what an item blocks, and a `Next:` line that names no open item. One case pins the exact key set of the state file, so no field that scores the two lines can be added by accident. The requests in these cases are made up, in the shape of real ones.
 
 **contract** exists because `hooks.json` itself was once wrong while every replay case stayed green: it used a `command` + `args` pair, `args` is not part of the schema, and the plugin had never run inside Claude Code. **runtime** exists because fixtures written from the docs cannot catch the docs being wrong. With no `claude` on the machine it prints SKIP and counts it separately; a skip is not a pass.
 

@@ -1,0 +1,54 @@
+{
+  "note": "标题里写了提交号或提交数（会被新提交取代的东西）记为问题，要求挪进依据；新增和改题都查，只报不拦。09-28：一张清单的「领先 31 个提交」「c2210ee 连同改动说明…」标题都在事情还成立时先过时了。7–40 位十六进制且同时有数字和字母才算提交号：deadbeef、日期、十位纯数字的工单号、嵌在更长编号里的一段（x1a2b3c4d5）、PR 编号都不算。 依据里套了括号时解析拆不开、整段依据留在标题里，这一段不查（照规矩写了依据）。",
+  "session_id": "test-sess-79",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "exit": 1,
+      "stdout_includes": [
+        "新增 L1",
+        "L1 的标题里有提交号 c2210ee",
+        "L2 的标题里写了提交数（31 个提交）"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-retitle.json",
+      "exit": 1,
+      "stdout_includes": [
+        "L3 改题",
+        "L3 的标题里写了提交数（12 个提交）"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-clean.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 等你：把改好的稿子发给合作者"
+      ],
+      "context_excludes": [
+        "的标题里有提交号",
+        "的标题里写了提交数"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "text": "把改好的稿子发给合作者（依据里写提交号）",
+      "firstText": "把 c2210ee 发给合作者"
+    },
+    "L4": {
+      "text": "deadbeef 与 2026-09-28 都不是提交号"
+    }
+  }
+}

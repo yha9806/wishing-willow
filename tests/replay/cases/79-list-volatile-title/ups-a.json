@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-79",
+  "prompt_id": "p79a",
+  "transcript_path": "/dev/null",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "合成仓库第 a 轮：把合成配置核对完再说"
+}
