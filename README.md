@@ -221,14 +221,14 @@ Hooks that mishandle input get in the way of real work, so every failure path ex
 ## Tests
 
 ```bash
-node tests/replay/run.mjs      # behaviour, 80 recorded cases
+node tests/replay/run.mjs      # behaviour, 81 recorded cases
 node tests/contract/run.mjs    # registration, exactly as hooks.json spells it
 node tests/runtime/run.mjs     # field names, read from the installed claude binary
 node tests/triggers/run.mjs    # the trigger list's check command
 cd macos && swift test         # the app: 66 tests in 20 suites
 ```
 
-**replay** runs the hooks against recorded turns and checks the resulting state: drifts with and without a declaration, a declaration buried before a dozen tool calls, an earlier turn's declaration that must *not* be reused, bypass paths, malformed input, English labels, system envelopes, quoted declarations, interrupted and mid-turn messages, and the list — added, moved, done with and without evidence, changed mid-turn by command, changed by the author on the panel, saved to the end of a long turn, checked again after a commit, named when it has not moved for long, a commit id in a title, tied to another conversation's item, handed back after a compaction, carried over to a resumed session, what an item blocks, and a `Next:` line that names no open item. One case pins the exact key set of the state file, so no field that scores the two lines can be added by accident. The requests in these cases are made up, in the shape of real ones.
+**replay** runs the hooks against recorded turns and checks the resulting state: drifts with and without a declaration, a declaration buried before a dozen tool calls, an earlier turn's declaration that must *not* be reused, bypass paths, malformed input, English labels, system envelopes, quoted declarations, interrupted and mid-turn messages, and the list — added, moved, done with and without evidence, changed mid-turn by command, changed by the author on the panel, saved to the end of a long turn, checked again after a commit, named when it has not moved for long, a commit id in a title, a basis with brackets inside it, tied to another conversation's item, handed back after a compaction, carried over to a resumed session, what an item blocks, and a `Next:` line that names no open item. One case pins the exact key set of the state file, so no field that scores the two lines can be added by accident. The requests in these cases are made up, in the shape of real ones.
 
 **contract** exists because `hooks.json` itself was once wrong while every replay case stayed green: it used a `command` + `args` pair, `args` is not part of the schema, and the plugin had never run inside Claude Code. **runtime** exists because fixtures written from the docs cannot catch the docs being wrong. With no `claude` on the machine it prints SKIP and counts it separately; a skip is not a pass.
 

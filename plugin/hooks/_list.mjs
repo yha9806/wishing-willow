@@ -62,7 +62,27 @@ const DROP = /^(L\d+)\s*(?:撤掉|dropped)\s*(?:[：:]\s*(.*))?$/i;
 const LATER = /^(L\d+)\s*(?:挪到以后|moved to later)\s*(?:[：:]\s*(.*))?$/i;
 // 一项挡着什么（09-28 spec「清单与下一步的分工」D1）：它一落地就能放开的项，或外部的事（投稿）。
 const BLOCKS = /^(L\d+)\s*(?:挡着|blocks)\s*[：:]\s*(.+)$/i;
-const BLOCKS_TAIL = /[（(]\s*(?:挡着|blocks)\s*[：:]\s*([^）)]+)[）)]\s*$/i;
+// 末尾的「（挡着：…）」「（依据：…）」：从句尾往回数括号找到配对的那个开括号，里面再套括号也拆得开
+// （09-28 实测一张真实清单：依据里写了带括号的文件名或说明，整段依据留在了标题里）。
+function tail(text, label) {
+  const t = String(text).replace(/\s+$/, '');
+  if (!/[）)]$/.test(t)) return null;
+  let depth = 0;
+  for (let i = t.length - 1; i >= 0; i--) {
+    const c = t[i];
+    if (c === '）' || c === ')') depth++;
+    else if (c === '（' || c === '(') {
+      depth--;
+      if (depth === 0) {
+        const m = label.exec(t.slice(i + 1, t.length - 1));
+        return m ? { value: m[1].trim(), index: i } : null;
+      }
+    }
+  }
+  return null;
+}
+const BLOCKS_LABEL = /^\s*(?:挡着|blocks)\s*[：:]\s*([\s\S]+)$/i;
+const BASIS_LABEL = /^\s*(?:依据|basis)\s*[：:]\s*([\s\S]+)$/i;
 const TARGETS = /\s*[、,，;；]\s*|\s+(?=L\d)/;
 export function splitTargets(t) {
   const v = String(t).trim();
@@ -98,7 +118,6 @@ export function volatileProblem(id, text, lang = 'zh') {
   return c ? T(`${id} 的标题里写了提交数（${c[0]}）：数会变，写进依据`,
     `${id}'s title carries a commit count (${c[0]}): the count changes; put it in the basis`) : null;
 }
-const BASIS = /[（(]\s*(?:依据|basis)\s*[：:]\s*([^）)]+)[）)]\s*$/i;
 
 export function listPath(sessionId) {
   return join(stateDir(), `${sessionId}.list.jsonl`);
@@ -147,10 +166,10 @@ export function parseOps(texts) {
         // 末尾的「（依据：…）」「（挡着：…）」两种都可以有，先后不论。
         let text = m[2], basis = '预测', blocks = null;
         for (let k = 0; k < 2; k++) {
-          const b = BASIS.exec(text);
-          if (b) { basis = b[1].trim(); text = text.slice(0, b.index); continue; }
-          const t = BLOCKS_TAIL.exec(text);
-          if (t) { blocks = splitTargets(t[1]); text = text.slice(0, t.index); }
+          const b = tail(text, BASIS_LABEL);
+          if (b) { basis = b.value; text = text.slice(0, b.index); continue; }
+          const t = tail(text, BLOCKS_LABEL);
+          if (t) { blocks = splitTargets(t.value); text = text.slice(0, t.index); }
         }
         ops.push({ op: 'add', ...status(m[1]), text: text.trim(), basis, ...(blocks ? { blocks } : {}) });
       } else if ((m = BLOCKS.exec(line))) ops.push({ op: 'blocks', id: m[1], targets: splitTargets(m[2]) }); else if ((m = DONE.exec(line))) ops.push({ op: 'done', id: m[1], note: (m[2] ?? '').trim() });
@@ -158,7 +177,11 @@ export function parseOps(texts) {
       else if ((m = DROP.exec(line))) ops.push({ op: 'drop', id: m[1], note: (m[2] ?? '').trim() });
       else if ((m = LATER.exec(line))) ops.push({ op: 'move', id: m[1], status: '以后', wait: null, note: (m[2] ?? '').trim() });
       else if ((m = APPROVE.exec(line))) ops.push({ op: 'approve', id: m[1] });
-      else if ((m = RETITLE.exec(line))) ops.push({ op: 'retitle', id: m[1], text: m[2].trim() });
+      else if ((m = RETITLE.exec(line))) {
+        // 改题时写的依据也拆出来（09-28：「L3 改题：新标题（依据：…）」整行进了标题）；它是新的依据，替掉旧的。
+        const b = tail(m[2], BASIS_LABEL);
+        ops.push({ op: 'retitle', id: m[1], text: (b ? m[2].slice(0, b.index) : m[2]).trim(), ...(b ? { basis: b.value } : {}) });
+      }
       else if (/^(\+|L\d+)/.test(line)) ops.push({ op: 'bad', line });
       else inBlock = false;   // 空行、「下一步：」、正文：块到此为止
       if (ops.length > before) ops[ops.length - 1].raw = line;   // 用命令记过的行，回复末尾再写一遍时认得出
@@ -215,6 +238,7 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
       // 建项原句留在 firstText：面板和记录都还能查到当初是怎么写的。
       if (it.firstText === undefined) it.firstText = it.text;
       it.text = o.text;
+      if (o.basis) it.basis = o.basis;
       it.touched = turn.turnIndex ?? it.touched;
       changes.push(T(`${o.id} 改题`, `${o.id} retitled`));
       const v = volatileProblem(o.id, o.text, lang);

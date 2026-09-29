@@ -1,0 +1,42 @@
+{
+  "note": "依据里再套括号也拆得开：从句尾往回数括号找配对的开括号（09-28 一张真实清单：依据里写了带括号的文件名，整段依据留在了标题里）。改题时写的依据也拆出来，替掉旧依据。标题里的括号不是依据的，原样留在标题里。",
+  "session_id": "test-sess-81",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1",
+        "新增 L2",
+        "新增 L3"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-retitle.json",
+      "stdout_includes": [
+        "L1 改题"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "text": "修合成解析器与改题",
+      "basis": "合成提交记录（新的一条）",
+      "firstText": "修合成解析器"
+    },
+    "L2": {
+      "text": "发合成稿",
+      "basis": "合成日志（第二轮）里的两处",
+      "blocks": ["L1"]
+    },
+    "L3": {
+      "text": "读合成附录（第二部分）",
+      "basis": "预测"
+    }
+  }
+}
