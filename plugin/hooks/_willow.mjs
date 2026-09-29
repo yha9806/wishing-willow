@@ -392,8 +392,51 @@ export function touchedPaths(input, prev) {
 // 提交回执：git commit（及 cherry-pick、revert、amend）成功时打印的第一行「[分支 哈希] 说明」，分支可以是 detached HEAD，
 // 根提交多一个「(root-commit)」。
 const COMMIT_RECEIPT = /^\[([^\]\n]+?) (?:\(root-commit\) )?([0-9a-f]{7,40})\] /gm;
-// 命令里的 git commit（git -C <仓> commit、git -c k=v commit 也算；commit-tree 不算）。
-const COMMIT_CMD = /\bgit(?:\s+(?:-[Cc]\s+\S+|--\S+))*\s+commit(?![-\w])/;
+// 命令里的 git commit（git -C <仓> commit、git -c k=v commit 也算；commit-tree 不算），git 要在命令的位置上：
+// 行首，或 && ; | ( 之后，或 then / do 之后；前面可以有环境变量赋值（DEVELOPER_DIR=… git commit，本机常见）和
+// env / time / command / nohup。
+const COMMIT_CMD = /(?:^|[;&|(]|\b(?:then|do)\b)\s*(?:[A-Za-z_]\w*=\S*\s+)*(?:(?:env|time|command|nohup)\s+(?:[A-Za-z_]\w*=\S*\s+)*)?git(?:\s+(?:-[Cc]\s+\S+|--\S+))*\s+commit(?![-\w])/m;
+
+/**
+ * 命令里真正会执行的部分：去掉引号里的字、heredoc 正文与 # 注释，换行留着（COMMIT_CMD 靠行首认命令）。09-28：一段写说明的
+ * heredoc 里写着「git commit -q」，被当成一次安静提交，点名说「等 3 个」，其实是 2 个；搜这几个字的 grep 同理。逐字扫描，
+ * 因为引号可以跨行：按行剥引号时，一段跨行的 python3 -c "…" 被剥错，后面真正的提交反而没认出来。
+ */
+export function commandWords(cmd) {
+  const s = String(cmd);
+  let out = '';
+  let i = 0;
+  const pending = [];   // 这一行起头的 heredoc，正文从下一行开始
+  while (i < s.length) {
+    const c = s[i];
+    if (c === '\\') { out += s.slice(i, i + 2); i += 2; continue; }
+    if (c === "'") { const j = s.indexOf("'", i + 1); out += "''"; i = j < 0 ? s.length : j + 1; continue; }
+    if (c === '"') {
+      let j = i + 1;
+      while (j < s.length && s[j] !== '"') j += s[j] === '\\' ? 2 : 1;
+      out += '""'; i = j + 1; continue;
+    }
+    if (c === '#' && (i === 0 || /\s/.test(s[i - 1]))) { const j = s.indexOf('\n', i); i = j < 0 ? s.length : j; continue; }
+    if (c === '<' && s[i + 1] === '<' && s[i + 2] !== '<') {
+      const m = /^<<(-?)\s*(['"]?)([A-Za-z_]\w*)\2/.exec(s.slice(i));
+      if (m) { pending.push({ end: m[3], tabs: m[1] === '-' }); out += m[0]; i += m[0].length; continue; }
+    }
+    if (c === '\n' && pending.length) {
+      out += '\n'; i += 1;
+      for (const h of pending.splice(0)) {   // 正文按起头的顺序一段接一段，结束行本身也不算命令
+        while (i < s.length) {
+          const j = s.indexOf('\n', i);
+          const line = s.slice(i, j < 0 ? s.length : j);
+          i = j < 0 ? s.length : j + 1;
+          if ((h.tabs ? line.replace(/^\t+/, '') : line) === h.end) break;
+        }
+      }
+      continue;
+    }
+    out += c; i += 1;
+  }
+  return out;
+}
 // 安静提交（-q）不打印回执，本机常见写法是紧跟 git log --oneline -1：取结果里第一行开头的提交号。
 const ONELINE = /^([0-9a-f]{7,40}) /m;
 const NOTHING = /nothing to commit|no changes added to commit|nothing added to commit/;
@@ -418,7 +461,7 @@ export function turnCommits(input, prev) {
     if (row?.isSidechain === true || !Array.isArray(row?.message?.content)) continue;
     for (const b of row.message.content) {
       if (row.type === 'assistant' && b?.type === 'tool_use' && typeof b.input?.command === 'string'
-        && /\bgit\b/.test(b.input.command)) gitCalls.set(b.id, COMMIT_CMD.test(b.input.command));
+        && /\bgit\b/.test(b.input.command)) gitCalls.set(b.id, COMMIT_CMD.test(commandWords(b.input.command)));
       if (row.type !== 'user' || b?.type !== 'tool_result' || !gitCalls.has(b.tool_use_id)) continue;
       const body = typeof b.content === 'string' ? b.content
         : Array.isArray(b.content) ? b.content.filter((c) => c?.type === 'text').map((c) => c.text).join('\n') : '';

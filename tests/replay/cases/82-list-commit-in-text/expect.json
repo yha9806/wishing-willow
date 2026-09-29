@@ -1,0 +1,44 @@
+{
+  "note": "命令文字里提到 git commit 不是提交：heredoc 正文、引号里的字（写进笔记的说明、搜这几个字的 grep）都不算，只认命令位置上的 git … commit（09-28：一段写说明的 heredoc 被当成一次安静提交，点名说「等 3 个」，其实是 2 个）。 引号可以跨行：多行 python -c 的右引号落在下一行时，按行配对会把后面的 git commit 当成引号里的字漏掉，逐字扫描才对（09-29 实测漏了一次真提交）。",
+  "session_id": "test-sess-82",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "append": "transcript.turn-a.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json"
+    },
+    {
+      "append": "transcript.turn-b.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "上一轮提交了 1a2b3c4。"
+      ],
+      "context_excludes": [
+        "等 2 个",
+        "等 3 个",
+        "and 1 more"
+      ]
+    }
+  ]
+}
