@@ -1,0 +1,38 @@
+{
+  "note": "8 行以内、每步都写了怎么验的卡：什么都不说。",
+  "session_id": "test-sess-88",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "计划卡 K1 写了",
+        "没写「→ 怎么验」"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "计划卡 K1 写了"
+      ]
+    }
+  ]
+}

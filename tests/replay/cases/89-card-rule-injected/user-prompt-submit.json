@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-89",
+  "prompt_id": "p89a",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "把合成分支推上去，合进主干以后再装到本机"
+}

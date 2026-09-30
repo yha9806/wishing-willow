@@ -15,7 +15,8 @@
         "List changes:",
         "\"+ Waiting on you: <item>\"",
         "Next:",
-        "--session test-sess-59"
+        "--session test-sess-59",
+        "Plan card K<n>: <goal>"
       ],
       "context_excludes": [
         "请在本轮回复的最开头写四行",

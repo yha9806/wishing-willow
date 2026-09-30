@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-88",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "prompt_id": "p88a",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "你批准的：推送合成分支\n我读成了：推送合成分支并合并\n我补上的：无\n标签：推送合并\n\n计划卡 K1：把合成分支合进主干\n不做：不动合成常驻\n① 合成步骤1 → 合成核对1\n② 合成步骤2 → 合成核对2\n③ 合成步骤3 → 合成核对3\n④ 合成步骤4 → 合成核对4\n⑤ 合成步骤5 → 合成核对5\n⑥ 合成步骤6 → 合成核对6\n\n下一步：接着做"
+}

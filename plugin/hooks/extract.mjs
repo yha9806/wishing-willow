@@ -10,6 +10,7 @@ import {
   turnAssistantRows, turnLastAt, turnFirstAt, turnCommits } from './_willow.mjs';
 import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine, nextProblem, heldProblem, sweepDue, sweepText, openAsked } from './_list.mjs';
 import { sessionLang } from './_lang.mjs';
+import { cardProblem } from './_card.mjs';
 
 try {
   const input = parseInput(readStdin());
@@ -77,9 +78,13 @@ try {
     }
   } catch { /* 不判 */ }
 
+  // 计划卡的形状（轻计划 D2）：超过 8 行、有步没写「→ 怎么验」，下一轮说一次。读不出这一轮就不判。
+  let card = null;
+  try { card = cardProblem(turnAssistantRows(input, prev).flatMap((r) => r.texts), sessionLang(prev)); } catch { card = null; }
+
   if (prev) {
     writeState(sessionId, { ...prev, decode, tag, plan, next, touched, turnEndedAt: endedAt, updatedAt: endedAt, nextProblem: nextIssue, listHeld: held,
-      listSweep: sweep, listSwept: swept });
+      listSweep: sweep, listSwept: swept, cardProblem: card });
     // 只在 capture 跑过的时候记日志：没有 capture 就没有原话，也没有「问没问」，
     // 记一条三个字段都是 null 的东西只会让统计更难看懂。
     appendTurnLog(sessionId, {

@@ -1,0 +1,39 @@
+{
+  "note": "计划卡里有一步没写「→ 怎么验」：下一轮点出是哪一步。",
+  "session_id": "test-sess-87",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "计划卡 K1",
+        "②",
+        "没写「→ 怎么验」"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "没写「→ 怎么验」"
+      ]
+    }
+  ]
+}

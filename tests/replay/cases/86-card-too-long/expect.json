@@ -1,0 +1,37 @@
+{
+  "note": "计划卡超过 8 行：下一轮说出来，只说一次。（轻计划 D2：卡 ≤ 8 行，目标、不做各一行，每步一行。）",
+  "session_id": "test-sess-86",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "计划卡 K1 写了 10 行"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "写了 10 行"
+      ]
+    }
+  ]
+}

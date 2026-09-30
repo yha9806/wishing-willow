@@ -14,6 +14,7 @@ import { triggerBlock } from './_triggers.mjs';
 import { inboxText } from './_inbox.mjs';
 import { listBlock, listRules, commandRule, authorChanges, idleDue, idleText, openAsked } from './_list.mjs';
 import { inheritList } from './_inherit.mjs';
+import { cardRule } from './_card.mjs';
 import { linkNews, selfLine } from './_links.mjs';
 import { promptLang, sessionLang, pick } from './_lang.mjs';
 
@@ -52,7 +53,8 @@ const REMINDER_EN =
   'Write them even when the first two agree; keep them plain; don\'t comment on them.\n';
 
 // 长清单的写法：压缩之后 compacted.mjs 要原样重交，所以只有一份（_list.mjs listRules）。
-const reminder = (lang) => pick(lang, REMINDER_ZH, REMINDER_EN) + listRules(lang);
+// 计划卡的写法跟在清单写法后面（_card.mjs，轻计划 D1–D4）。
+const reminder = (lang) => pick(lang, REMINDER_ZH, REMINDER_EN) + listRules(lang) + '\n' + cardRule(lang);
 
 // 标签那一行是给菜单栏／刘海那条常亮层用的：刘海 156pt，11pt 中文大约 14 个字，
 // 一句解码放不下。它必须由模型自己压，**不能由读方截断解码行** —— 实测
@@ -242,6 +244,7 @@ try {
     listSwept,             // {编号: 上次问的轮次}：提交后核对与挂久点名共用，问过的几轮内不再问
     listLinks,             // {编号: 上次说的结论}：挂在别的对话编号上的项，同一结论只说一次（_links.mjs）
     listAuthorSeen: now,   // 这一刻之前作者在面板里的改动都已经说过；下一轮只说这之后的（spec 清单实时 C）
+    cardProblem: null,     // 上一轮计划卡的形状问题，extract 写、这一轮 capture 说一次（_card.mjs）
     inboxSaid,             // {<留言文件>:<段>: 文字}：上次转达给这个会话的信息段，没变就不再说（_inbox.mjs，注入瘦身 D1）
     // 这一轮还没结束。extract 在 Stop 时写下时间戳。没有这一位，读方分不清
     // 「模型还在回答」和「答完了没写声明」—— 2026-09-12 用户实测：每一轮一开头
@@ -250,7 +253,10 @@ try {
     endedAt: null,
   });
 
-  if (bypass && !block && !inbox && !list) quietExit();
+  // 上一轮计划卡超长或少了「→ 怎么验」：这一轮说一次，短确认的轮次也说（extract 写，_card.mjs）。
+  const card = typeof prev?.cardProblem === 'string' ? prev.cardProblem : null;
+
+  if (bypass && !block && !inbox && !list && !card) quietExit();
 
   // Must be complete, valid JSON: Claude Code treats output starting with '{'
   // but not ending in '}' as plain text.
@@ -261,7 +267,7 @@ try {
       additionalContext: (envelopeRulesProblem && !bypass
         ? T(`【Wishing-Willow】${envelopeRulesProblem}：后台通知等可能被当成你的话记下。\n`,
           `[Wishing-Willow] ${envelopeRulesProblem}: background notifications may be recorded as the user's words.\n`) : '')
-        + [bypass ? null : `${reminder(lang)}\n${commandRule(sessionId, lang)}\n${selfLine(sessionId, lang)}`, block, list, inbox].filter(Boolean).join('\n\n'),
+        + [bypass ? null : `${reminder(lang)}\n${commandRule(sessionId, lang)}\n${selfLine(sessionId, lang)}`, card, block, list, inbox].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);

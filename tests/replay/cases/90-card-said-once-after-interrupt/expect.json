@@ -1,0 +1,33 @@
+{
+  "note": "计划卡的问题只说一次：说过的那一轮被打断（没有 Stop），下一轮也不再说——capture 说完就清掉，不靠下一次 extract 覆盖。",
+  "session_id": "test-sess-90",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "计划卡 K1 写了 10 行"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "写了 10 行"
+      ]
+    }
+  ]
+}
