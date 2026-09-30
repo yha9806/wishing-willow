@@ -14,14 +14,14 @@ export const CARD_MAX_LINES = 8;
 const CARD_RULE_ZH =
   '两个以上不可逆动作（推送、开 PR、合并、发出、删除、改写提交等）或要用户亲手跑命令时，先写计划卡：' +
   '首行「计划卡 K<n>：<目标>」，一行「不做：…」，每步一行「① 做什么 → 怎么验」，要用户点头的标 ✋，用户跑的给一条命令；' +
-  `≤ ${CARD_MAX_LINES} 行。批一次即批卡上全部步骤，没写到的情况整张卡停下只问那一处。每步记成清单项，标题以「K<n>·①」开头。`;
+  `≤ ${CARD_MAX_LINES} 行。批一次即批卡上全部步骤（记「K<n> 认可」），没写到的情况整张卡停下只问那一处。每步记成清单项，标题以「K<n>·①」开头。`;
 
 const CARD_RULE_EN =
   'Before two or more irreversible actions (push, open a PR, merge, send, delete, rewrite a commit…) or a command the user must run, '
   + 'write a plan card: first line "Plan card K<n>: <goal>", one line "Not doing: …", one line per step "① what → how it is checked", '
   + `✋ on steps the user must approve, one command for a step the user runs; at most ${CARD_MAX_LINES} lines. `
   + 'One approval covers every step on the card; anything it does not cover stops the card and asks about that one thing. '
-  + 'Record each step as a list item titled "K<n>·① …".';
+  + 'Record each step as a list item titled "K<n>·① …", and the approval as "K<n> approved".';
 
 export const cardRule = (lang) => pick(lang, CARD_RULE_ZH, CARD_RULE_EN);
 

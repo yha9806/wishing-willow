@@ -85,6 +85,13 @@ export function splitTargets(t) {
   return v.split(TARGETS).map((x) => x.trim()).filter(Boolean);
 }
 const APPROVE = /^(L\d+)\s*(?:认可|approved)\s*$/i;
+// 「K1 认可」：批一张计划卡就是批卡上写明的全部步骤（轻计划 D3，_card.mjs）。
+const APPROVE_CARD = /^(K\d+)\s*(?:认可|approved)\s*$/i;
+// 计划卡上的一步：标题以「K1·」开头（· 也认 ・ 和 .）。
+export function cardOf(text) {
+  const m = /^(K\d+)\s*[·・.]/i.exec(String(text ?? '').trim());
+  return m ? m[1].toUpperCase() : null;
+}
 const RETITLE = /^(L\d+)\s*(?:改题|retitled?)\s*[：:]\s*(\S.*)$/i;
 // 标题一行写完：中文约 40 字、英文约 80 个字符（CJK 记 1、其余记 0.5）。09-28 面板 grill 第三轮 R1：
 // 建项时写成三到五行的问句，事情定了标题还在问，面板上比「现在那句」显眼得多。
@@ -172,6 +179,7 @@ export function parseOps(texts) {
       else if ((m = DROP.exec(line))) ops.push({ op: 'drop', id: m[1], note: (m[2] ?? '').trim() });
       else if ((m = LATER.exec(line))) ops.push({ op: 'move', id: m[1], status: '以后', wait: null, note: (m[2] ?? '').trim() });
       else if ((m = APPROVE.exec(line))) ops.push({ op: 'approve', id: m[1] });
+      else if ((m = APPROVE_CARD.exec(line))) ops.push({ op: 'approveCard', card: m[1].toUpperCase() });
       else if ((m = RETITLE.exec(line))) {
         // 改题时写的依据也拆出来（09-28：「L3 改题：新标题（依据：…）」整行进了标题）；它是新的依据，替掉旧的。
         const b = tail(m[2], BASIS_LABEL);
@@ -214,6 +222,17 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
       }
       const v = volatileProblem(id, o.text, lang);
       if (v) problems.push(v);
+      continue;
+    }
+    if (o.op === 'approveCard') {
+      const steps = items.filter((x) => cardOf(x.text) === o.card && !CLOSED.has(x.status));
+      if (!steps.length) {
+        problems.push(T(`${o.card} 没有开着的步骤（标题以「${o.card}·」开头的项），没记认可`,
+          `${o.card} has no open steps (items titled "${o.card}·…"), so nothing was approved`));
+        continue;
+      }
+      for (const x of steps) x.approvedTurn = turn.turnId ?? null;
+      changes.push(T(`${o.card} 认可（${steps.map((x) => x.id).join('、')}）`, `${o.card} approved (${steps.map((x) => x.id).join(', ')})`));
       continue;
     }
     const it = find(o.id);

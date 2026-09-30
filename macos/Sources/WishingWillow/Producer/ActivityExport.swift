@@ -144,16 +144,20 @@ enum ActivityExport {
             // N 只数新的（最近 freshTurns 轮提出或动过）：09-24 刘海上一直是「等你 26」，大半是早上提的、没人再问过，
             // 数字大到不看。旧的照样在悬停与面板的清单里，10 轮以上没动的标着几轮没动。
             var n = 0
+            var card: String?
             if case .snapshot(let snap) = ConversationList.read(sessionId: s.id, directory: store.directory) {
                 n = freshWaiting(snap.items, now: s.record.turnIndex)
+                card = cardProgress(snap.items)
             }
-            if n > 0 {
-                let waiting: [String: Any] = ["text": L("等你", "Waiting"), "tone": "white", "count": n]
+            // 有计划卡在跑时，标签是卡的进度（轻计划 D5）：一眼看出第几步、在等什么；它比「等你 N」具体。
+            let standing: [String: Any]? = card.map { ["text": $0, "tone": "white"] }
+                ?? (n > 0 ? ["text": L("等你", "Waiting"), "tone": "white", "count": n] : nil)
+            if let standing {
                 if a["label"] is NSNull {
-                    a["label"] = waiting
+                    a["label"] = standing
                     a["labelUntilSeen"] = false
                 } else if a["labelUntilSeen"] as? Bool == true {
-                    a["labelSeen"] = waiting
+                    a["labelSeen"] = standing
                 }
             }
         }
@@ -221,6 +225,42 @@ enum ActivityExport {
             }
             return ["items": items, "problems": Array(snap.problems.prefix(16)), "labels": labels]
         }
+    }
+
+    /// 计划卡的进度（轻计划 D5，插件 _card.mjs）：标题以「K<n>·」开头的项是卡 K<n> 的步骤。取还有没做完步骤的卡里编号
+    /// 最大的一张，写「K1 1/3 · 等 CI」：做完几步 / 步数（撤掉的不算），再写现在那一步——卡上编号（①②…）最小的没做完的那步——
+    /// 在做、等你、等什么、还没开始（待做）。没有卡、卡都做完了：nil，标签照旧。
+    static func cardProgress(_ items: [ListSnapshot.Item]) -> String? {
+        let circled = Array("①②③④⑤⑥⑦⑧⑨⑩")
+        func card(_ t: String) -> (id: String, n: Int, step: Int)? {
+            let t = t.trimmingCharacters(in: .whitespaces)
+            guard t.first == "K" || t.first == "k" else { return nil }
+            let digits = t.dropFirst().prefix { $0.isNumber }
+            guard let n = Int(digits), !digits.isEmpty else { return nil }
+            let rest = t.dropFirst(1 + digits.count).drop { $0 == " " }
+            guard let sep = rest.first, "·・.".contains(sep) else { return nil }
+            let step = rest.dropFirst().drop { $0 == " " }.first.flatMap { circled.firstIndex(of: $0) }.map { $0 + 1 } ?? Int.max
+            return ("K\(n)", n, step)
+        }
+        let steps = items.enumerated().compactMap { i, x in card(x.text).map { (card: $0, order: i, item: x) } }
+            .filter { $0.item.status != "撤掉" }
+        let open = steps.filter { $0.item.status != "做完" }
+        guard let latest = open.map(\.card.n).max() else { return nil }
+        let mine = steps.filter { $0.card.n == latest }
+        guard let now = mine.filter({ $0.item.status != "做完" }).min(by: { ($0.card.step, $0.order) < ($1.card.step, $1.order) })
+        else { return nil }
+        let done = mine.filter { $0.item.status == "做完" }.count
+        let word: String
+        switch now.item.status {
+        case "在做": word = L("在做", "doing")
+        case "等你": word = L("等你", "waiting on you")
+        case "等":
+            let w = (now.item.wait ?? "").trimmingCharacters(in: .whitespaces)
+            let short = w.count > 8 ? String(w.prefix(8)) + "…" : w
+            word = short.isEmpty ? L("等别的", "waiting") : L("等 ", "waiting on ") + short
+        default: word = L("待做", "to do")
+        }
+        return "K\(latest) \(done)/\(mine.count) · \(word)"
     }
 
     /// 「等你」算新的：最近几轮提出或动过（插件 applyOps 在新增、改状态时写 touched）。

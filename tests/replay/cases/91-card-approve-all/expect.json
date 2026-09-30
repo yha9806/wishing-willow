@@ -1,0 +1,47 @@
+{
+  "note": "「K1 认可」一次认可整张卡：标题以「K1·」开头、还开着的步骤都记认可，卡外的项不动；没有这张卡的步骤就记成问题。（轻计划 D3：批一张卡就是批卡上写明的全部步骤。）",
+  "session_id": "test-sess-91",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1",
+        "新增 L4"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-approve.json",
+      "stdout_includes": [
+        "K1 认可（L1、L2、L3）"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-approve-none.json",
+      "stdout_includes": [
+        "K2 没有开着的步骤"
+      ],
+      "exit": 1
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "approvedTurn": "p91a"
+    },
+    "L2": {
+      "approvedTurn": "p91a"
+    },
+    "L3": {
+      "approvedTurn": "p91a"
+    },
+    "L4": {
+      "approvedTurn": null
+    }
+  }
+}
