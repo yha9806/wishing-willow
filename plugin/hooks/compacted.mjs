@@ -32,7 +32,8 @@ try {
   } catch {
     list = pick(lang, '【Wishing-Willow · 清单】清单读不出，不能当作没有开着的事。', '[Wishing-Willow · List] The list can\'t be read. Don\'t take that as nothing being open.');
   }
-  if (prev) writeState(sessionId, { ...prev, listShown: null, shown: null });
+  // 写作循环等别的来源转达过什么也一起忘掉：上下文里那份可能已被压缩掉，下一轮全部重说（_inbox.mjs）。
+  if (prev) writeState(sessionId, { ...prev, listShown: null, shown: null, inboxSaid: null });
 
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {

@@ -1,0 +1,63 @@
+{
+  "note": "写作循环块在历史来源会话里只在内容和上次转达的不同时才转达：第二轮没变不重发；内容变了（换了一份留言）就发新的；压缩后的下一轮重发一次（上下文里那份可能已被压缩掉）。（注入瘦身 D1：这一段原来每轮都发。）",
+  "session_id": "test-sess-83",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "稿件「合成稿」（这个会话是它的历史来源，不记录原话）覆盖：合成检查乙过期"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "稿件「合成稿」（这个会话是它的历史来源，不记录原话）覆盖：合成检查乙过期",
+        "写作循环 · 合成稿"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "copy": "inbox-changed.json",
+      "to": "inbox/awt-loop.synthetic.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "稿件「合成稿」（这个会话是它的历史来源，不记录原话）覆盖：合成检查乙最新"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-c.json"
+    },
+    {
+      "hook": "compacted",
+      "input": "start-compact.json",
+      "stdout": "inject"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-d.json",
+      "stdout": "inject",
+      "context_includes": [
+        "稿件「合成稿」（这个会话是它的历史来源，不记录原话）覆盖：合成检查乙最新"
+      ]
+    }
+  ]
+}

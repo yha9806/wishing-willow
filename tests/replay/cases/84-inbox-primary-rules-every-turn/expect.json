@@ -1,0 +1,33 @@
+{
+  "note": "改稿会话：〔循环〕说明段是规则，每个普通轮照发（注入瘦身第一步不动规则的轮次）；覆盖那一行是信息，没变就不重发。",
+  "session_id": "test-sess-84",
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "〔循环〕合成说明块：涉及稿件时在回复最后加解释块",
+        "覆盖：合成检查甲没看过当前稿"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "〔循环〕合成说明块：涉及稿件时在回复最后加解释块"
+      ],
+      "context_excludes": [
+        "覆盖：合成检查甲没看过当前稿"
+      ]
+    }
+  ]
+}

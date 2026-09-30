@@ -21,32 +21,27 @@ import { pick } from './_lang.mjs';
 // 长清单（2026-09-24 用户：要整场对话的长链路清单，跟着对话变，不只下一步）。旧的「计划：」块并进来：
 // 这一轮要做的步骤就是清单里「在做」的项。只写变化，一项只能靠明写的一行离开。
 const LIST_RULES_ZH =
-  '这场对话有一张长清单（【清单】里是还开着的项）。每条回复末尾（「下一步：」之前）照【清单】给的那一行写「清单：…」，本轮有变化就先改好再写。' +
-  '这一轮让清单有变化时——出现了要做或要等的事、做完了、换了状态、撤掉——' +
-  '在「下一步：」那一行之前写「清单变化：」，下面一行一条：「+ 在做：<事>」「+ 等你：<事>」「+ 等 <什么>：<事>」「+ 以后：<事>」新增' +
-  '（有事实依据时在末尾加「（依据：<提交号、文件或 CI>）」，不加就算预测）；「L3 做完：<证据>」「L3 → 等你：<为什么>」' +
-  '「L3 撤掉：<原因>」「L3 认可」（用户这一轮认可了它）「L3 改题：<新标题>」（事情变了、原标题读起来像还悬着时）' +
-  '「L3 挡着：L5、L7」（它一落地就能放开哪几项；也可以写外部的事，如「投稿」；写「无」清空）。' +
-  '标题一行写完（约 40 字内），背景写进依据或说明。编号只在这场对话里算数，提到别的对话的编号要带上对话名（「会话甲的 L3」）。' +
-  '没提到的项原样留着；清单没有变化就不写这一块。\n' +
-  '回复的最后一行写「下一步：Lx <这件事>——<为什么是它>」：清单上还有开着的项时，点名其中一项，说它为什么排第一（挡着别的、在等你、快到期）；' +
-  '清单上没有开着的项时，写这一轮之后等用户什么，或你接着做什么。';
+  // 注入瘦身 D2 第一步（2026-09-30）：每条写法都在，只把说法写短。
+  '长清单（【清单】里是开着的项）：每条回复在「下一步：」之前照【清单】给的那一行写「清单：…」，本轮有变化先改好。' +
+  '本轮清单有变化（新的要做或要等、做完、换状态、撤掉）就在「下一步：」之前写「清单变化：」，一行一条：' +
+  '「+ 在做：<事>」「+ 等你：<事>」「+ 等 <什么>：<事>」「+ 以后：<事>」新增，有事实依据就在末尾加「（依据：<提交号、文件或 CI>）」，不加算预测；' +
+  '「L3 做完：<证据>」「L3 → 等你：<为什么>」「L3 撤掉：<原因>」「L3 认可」（用户本轮认可）「L3 改题：<新标题>」（原标题读着像还悬着）' +
+  '「L3 挡着：L5、L7」（落地能放开哪几项，可写外部的事，写「无」清空）。' +
+  '标题一行约 40 字，背景进依据；编号只在本对话算数，提到别的对话的编号要带上对话名（「会话甲的 L3」）；没提到的项原样留着，没变化就不写这块。\n' +
+  '回复的最后一行写「下一步：Lx <这件事>——<为什么是它>」：有开着的项就点名一项，说它为什么排第一（挡着别的、在等你、快到期）；' +
+  '没有就写之后等用户什么或你接着做什么。';
 
 // 英文版（2026-09-27 装机演练 F2）。与中文版逐条对应；写法两种都认（parseOps）。
 const LIST_RULES_EN =
-  'This conversation has a long list (the open items are under [Wishing-Willow · List]). End every reply, just before the "Next:" line, '
-  + 'with the "List: …" line given there; if the list changed this turn, update that line first. '
-  + 'When this turn changes the list — something new to do or to wait for, something finished, moved or dropped — '
-  + 'write "List changes:" before the "Next:" line, one change per line: "+ Doing: <item>", "+ Waiting on you: <item>", '
-  + '"+ Waiting on <what>: <item>", "+ Later: <item>" to add one (end it with "(basis: <commit, file or CI>)" when a fact backs it; '
-  + 'without that it counts as a forecast); "L3 done: <evidence>", "L3 → waiting on you: <why>", "L3 dropped: <reason>", '
-  + '"L3 approved" (the user approved it this turn), "L3 retitled: <new title>" (when things changed and the old title reads as still open). '
-  + '"L3 blocks: L5, L7" (what it frees once it lands; an outside event such as "submission" is fine; "none" clears it). '
-  + 'Keep a title to one line (about 80 characters); background goes in the basis or the note. '
-  + 'IDs are only meaningful inside this conversation; when you mention another conversation\'s ID, name the conversation ("session A\'s L3"). '
-  + 'Items you don\'t mention stay as they are; if the list didn\'t change, leave the block out.\n'
-  + 'End the reply with one line: "Next: Lx <the item> — <why it comes first>": while the list has open items, name one and say why it comes first (it blocks others, it waits on the user, it is due); '
-  + 'when nothing is open, say what you wait on the user for after this turn, or what you do next.';
+  'Long list (open items under [Wishing-Willow · List]): end every reply, just before "Next:", with the "List: …" line given there, updated first if the list changed. '
+  + 'When this turn changes the list (new to do or wait for, finished, moved, dropped), write "List changes:" before "Next:", one per line: '
+  + '"+ Doing: <item>", "+ Waiting on you: <item>", "+ Waiting on <what>: <item>", "+ Later: <item>" to add (end with "(basis: <commit, file or CI>)" when a fact backs it; else it is a forecast); '
+  + '"L3 done: <evidence>", "L3 → waiting on you: <why>", "L3 dropped: <reason>", "L3 approved" (the user approved it this turn), "L3 retitled: <new title>" (the old title reads as still open), '
+  + '"L3 blocks: L5, L7" (what it frees once it lands; outside events allowed; "none" clears). '
+  + 'One-line titles (about 80 characters), background in the basis; IDs count only in this conversation, so name the conversation for another one\'s ID ("session A\'s L3"); '
+  + 'unmentioned items stay; no change, no block.\n'
+  + 'Last line: "Next: Lx <the item> — <why it comes first>": with open items, name one and say why it comes first (blocks others, waits on the user, due); '
+  + 'with none, say what you wait on the user for or what you do next.';
 
 export const listRules = (lang) => pick(lang, LIST_RULES_ZH, LIST_RULES_EN);
 
@@ -428,13 +423,12 @@ export function listCommand(sessionId) {
 
 export function commandRule(sessionId, lang = 'zh') {
   if (lang === 'en') {
-    return 'Record a list change the moment it happens instead of waiting for the end of the reply (the notch shows it at once): run '
-      + `${listCommand(sessionId)} "<line>" ["<line>" …]` + ', each line written as under "List changes:"; it replies with what changed and the new list line. '
-      + 'Lines recorded this way need not be repeated at the end of the reply; if you do repeat them, they count once.';
+    return 'Record a list change the moment it happens (the notch shows it at once): run '
+      + `${listCommand(sessionId)} "<line>" ["<line>" …]` + ', each line as under "List changes:"; it replies with the new list line. '
+      + 'Lines recorded this way need not be repeated at the end of the reply.';
   }
-  return '清单一变就立刻记下，不用等到回复末尾（刘海马上就能看到）：跑 '
-    + `${listCommand(sessionId)} "<一行>" ["<一行>" …]` + '，一行的写法和「清单变化：」里的一样；它会回你改了什么和新的清单那一行。'
-    + '用命令记过的，回复末尾不用再写，写了也只算一次。';
+  return '清单一变就立刻记（刘海马上显示）：跑 '
+    + `${listCommand(sessionId)} "<一行>" ["<一行>" …]` + '，写法同「清单变化：」，它会回新的清单那一行；记过的回复末尾不用再写。';
 }
 
 export function appendSnapshot(sessionId, snap) {

@@ -111,6 +111,6 @@ export function linkNews(items, selfId, said, lang = 'zh') {
 export function selfLine(sessionId, lang = 'zh') {
   const short = String(sessionId).slice(0, 8);
   return pick(lang,
-    `这场对话的会话号是 ${short}（前 8 位）。别的对话要等你这边的一项，把会话号和编号告诉它；你等别的对话的一项，写「等 <它的会话号前 8 位> 的 L3：…」，那一项做完或撤掉时这里会说。`,
-    `This conversation's session id starts ${short}. If another conversation waits on one of your items, give it that id and the item's number; when you wait on another conversation's item, write "waiting on <its first 8 characters>'s L3: …", and you are told here when that item is done or dropped.`);
+    `这场对话的会话号是 ${short}（前 8 位）。别的对话等你这边的一项：把会话号和编号告诉它；你等别的对话的一项：写「等 <它的会话号前 8 位> 的 L3：…」，那边做完或撤掉会在这里说。`,
+    `This conversation's session id starts ${short}. Another conversation waiting on your item: give it this id and the number; you waiting on another's item: write "waiting on <its first 8 characters>'s L3: …" and you are told here when it is done or dropped.`);
 }

@@ -19,11 +19,19 @@ const str = (x) => (typeof x === 'string' && x.trim() ? x.trim() : null);
 
 /**
  * 这一轮要替别的来源说的话。mode：'full'（普通轮）或 'always'（短确认、系统信封开始的一轮）。
- * 返回 null（没有要说的），或一段文字。读不出的留言文件照实说出来，不能当作没有。
+ * said：上次转达给这个会话的信息段 {<文件>:<段>: 文字}，存在会话状态里（capture 的 inboxSaid）。
+ * 返回 {text, said}：text 为 null（没有要说的）或一段文字；said 是这一轮之后的记忆。读不出的留言文件照实说出来，不能当作没有。
+ *
+ * 注入瘦身 D1（2026-09-30）：信息段（always 那一行、history 那一行）和上次转达的一字不差就不再说——
+ * 历史来源会话里，同一行覆盖原来每轮都说一遍，一直占着上下文。规则段（full，比如写作循环的说明块）
+ * 每个普通轮照说：逐轮日志里，这一轮没提醒规则时，按规则写的比例明显更低。
+ * 压缩后 compacted 清掉这份记忆，下一轮全部重说。WILLOW_INBOX_EVERY_TURN=1 退回每轮都说。
  */
-export function inboxText(sessionId, promptId, mode, lang = 'zh') {
+export function inboxText(sessionId, promptId, mode, lang = 'zh', said = null) {
   const dir = join(stateDir(), 'inbox');
-  if (!existsSync(dir)) return null;
+  if (!existsSync(dir)) return { text: null, said };
+  const dedupe = process.env.WILLOW_INBOX_EVERY_TURN !== '1';
+  const next = { ...(said ?? {}) };
   const entries = [];
   const bad = [];
   for (const f of readdirSync(dir).filter((x) => x.endsWith('.json')).sort()) {
@@ -32,15 +40,23 @@ export function inboxText(sessionId, promptId, mode, lang = 'zh') {
     if (!e || typeof e !== 'object' || !e.sessions || typeof e.sessions !== 'object') { bad.push(f); continue; }
     const s = e.sessions[sessionId];
     if (!s || typeof s !== 'object') continue;
-    if (typeof promptId === 'string' && s.since === promptId) continue;
-    const parts = s.role === 'history' ? [str(e.history)]
-      : mode === 'full' ? [str(e.full), str(e.always)] : [str(e.always)];
-    const text = parts.filter(Boolean).join('\n');
+    const history = s.role === 'history';
+    const info = history ? str(e.history) : str(e.always);
+    const key = `${f}:${history ? 'history' : 'always'}`;
+    // 写作循环这一轮自己说了（第一次见到这个会话）：不重复，但记下它说过的那一行。
+    if (typeof promptId === 'string' && s.since === promptId) {
+      if (info) next[key] = info;
+      continue;
+    }
+    const rules = !history && mode === 'full' ? str(e.full) : null;
+    const fresh = info && !(dedupe && next[key] === info) ? info : null;
+    if (info) next[key] = info; else delete next[key];
+    const text = [rules, fresh].filter(Boolean).join('\n');
     if (text) entries.push({ p: Number(e.priority) || 0, text: `【${str(e.label) ?? str(e.source) ?? f}】\n${text}` });
   }
   entries.sort((a, b) => b.p - a.p);
   const out = entries.map((x) => x.text);
   if (bad.length) out.push(pick(lang, `【Wishing-Willow】留言读不出：${bad.join('、')}。这一轮没带上它们要说的话，不能当作没有。`,
     `[Wishing-Willow] Messages that can't be read: ${bad.join(', ')}. This turn doesn't carry what they say; don't take that as there being none.`));
-  return out.length ? out.join('\n\n') : null;
+  return { text: out.length ? out.join('\n\n') : null, said: Object.keys(next).length ? next : null };
 }

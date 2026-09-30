@@ -1,0 +1,32 @@
+{
+  "note": "退回开关：WILLOW_INBOX_EVERY_TURN=1 时每轮都转达，和瘦身前一样。",
+  "session_id": "test-sess-85",
+  "env": {
+    "WILLOW_INBOX_EVERY_TURN": "1"
+  },
+  "steps": [
+    {
+      "append": "transcript.pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "稿件「合成稿」（这个会话是它的历史来源，不记录原话）覆盖：合成检查乙过期"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "稿件「合成稿」（这个会话是它的历史来源，不记录原话）覆盖：合成检查乙过期"
+      ]
+    }
+  ]
+}

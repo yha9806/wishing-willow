@@ -34,24 +34,22 @@ const REMINDER_ZH =
   // 第四行「我补上的」（2026-09-13 用户选定）：把默认值补进去的部分说出来。
   // 装上后一天的记录里，一个查文献的会话把「有没有相关 paper」读成只查撞车——两行彼此一致、没有 ⚠，
   // 做完一轮后用户才补「还要看会刊收不收」。「你批准的」也是模型写的，会跟着一起偏；补上的东西要单独一行才看得见。
-  '【Wishing-Willow】请在本轮回复的最开头写四行，然后再回答：\n' +
-  '你批准的：<一句话写出用户要的>\n' +
-  '我读成了：<一句话写出你把这个请求读成了什么任务；与上一行不一致时，本行开头标 ⚠>\n' +
-  '我补上的：<请求里没说、由你替用户定下的部分——范围、对象、标准、先后、形式，逐项简写；确实没有就写「无」>\n' +
-  '标签：<把「我读成了」压成 ≤6 个汉字（英文 ≤14 字符），动词+宾语；' +
-  '禁止「继续 / 往下做 / 处理 / 优化 / 完善 / 推进 / 跟进」这类不含信息的词>\n' +
-  '前两行一致时也照写，保持平淡。不要解释这几行本身。\n';
+  // 注入瘦身 D2 第一步（2026-09-30）：规则一条不少，只把说法写短；每轮照发。
+  '【Wishing-Willow】请在本轮回复的最开头写四行，再回答：\n' +
+  '你批准的：<一句话：用户要的>\n' +
+  '我读成了：<一句话：你读成的任务；与上一行不一致就在行首标 ⚠>\n' +
+  '我补上的：<请求没说、你替用户定的部分（范围、对象、标准、先后、形式），逐项简写；没有写「无」>\n' +
+  '标签：<「我读成了」压成 ≤6 个汉字（英文 ≤14 字符），动词+宾语；不用继续、往下做、处理、优化、完善、推进、跟进这类空词>\n' +
+  '两行一致也照写，平淡，不解释这几行。\n';
 
 // 英文版（2026-09-27 装机演练 F2）。四个标签与 README 一致；读的一侧（_willow.mjs）认 How I read it 与 Tag。
 const REMINDER_EN =
   '[Wishing-Willow] Open this reply with four lines, then answer:\n' +
   'You approved: <one sentence: what the user asked for>\n' +
-  'How I read it: <one sentence: the task you took this request to be; if it differs from the line above, start this line with ⚠>\n' +
-  'What I filled in: <what the request left unsaid and you decided for the user — scope, target, standard, order, form; brief, item by item; ' +
-  'write "nothing" if there truly is nothing>\n' +
-  'Tag: <"How I read it" squeezed to ≤14 characters (Chinese ≤6), verb + object; ' +
-  'no empty verbs such as "continue", "handle", "improve", "polish", "follow up">\n' +
-  'Write them even when the first two lines agree, and keep them plain. Don\'t comment on these lines.\n';
+  'How I read it: <one sentence: the task you took it to be; if it differs from the line above, start with ⚠>\n' +
+  'What I filled in: <what the request left unsaid and you decided (scope, target, standard, order, form), item by item; "nothing" if none>\n' +
+  'Tag: <"How I read it" in ≤14 characters (Chinese ≤6), verb + object; no empty verbs such as continue, handle, improve, polish, follow up>\n' +
+  'Write them even when the first two agree; keep them plain; don\'t comment on them.\n';
 
 // 长清单的写法：压缩之后 compacted.mjs 要原样重交，所以只有一份（_list.mjs listRules）。
 const reminder = (lang) => pick(lang, REMINDER_ZH, REMINDER_EN) + listRules(lang);
@@ -196,6 +194,20 @@ try {
     list = T('【Wishing-Willow · 清单】清单读不出，不能当作没有开着的事。', '[Wishing-Willow · List] The list can\'t be read. Don\'t take that as nothing being open.');
   }
 
+  // 别的来源（写作循环）留给模型的话，由这一个出口一起说（_inbox.mjs）。普通轮带全部；
+  // 短确认、系统信封开始的一轮只带常驻的那一行——两边用同一条轮次规则。读不出照实说。
+  // 信息段和上次转达的一样就不再说（注入瘦身 D1），所以要在写状态之前算，记下这一轮转达了什么。
+  let inbox = null;
+  let inboxSaid = prev?.inboxSaid ?? null;
+  try {
+    const r = inboxText(sessionId, input.prompt_id, bypass ? 'always' : 'full', lang, inboxSaid);
+    inbox = r.text;
+    inboxSaid = r.said;
+  } catch {
+    inbox = T('【Wishing-Willow】留言读不出。这一轮没带上别的来源要说的话，不能当作没有。',
+      '[Wishing-Willow] Messages from other sources can\'t be read. This turn doesn\'t carry them; don\'t take that as there being none.');
+  }
+
   writeState(sessionId, {
     schema: SCHEMA,
     sessionId,
@@ -230,22 +242,13 @@ try {
     listSwept,             // {编号: 上次问的轮次}：提交后核对与挂久点名共用，问过的几轮内不再问
     listLinks,             // {编号: 上次说的结论}：挂在别的对话编号上的项，同一结论只说一次（_links.mjs）
     listAuthorSeen: now,   // 这一刻之前作者在面板里的改动都已经说过；下一轮只说这之后的（spec 清单实时 C）
+    inboxSaid,             // {<留言文件>:<段>: 文字}：上次转达给这个会话的信息段，没变就不再说（_inbox.mjs，注入瘦身 D1）
     // 这一轮还没结束。extract 在 Stop 时写下时间戳。没有这一位，读方分不清
     // 「模型还在回答」和「答完了没写声明」—— 2026-09-12 用户实测：每一轮一开头
     // 灵动岛都冒一次橙色的「问了，模型没写声明」，而模型那时一个字都还没回。
     turnEndedAt: null,
     endedAt: null,
   });
-
-  // 别的来源（写作循环）留给模型的话，由这一个出口一起说（_inbox.mjs）。普通轮带全部；
-  // 短确认、系统信封开始的一轮只带常驻的那一行——两边用同一条轮次规则。读不出照实说。
-  let inbox = null;
-  try {
-    inbox = inboxText(sessionId, input.prompt_id, bypass ? 'always' : 'full', lang);
-  } catch {
-    inbox = T('【Wishing-Willow】留言读不出。这一轮没带上别的来源要说的话，不能当作没有。',
-      '[Wishing-Willow] Messages from other sources can\'t be read. This turn doesn\'t carry them; don\'t take that as there being none.');
-  }
 
   if (bypass && !block && !inbox && !list) quietExit();
 
