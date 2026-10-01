@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { stateDir } from './_willow.mjs';
 import { pick } from './_lang.mjs';
+import { replyIn } from './_reply.mjs';
 
 // 清单的写法，每轮开头随提醒注入（capture.mjs），压缩后原样重交一次（compacted.mjs）。
 // 长清单（2026-09-24 用户：要整场对话的长链路清单，跟着对话变，不只下一步）。旧的「计划：」块并进来：
@@ -50,12 +51,8 @@ export const listRules = (lang) => pick(lang, LIST_RULES_ZH, LIST_RULES_EN);
 // 用户的原话照旧逐字记下（还是「.」），只是告诉模型这一轮按哪句来办。
 export const ACCEPT = /^\s*[.。]\s*$/u;
 
-/** 「下一步」那一行里最后一个 回「X」（英文 reply "X"）的 X；没有就 null。 */
-export function suggestedReply(next) {
-  if (typeof next !== 'string') return null;
-  const all = [...next.matchAll(/(?:回|reply)\s*[「"“]([^」"”\n]{1,60})[」"”]/giu)];
-  return all.length ? (all[all.length - 1][1].trim() || null) : null;
-}
+/** 「下一步」那一行里最后一个 回「X」（英文 reply "X"）的 X；没有就 null。和输入框灰字（next-reply.ts）同一份规则。 */
+export const suggestedReply = replyIn;
 
 /** 用户只回了「.」时要告诉模型的一句；不是这种回复就 null。 */
 export function acceptText(prompt, next, lang) {

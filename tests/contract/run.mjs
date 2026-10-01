@@ -55,6 +55,38 @@ for (const { event, h } of entries) {
     typeof h.command === 'string' ? `command="${h.command}"` : 'command 不是字符串');
 }
 
+// ── 函数钩子模块（Claude Code 新插件接口）：输入框灰字 ─────────────────────
+// hooks.json 的 modules 里列的文件要在；模块跑在没有 Node 的环境里，它和它 import 的文件都不能用 node: 模块；
+// 建议回复的取法（_reply.mjs）照几种回复结尾各试一次。
+{
+  const mods = cfg.modules ?? [];
+  check('hooks.json 列了输入框灰字模块', mods.includes('./next-reply.ts'), `modules=${JSON.stringify(mods)}`);
+  for (const m of mods) {
+    const path = join(PLUGIN_ROOT, 'hooks', m);
+    check(`模块 ${m} 在`, existsSync(path));
+    if (!existsSync(path)) continue;
+    const src = readFileSync(path, 'utf8');
+    const imports = [...src.matchAll(/from\s+['"]([^'"]+)['"]/g)].map((x) => x[1]);
+    for (const imp of imports.filter((x) => x.startsWith('.'))) {
+      const dep = readFileSync(join(PLUGIN_ROOT, 'hooks', imp), 'utf8');
+      check(`${m} 引的 ${imp} 不用 Node`, !/from\s+['"]node:|require\(/.test(dep));
+    }
+    check(`${m} 不用 Node`, !imports.some((x) => x.startsWith('node:')));
+  }
+  const { suggestedReplyOf } = await import(join(PLUGIN_ROOT, 'hooks', '_reply.mjs'));
+  const cases = [
+    ['正文\n\n清单：▫ 以后 5\n\n下一步：L1 写插件——接口已确认；回「写插件」', '写插件'],
+    ['下一步：L1 推分支——它挡着合并；回「K1 认可」', 'K1 认可'],
+    ['正文里提到 回「别取这个」\n\n下一步：L2 等 CI——没有建议', null],
+    ['Next: L3 merge — it blocks the install; reply "merge it"', 'merge it'],
+    ['没有下一步这一行', null],
+  ];
+  for (const [answer, want] of cases) {
+    const got = suggestedReplyOf(answer);
+    check(`建议回复取作 ${JSON.stringify(want)}`, got === want, `得到 ${JSON.stringify(got)}`);
+  }
+}
+
 // ── 2. 真正的证据：照 command 写的那样执行一次 ──────────────────
 // 用 shell 执行，和 Claude Code 一样——引号、路径、可执行位都在这一步暴露。
 function runAsWritten(command, stdin, stateDir) {
