@@ -47,9 +47,10 @@ const LIST_RULES_EN =
 export const listRules = (lang) => pick(lang, LIST_RULES_ZH, LIST_RULES_EN);
 
 // 一键接受（K9，2026-10-01）：「下一步」末尾写 回「X」，用户只回「.」或「。」就当回了 X。
+// 只有点也算（2026-10-02）：「。。」「...」「…」「．」顺手打出来都是这个意思；带了别的字（「好.」）就不算。
 // Claude Code 输入框里的灰字建议是另调一次模型猜出来的，插件写不进去（2.1.284 程序摘录）；这条不靠它。
 // 用户的原话照旧逐字记下（还是「.」），只是告诉模型这一轮按哪句来办。
-export const ACCEPT = /^\s*[.。]\s*$/u;
+export const ACCEPT = /^\s*[.。．…]+\s*$/u;
 
 /** 「下一步」那一行里最后一个 回「X」（英文 reply "X"）的 X；没有就 null。和输入框灰字（next-reply.ts）同一份规则。 */
 export const suggestedReply = replyIn;
