@@ -12,7 +12,7 @@ import {
 } from './_willow.mjs';
 import { triggerBlock } from './_triggers.mjs';
 import { inboxText } from './_inbox.mjs';
-import { listBlock, listRules, commandRule, authorChanges, idleDue, idleText, openAsked } from './_list.mjs';
+import { listBlock, listRules, commandRule, authorChanges, idleDue, idleText, openAsked, ACCEPT, suggestedReply, acceptText } from './_list.mjs';
 import { inheritList } from './_inherit.mjs';
 import { cardRule } from './_card.mjs';
 import { linkNews, selfLine } from './_links.mjs';
@@ -79,17 +79,21 @@ try {
   // and the reader shows it as such instead of leaving the screen blank.
   // 这一轮到底问没问，capture 是唯一知道的人。日志里没有这一位，
   // 「我们没问」和「问了没答」就算成同一件事 —— 统计直接是错的。
-  const bypass = prompt === null || shouldBypass(prompt);
-
   // 原话是不是人说的。2026-09-12 真实截图：灵动岛把一条 <task-notification>
   // 显示成了「你批准的」。原话照旧逐字记下，但要标明它的来历。
   const origin = prompt === null ? null : (isSystemEnvelope(prompt) ? 'system' : 'user');
 
   const prev = readState(sessionId);
 
+  // 一键接受（K9）：只回「.」时，这一轮按上一条回复末尾 回「X」 的 X 来算——问不问、用哪种语言都看 X（_list.mjs）。
+  const accepted = origin === 'user' && typeof prompt === 'string' && ACCEPT.test(prompt) ? suggestedReply(prev?.next) : null;
+  const said = accepted ?? prompt;
+  const bypass = prompt === null || shouldBypass(said);
+
   // 这一轮写给模型的话用哪种语言：人说的、够长的原话才作数；系统信封、斜杠命令、短确认沿用上一轮（_lang.mjs）。
-  const lang = origin === 'user' && !bypass ? promptLang(prompt, prev?.lang ?? null) : sessionLang(prev);
+  const lang = origin === 'user' && !bypass ? promptLang(said, prev?.lang ?? null) : sessionLang(prev);
   const T = (zh, en) => pick(lang, zh, en);
+  const accept = origin === 'user' ? acceptText(prompt, prev?.next, lang) : null;
 
   // 上一轮还没结束（Stop 还没写下 turnEndedAt）而且是用户发起的。
   const inFlight = !!prev && prev.turnEndedAt === null && prev.origin === 'user';
@@ -159,8 +163,8 @@ try {
     list = r.text;
     listShown = r.shown;
     if (list && prev?.nextProblem) {
-      list += T(`\n${prev.nextProblem}：这一轮的最后一行写成「下一步：Lx <这件事>——<为什么是它>」。`,
-        `\n${prev.nextProblem}: end this turn with "Next: Lx <the item> — <why it comes first>".`);
+      list += T(`\n${prev.nextProblem}：这一轮的最后一行写成「下一步：Lx <这件事>——<为什么是它>；回「…」」。`,
+        `\n${prev.nextProblem}: end this turn with "Next: Lx <the item> — <why it comes first>; reply \"…\"".`);
     }
     if (list && prev?.listHeld) list += `\n${prev.listHeld}。`;
     // 上一轮提交过：之前记下的等你逐条核一遍（extract 算好的一句，见 _list.mjs sweepDue）。
@@ -256,7 +260,7 @@ try {
   // 上一轮计划卡超长或少了「→ 怎么验」：这一轮说一次，短确认的轮次也说（extract 写，_card.mjs）。
   const card = typeof prev?.cardProblem === 'string' ? prev.cardProblem : null;
 
-  if (bypass && !block && !inbox && !list && !card) quietExit();
+  if (bypass && !block && !inbox && !list && !card && !accept) quietExit();
 
   // Must be complete, valid JSON: Claude Code treats output starting with '{'
   // but not ending in '}' as plain text.
@@ -267,7 +271,7 @@ try {
       additionalContext: (envelopeRulesProblem && !bypass
         ? T(`【Wishing-Willow】${envelopeRulesProblem}：后台通知等可能被当成你的话记下。\n`,
           `[Wishing-Willow] ${envelopeRulesProblem}: background notifications may be recorded as the user's words.\n`) : '')
-        + [bypass ? null : `${reminder(lang)}\n${commandRule(sessionId, lang)}\n${selfLine(sessionId, lang)}`, card, block, list, inbox].filter(Boolean).join('\n\n'),
+        + [accept, bypass ? null : `${reminder(lang)}\n${commandRule(sessionId, lang)}\n${selfLine(sessionId, lang)}`, card, block, list, inbox].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);

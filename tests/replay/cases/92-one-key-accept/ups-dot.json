@@ -1,0 +1,8 @@
+{
+  "session_id": "test-sess-92",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "prompt_id": "p92b",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "."
+}

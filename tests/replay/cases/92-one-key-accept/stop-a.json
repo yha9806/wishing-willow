@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-92",
+  "prompt_id": "p92a",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "你批准的：推合成分支\n我读成了：推合成分支\n\n已经备好。\n\n下一步：L1 推合成分支——它挡着合并；回「K1 认可」"
+}

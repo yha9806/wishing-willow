@@ -1,0 +1,51 @@
+{
+  "note": "一键接受（K9）：只回「.」或「。」时，钩子从上一条回复末尾的 回「X」 取出 X，告诉模型这一轮按回了 X 来办；X 不是纯确认时照常带四行声明。上一条末尾没有 回「…」 就说别猜、先问。回别的字（哪怕是「继续」）不触发。",
+  "session_id": "test-sess-92",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-dot.json",
+      "context_includes": [
+        "用户只回了「.」",
+        "按用户回的是「K1 认可」",
+        "你批准的：<一句话"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-b.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-dot2.json",
+      "context_includes": [
+        "用户只回了「。」",
+        "没有写 回「…」",
+        "别猜"
+      ],
+      "context_excludes": [
+        "按用户回的是"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-c.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-word.json",
+      "context_excludes": [
+        "用户只回了"
+      ]
+    }
+  ]
+}

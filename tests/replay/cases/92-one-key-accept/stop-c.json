@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-92",
+  "prompt_id": "p92c",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "你批准的：问要做什么\n我读成了：问一句\n\n要做哪件？\n\n下一步：L1 等你说做哪件——没有建议可接；回「继续」"
+}
