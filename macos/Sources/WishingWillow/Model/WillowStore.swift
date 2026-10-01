@@ -161,7 +161,8 @@ final class WillowStore {
         // FSEvents does not fire for a directory that does not exist yet, and the
         // plugin creates it on its first turn. A slow poll covers that gap and the
         // staleness clock, which changes with no file event at all.
-        let t = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
+        // 15 秒（K10 功耗，原 5 秒）：文件一变 FSEvents 立刻重载，轮询只管这两件慢事。
+        let t = Timer(timeInterval: 15, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.reload() }
         }
         t.tolerance = 2

@@ -36,18 +36,50 @@ enum ConversationList {
     static func read(sessionId: String, directory: URL) -> Result {
         let url = directory.appendingPathComponent("\(sessionId).list.jsonl")
         guard FileManager.default.fileExists(atPath: url.path) else { return .none }
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return .unreadable(L("文件打不开", "cannot open the file")) }
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: true)
-        guard let last = lines.last.flatMap(parse) else { return .unreadable(L("最后一行不是快照", "the last line is not a snapshot")) }
+        let t = tail(url)
+        guard t.readable else { return .unreadable(L("文件打不开", "cannot open the file")) }
+        guard let last = t.last else { return .unreadable(L("最后一行不是快照", "the last line is not a snapshot")) }
         return .snapshot(last)
     }
 
     /// 最后一份之前的那一份（比出这一轮变了什么用）；没有或读不出是 nil。
     static func previous(sessionId: String, directory: URL) -> ListSnapshot? {
         let url = directory.appendingPathComponent("\(sessionId).list.jsonl")
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: true)
-        return lines.count >= 2 ? parse(lines[lines.count - 2]) : nil
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return tail(url).previous
+    }
+
+    /// 最后两份快照。清单文件只追加，一个会话能长到几 MB，每次导出都要读（K10 功耗）：
+    /// 只从文件尾部读够两整行，按大小和修改时间缓存，文件没变就不再读。
+    struct Tail {
+        var readable: Bool
+        var last: ListSnapshot?
+        var previous: ListSnapshot?
+    }
+
+    /// 从尾部一次读多少字节；不够两整行就加倍再读。测试会把它调小。
+    nonisolated(unsafe) static var tailChunk = 256 * 1024
+    private static let tails = FileCache<Tail>()
+
+    static func tail(_ url: URL) -> Tail {
+        tails.value(at: url) { url in
+            guard let h = try? FileHandle(forReadingFrom: url) else { return Tail(readable: false) }
+            defer { try? h.close() }
+            guard let size = try? h.seekToEnd() else { return Tail(readable: false) }
+            var chunk = UInt64(max(tailChunk, 1))
+            while true {
+                let start = size > chunk ? size - chunk : 0
+                guard (try? h.seek(toOffset: start)) != nil, let data = try? h.readToEnd() else { return Tail(readable: false) }
+                var lines = data.split(separator: 0x0A, omittingEmptySubsequences: true)
+                if start > 0, !lines.isEmpty { lines.removeFirst() }   // 从一行中间开始读的，第一段不完整
+                if lines.count >= 2 || start == 0 {
+                    let text = lines.suffix(2).map { Substring(String(decoding: $0, as: UTF8.self)) }
+                    return Tail(readable: true, last: text.last.flatMap(parse),
+                                previous: text.count == 2 ? parse(text[0]) : nil)
+                }
+                chunk *= 2
+            }
+        }
     }
 
     static func parse(_ line: Substring) -> ListSnapshot? {

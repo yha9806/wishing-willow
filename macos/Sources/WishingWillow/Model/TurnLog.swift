@@ -66,7 +66,13 @@ enum TurnLog {
     /// Read a session's log. A half-written line is skipped, not fatal — the
     /// plugin renames into place, but a reader should never assume that.
     static func read(sessionId: String, directory: URL) -> [TurnLogEntry] {
-        let url = directory.appendingPathComponent("\(sessionId).log.jsonl")
+        // 每次导出读两遍、每个会话都读（K10 功耗）：文件没变就用上一次读出的。
+        cache.value(at: directory.appendingPathComponent("\(sessionId).log.jsonl"), load: load)
+    }
+
+    private static let cache = FileCache<[TurnLogEntry]>()
+
+    private static func load(_ url: URL) -> [TurnLogEntry] {
         guard let text = try? String(contentsOf: url, encoding: .utf8) else { return [] }
         var out: [TurnLogEntry] = []
         for line in text.split(separator: "\n", omittingEmptySubsequences: true) {
