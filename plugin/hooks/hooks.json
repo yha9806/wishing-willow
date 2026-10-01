@@ -46,5 +46,8 @@
         ]
       }
     ]
-  }
+  },
+  "modules": [
+    "./next-reply.ts"
+  ]
 }
