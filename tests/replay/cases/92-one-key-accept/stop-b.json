@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-92",
+  "prompt_id": "p92b",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "你批准的：K1 认可\n我读成了：按卡推送\n\n推好了。\n\n下一步：L1 等合并——别的都在等它"
+}
