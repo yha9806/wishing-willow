@@ -1,0 +1,74 @@
+{
+  "note": "一键接受也认几个点：「。。」「...」「…」「．」都当作只回了一个「.」。带字的（「好.」）不算。",
+  "session_id": "test-sess-93",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-0.json",
+      "context_includes": [
+        "用户只回了「。。」",
+        "按用户回的是「K1 认可」"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-0.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-1.json",
+      "context_includes": [
+        "用户只回了「...」",
+        "按用户回的是「K1 认可」"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-1.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-2.json",
+      "context_includes": [
+        "用户只回了「…」",
+        "按用户回的是「K1 认可」"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-2.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-3.json",
+      "context_includes": [
+        "用户只回了「．」",
+        "按用户回的是「K1 认可」"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-3.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-4.json",
+      "context_excludes": [
+        "用户只回了"
+      ]
+    },
+    {
+      "hook": "extract",
+      "input": "stop-4.json"
+    }
+  ]
+}
