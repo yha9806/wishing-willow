@@ -29,8 +29,9 @@ const LIST_RULES_ZH =
   '「L3 做完：<证据>」「L3 → 等你：<为什么>」「L3 撤掉：<原因>」「L3 认可」（用户本轮认可）「L3 改题：<新标题>」（原标题读着像还悬着）' +
   '「L3 挡着：L5、L7」（落地能放开哪几项，可写外部的事，写「无」清空）。' +
   '标题一行约 40 字，背景进依据；编号只在本对话算数，提到别的对话的编号要带上对话名（「会话甲的 L3」）；没提到的项原样留着，没变化就不写这块。\n' +
-  '回复的最后一行写「下一步：Lx <这件事>——<为什么是它>；回「<用户可以原样回的一句>」」：有开着的项就点名一项，说它为什么排第一（挡着别的、在等你、快到期）；' +
-  '没有就写之后等用户什么或你接着做什么。用户只回「.」就等于回了这一句。';
+  '回复的最后一行写「下一步：Lx <这件事>——<为什么是它>」：有开着的项就点名一项，说它为什么排第一（挡着别的、在等你、快到期）；' +
+  '没有就写之后等用户什么或你接着做什么。要用户回话或拍板时，末尾再加「；回「<用户可以原样回的一句>」」，用户只回「.」就等于回了这一句；' +
+  '不用用户回的（你接着做、等后台跑完、等别的对话）就不写 回「…」。';
 
 // 英文版（2026-09-27 装机演练 F2）。与中文版逐条对应；写法两种都认（parseOps）。
 const LIST_RULES_EN =
@@ -41,8 +42,10 @@ const LIST_RULES_EN =
   + '"L3 blocks: L5, L7" (what it frees once it lands; outside events allowed; "none" clears). '
   + 'One-line titles (about 80 characters), background in the basis; IDs count only in this conversation, so name the conversation for another one\'s ID ("session A\'s L3"); '
   + 'unmentioned items stay; no change, no block.\n'
-  + 'Last line: "Next: Lx <the item> — <why it comes first>; reply "<a reply the user can send as is>"": with open items, name one and say why it comes first (blocks others, waits on the user, due); '
-  + 'with none, say what you wait on the user for or what you do next. A bare "." from the user means that reply.';
+  + 'Last line: "Next: Lx <the item> — <why it comes first>": with open items, name one and say why it comes first (blocks others, waits on the user, due); '
+  + 'with none, say what you wait on the user for or what you do next. When the user has to answer or decide, end it with '
+  + '"; reply "<a reply the user can send as is>""; a bare "." from the user means that reply. '
+  + 'When nothing is needed from the user (you carry on, a background run, another conversation), leave the reply out.';
 
 export const listRules = (lang) => pick(lang, LIST_RULES_ZH, LIST_RULES_EN);
 
