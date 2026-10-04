@@ -705,19 +705,22 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = '
     ? turnIndex - x.touched : 0);
   const staleAt = (x) => (x.status === '等你' ? STALE_YOU_TURNS : STALE_TURNS);
   const shownItems = full ? open : open.filter((x) => x.status === '等你' || (mode === 'full' && x.status === '在做' && idleOf(x) >= STALE_TURNS));
+  // 「属于」只在完整列出的那一轮注：其余轮列出的等你、挂久的项，关系在那一轮已经交给模型了（A5 实测：每轮都注，
+  // 十项挂久的就多一百多字）。只开了一篇稿子时只写编号。
+  const ofs = (x) => (full && x.of?.length ? x.of.map((r) => (ms.length === 1 && r.startsWith(`${ms[0].workspace} `) ? r.slice(ms[0].workspace.length + 1) : r)) : null);
   const lines = shownItems.map((x) => {
     const idle = idleOf(x);
     if (lang === 'en') {
       return `${x.id} ${label(x, lang)}: ${x.text}`
         + (x.blocks?.length ? ` (blocks ${x.blocks.join(', ')})` : '')
-        + (x.of?.length ? ` (belongs to ${x.of.join(', ')})` : '')
+        + (ofs(x) ? ` (belongs to ${ofs(x).join(', ')})` : '')
         + (x.basis && x.basis !== '预测' ? ` (basis: ${x.basis})` : '')
         + (x.approvedTurn ? ' (approved)' : '')
         + (idle >= staleAt(x) ? ` (untouched for ${idle} turns)` : '');
     }
     return `${x.id} ${label(x)}：${x.text}`
       + (x.blocks?.length ? `（挡着 ${x.blocks.join('、')}）` : '')
-      + (x.of?.length ? `（属于 ${x.of.join('、')}）` : '')
+      + (ofs(x) ? `（属于 ${ofs(x).join('、')}）` : '')
       + (x.basis && x.basis !== '预测' ? `（依据：${x.basis}）` : '')
       + (x.approvedTurn ? '（已认可）' : '')
       + (idle >= staleAt(x) ? `（${idle} 轮没动）` : '');

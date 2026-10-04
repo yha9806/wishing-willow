@@ -41,7 +41,7 @@
       "input": "ups-b.json",
       "stdout": "inject",
       "context_includes": [
-        "L1 在做：合成步骤一（属于 合成稿 N1）",
+        "L1 在做：合成步骤一（属于 N1）",
         "稿件 合成稿 开着、清单里没挂：N3 合成待做丙·等作者"
       ],
       "context_excludes": [
