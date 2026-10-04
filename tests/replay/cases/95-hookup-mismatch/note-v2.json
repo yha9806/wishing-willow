@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "source": "awt-loop",
+  "label": "写作循环 · 合成稿",
+  "workspace": "合成稿",
+  "sessions": {
+    "test-sess-95": {
+      "role": "primary",
+      "since": "an-earlier-prompt"
+    }
+  },
+  "full": "〔循环〕合成说明块",
+  "always": "覆盖：合成稿合成检查",
+  "history": "稿件「合成稿」合成历史行",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "todo": [
+    {
+      "id": "N1",
+      "title": "合成待做甲",
+      "state": "已做",
+      "closed": true
+    },
+    {
+      "id": "N2",
+      "title": "合成待做乙",
+      "state": "在做",
+      "closed": false
+    }
+  ],
+  "hookup": true
+}

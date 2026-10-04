@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "source": "awt-loop",
+  "label": "写作循环 · 合成无清单稿",
+  "workspace": "合成无清单稿",
+  "sessions": {
+    "test-sess-96": {
+      "role": "primary",
+      "since": "an-earlier-prompt"
+    }
+  },
+  "full": "〔循环〕合成说明块",
+  "always": "覆盖：合成无清单稿合成检查",
+  "history": "稿件「合成无清单稿」合成历史行",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "todo": null,
+  "hookup": true,
+  "todo_why": "没有主张清单"
+}

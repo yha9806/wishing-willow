@@ -1,0 +1,38 @@
+{
+  "note": "没挂上的那一行：集合没变的轮次只写编号；压缩后（上下文里那份标题可能没了）压缩那一刻和下一轮都重写标题。",
+  "session_id": "test-sess-99",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单里没挂：N1 合成待做甲·在做"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单里没挂：N1（标题同上一轮）"
+      ]
+    },
+    {
+      "hook": "compacted",
+      "input": "start-compact.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单里没挂：N1 合成待做甲·在做"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单里没挂：N1 合成待做甲·在做"
+      ]
+    }
+  ]
+}

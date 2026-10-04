@@ -4,6 +4,7 @@
 // 模型只在清单有变化时，在回复末尾写一个「清单变化：」块，一行一条——
 //   + 在做：… / + 等你：… / + 等 <什么>：… / + 以后：…（末尾可带「（依据：…）」，不带就是预测）
 //   L3 做完：<证据>   L3 → <状态>[：说明]   L3 撤掉：<原因>   L3 挪到以后：<条件>   L3 认可
+//   L3 属于：E5（挂到稿件那边的一件待做）   E6 不挂：<理由>（稿件那边这件不挂到清单上）
 // 编号由这里分配。一项只能靠明写的一行离开清单；没提到的原样留着，所以「悄悄消失」在写法上就不会发生。
 // 撤掉没写原因的不撤，做完没附证据的照记，引用了不存在的编号——都记为问题，下一轮说出来。
 //
@@ -17,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { stateDir } from './_willow.mjs';
 import { pick } from './_lang.mjs';
 import { replyIn } from './_reply.mjs';
+import { hookupNotes } from './_inbox.mjs';
 
 // 清单的写法，每轮开头随提醒注入（capture.mjs），压缩后原样重交一次（compacted.mjs）。
 // 长清单（2026-09-24 用户：要整场对话的长链路清单，跟着对话变，不只下一步）。旧的「计划：」块并进来：
@@ -82,6 +84,10 @@ const DROP = /^(L\d+)\s*(?:撤掉|dropped)\s*(?:[：:]\s*(.*))?$/i;
 const LATER = /^(L\d+)\s*(?:挪到以后|moved to later)\s*(?:[：:]\s*(.*))?$/i;
 // 一项挡着什么（09-28 spec「清单与下一步的分工」D1）：它一落地就能放开的项，或外部的事（投稿）。
 const BLOCKS = /^(L\d+)\s*(?:挡着|blocks)\s*[：:]\s*(.+)$/i;
+// 一项属于稿件那边的哪件待做（2026-10-04 spec「稿件待做挂上对话清单」D2）：「L33 属于：E5」；
+// 对话绑了几篇稿子时写「ipm E5」。稿件那边一件不挂到清单上，写「E6 不挂：<理由>」（D3）。
+const OF = /^(L\d+)\s*(?:属于|belongs to)\s*[：:]\s*(.+)$/i;
+const NOHOOK = /^((?:[\w.\-\u2e80-\u9fff]+\s+)?[A-Za-z]+\d+)\s*(?:不挂|not hooked)\s*(?:[：:]\s*(.*))?$/i;
 // 末尾的「（挡着：…）」「（依据：…）」：从句尾往回数括号找到配对的那个开括号，里面再套括号也拆得开
 // （09-28 实测一张真实清单：依据里写了带括号的文件名或说明，整段依据留在了标题里）。
 function tail(text, label) {
@@ -102,6 +108,7 @@ function tail(text, label) {
   return null;
 }
 const BLOCKS_LABEL = /^\s*(?:挡着|blocks)\s*[：:]\s*([\s\S]+)$/i;
+const OF_LABEL = /^\s*(?:属于|belongs to)\s*[：:]\s*([\s\S]+)$/i;
 const BASIS_LABEL = /^\s*(?:依据|basis)\s*[：:]\s*([\s\S]+)$/i;
 const TARGETS = /\s*[、,，;；]\s*|\s+(?=L\d)/;
 export function splitTargets(t) {
@@ -190,16 +197,20 @@ export function parseOps(texts) {
       let m;
       const before = ops.length;
       if ((m = ADD.exec(line))) {
-        // 末尾的「（依据：…）」「（挡着：…）」两种都可以有，先后不论。
-        let text = m[2], basis = '预测', blocks = null;
-        for (let k = 0; k < 2; k++) {
+        // 末尾的「（依据：…）」「（挡着：…）」「（属于：…）」都可以有，先后不论。
+        let text = m[2], basis = '预测', blocks = null, of = null;
+        for (let k = 0; k < 3; k++) {
           const b = tail(text, BASIS_LABEL);
           if (b) { basis = b.value; text = text.slice(0, b.index); continue; }
           const t = tail(text, BLOCKS_LABEL);
-          if (t) { blocks = splitTargets(t.value); text = text.slice(0, t.index); }
+          if (t) { blocks = splitTargets(t.value); text = text.slice(0, t.index); continue; }
+          const o = tail(text, OF_LABEL);
+          if (o) { of = splitTargets(o.value); text = text.slice(0, o.index); }
         }
-        ops.push({ op: 'add', ...status(m[1]), text: text.trim(), basis, ...(blocks ? { blocks } : {}) });
-      } else if ((m = BLOCKS.exec(line))) ops.push({ op: 'blocks', id: m[1], targets: splitTargets(m[2]) }); else if ((m = DONE.exec(line))) ops.push({ op: 'done', id: m[1], note: (m[2] ?? '').trim() });
+        ops.push({ op: 'add', ...status(m[1]), text: text.trim(), basis, ...(blocks ? { blocks } : {}), ...(of ? { of } : {}) });
+      } else if ((m = BLOCKS.exec(line))) ops.push({ op: 'blocks', id: m[1], targets: splitTargets(m[2]) });
+      else if ((m = OF.exec(line))) ops.push({ op: 'of', id: m[1], targets: splitTargets(m[2]) });
+      else if ((m = DONE.exec(line))) ops.push({ op: 'done', id: m[1], note: (m[2] ?? '').trim() });
       else if ((m = MOVE.exec(line))) ops.push({ op: 'move', id: m[1], ...status(m[2]), note: (m[3] ?? '').trim() });
       else if ((m = DROP.exec(line))) ops.push({ op: 'drop', id: m[1], note: (m[2] ?? '').trim() });
       else if ((m = LATER.exec(line))) ops.push({ op: 'move', id: m[1], status: '以后', wait: null, note: (m[2] ?? '').trim() });
@@ -210,6 +221,7 @@ export function parseOps(texts) {
         const b = tail(m[2], BASIS_LABEL);
         ops.push({ op: 'retitle', id: m[1], text: (b ? m[2].slice(0, b.index) : m[2]).trim(), ...(b ? { basis: b.value } : {}) });
       }
+      else if ((m = NOHOOK.exec(line))) ops.push({ op: 'nohook', ref: m[1].replace(/\s+/g, ' '), note: (m[2] ?? '').trim() });
       else if (/^(\+|L\d+)/.test(line)) ops.push({ op: 'bad', line });
       else inBlock = false;   // 空行、「下一步：」、正文：块到此为止
       if (ops.length > before) ops[ops.length - 1].raw = line;   // 用命令记过的行，回复末尾再写一遍时认得出
@@ -218,12 +230,50 @@ export function parseOps(texts) {
   return ops;
 }
 
-/** 把一轮的操作应用到上一份快照上。turn = {turnId, turnIndex}。 */
-export function applyOps(prevItems, ops, turn, lang = 'zh') {
+/**
+ * 「属于」和「不挂」写的稿件待做编号对到开了对号的稿件上（spec「稿件待做挂上对话清单」D2）：
+ * 「E5」或「ipm E5」→ {key: 'ipm E5', ws, id, todo}；对不上 → {problem}。裸编号在两篇稿子里都有就要带稿件名。
+ */
+export function resolveTodo(ref, manuscripts, lang = 'zh') {
+  const T = (zh, en) => pick(lang, zh, en);
+  const m = /^(?:(\S+)\s+)?([A-Za-z]+\d+)$/.exec(String(ref).trim());
+  if (!m) return { problem: T(`「${ref}」不是稿件待做的编号`, `"${ref}" is not a manuscript item ID`) };
+  const [, ws, id] = m;
+  const hits = manuscripts.filter((x) => (!ws || x.workspace === ws) && x.todo.some((t) => t.id === id));
+  if (hits.length === 1) return { key: `${hits[0].workspace} ${id}`, ws: hits[0].workspace, id, todo: hits[0].todo.find((t) => t.id === id) };
+  if (hits.length > 1) {
+    return { problem: T(`${id} 在 ${hits.map((h) => h.workspace).join('、')} 都有，写「${hits[0].workspace} ${id}」这样带上稿件名`,
+      `${id} is in ${hits.map((h) => h.workspace).join(', ')}; write "${hits[0].workspace} ${id}" with the manuscript's name`) };
+  }
+  if (ws && !manuscripts.some((x) => x.workspace === ws)) {
+    return { problem: T(`没有开了对号的稿件 ${ws}`, `no manuscript named ${ws} has the hookup on`) };
+  }
+  return { problem: T(`稿件那边没有 ${ws ? `${ws} ` : ''}${id}`, `the manuscript has no ${ws ? `${ws} ` : ''}${id}`) };
+}
+
+/**
+ * 把一轮的操作应用到上一份快照上。turn = {turnId, turnIndex}。
+ * ctx.manuscripts：开了对号的稿件（_inbox.mjs hookupNotes）；有就核「属于」「不挂」写的编号，没有就照记不核。
+ * ctx.unhooked：上一份快照里写过「不挂」的 {'ipm E6': {reason, turn}}，带到这一份。
+ */
+export function applyOps(prevItems, ops, turn, lang = 'zh', ctx = {}) {
   const T = (zh, en) => pick(lang, zh, en);
   const items = (prevItems ?? []).map((x) => ({ ...x }));
   const changes = [];
   const problems = [];
+  const ms = Array.isArray(ctx?.manuscripts) ? ctx.manuscripts : [];
+  const unhooked = { ...(ctx?.unhooked && typeof ctx.unhooked === 'object' ? ctx.unhooked : {}) };
+  // 开了对号时核编号、写成带稿件名的那种；没开时照记。全都对不上的，返回 null（不动原来的）。
+  const ofTargets = (owner, targets) => {
+    if (!ms.length) return targets;
+    const kept = [];
+    for (const t of targets) {
+      const r = resolveTodo(t, ms, lang);
+      if (r.problem) problems.push(T(`${owner} 属于的 ${t}：${r.problem}`, `${owner} belongs to ${t}: ${r.problem}`));
+      else if (!kept.includes(r.key)) kept.push(r.key);
+    }
+    return targets.length && !kept.length ? null : kept;
+  };
   let next = items.reduce((n, x) => Math.max(n, Number(String(x.id).slice(1)) || 0), 0) + 1;
   const find = (id) => items.find((x) => x.id === id);
   for (const o of ops) {
@@ -237,9 +287,10 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
         continue;
       }
       const id = `L${next++}`;
+      const of = o.of ? ofTargets(id, o.of) : null;
       items.push({ id, text: o.text, status: o.status, wait: o.wait, basis: o.basis,
         sourceTurn: turn.turnId ?? null, since: turn.turnIndex ?? null, touched: turn.turnIndex ?? null,
-        ...(o.blocks && o.blocks.length ? { blocks: o.blocks } : {}) });
+        ...(o.blocks && o.blocks.length ? { blocks: o.blocks } : {}), ...(of && of.length ? { of } : {}) });
       changes.push(T(`新增 ${id}`, `added ${id}`));
       if (titleWidth(o.text) > TITLE_MAX) {
         problems.push(T(`${id} 的标题太长（一行写完，约 40 字内），背景写进依据或说明；可以「${id} 改题：…」改短`,
@@ -260,8 +311,29 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
       changes.push(T(`${o.card} 认可（${steps.map((x) => x.id).join('、')}）`, `${o.card} approved (${steps.map((x) => x.id).join(', ')})`));
       continue;
     }
+    if (o.op === 'nohook') {
+      if (!o.note) { problems.push(T(`${o.ref} 不挂没写理由，没记`, `${o.ref} not hooked without a reason, so not recorded`)); continue; }
+      if (!ms.length) {
+        problems.push(T(`这场对话没有开了对号的稿件，${o.ref} 不挂没记`, `no manuscript in this conversation has the hookup on; ${o.ref} not recorded`));
+        continue;
+      }
+      const r = resolveTodo(o.ref, ms, lang);
+      if (r.problem) { problems.push(r.problem); continue; }
+      unhooked[r.key] = { reason: o.note, turn: turn.turnIndex ?? null };
+      changes.push(T(`${r.key} 不挂`, `${r.key} not hooked`));
+      continue;
+    }
     const it = find(o.id);
     if (!it) { problems.push(T(`${o.id} 不存在`, `${o.id} doesn't exist`)); continue; }
+    if (o.op === 'of') {
+      const kept = ofTargets(o.id, o.targets);
+      if (kept === null) continue;   // 写的全对不上：不动原来的，问题已记
+      if (kept.length) it.of = kept; else delete it.of;
+      it.touched = turn.turnIndex ?? it.touched;
+      changes.push(kept.length ? T(`${o.id} 属于 ${kept.join('、')}`, `${o.id} belongs to ${kept.join(', ')}`)
+        : T(`${o.id} 不再属于稿件待做`, `${o.id} belongs to no manuscript item now`));
+      continue;
+    }
     if (o.op === 'approve') { it.approvedTurn = turn.turnId ?? null; changes.push(T(`${o.id} 认可`, `${o.id} approved`)); continue; }
     if (o.op === 'blocks') {
       // 编号只认这场对话里有的；外部的事（投稿、截止）照写。写「无」清空。
@@ -293,7 +365,13 @@ export function applyOps(prevItems, ops, turn, lang = 'zh') {
     it.touched = turn.turnIndex ?? it.touched;
     changes.push(`${o.id} ${label(it, lang)}`);
   }
-  return { items, changes, problems };
+  // 稿件那边关了的，「不挂」就不用再记（只清开了对号、看得见的那几篇的）。
+  for (const k of Object.keys(unhooked)) {
+    const r = ms.length ? resolveTodo(k, ms, lang) : null;
+    if (r && !r.problem && r.todo.closed) delete unhooked[k];
+    else if (r?.problem && ms.some((x) => k.startsWith(`${x.workspace} `))) delete unhooked[k];
+  }
+  return { items, changes, problems, ...(Object.keys(unhooked).length ? { unhooked } : {}) };
 }
 
 /**
@@ -517,6 +595,66 @@ export function inlineLine(open, lang = 'zh') {
 
 export const REFRESH_TURNS = 10;
 
+/**
+ * 稿件待做对号（2026-10-04 spec「稿件待做挂上对话清单」D3）。manuscripts 来自 _inbox.mjs hookupNotes。
+ * 「没挂上」：开着的待做，没有任何开着的清单项属于它，也没写「不挂」。
+ * 「对不上」：那边关了、属于它的清单项还开着；那边在做、属于它的开着的清单项全是以后。
+ * 返回 {sig, lines(titled)}：sig 是没挂上的那一组（集合变了才写标题），lines(true/false) 给出要说的行。
+ */
+export function hookupCheck(items, manuscripts, unhooked, lang = 'zh') {
+  const T = (zh, en) => pick(lang, zh, en);
+  const ms = Array.isArray(manuscripts) ? manuscripts : [];
+  if (!ms.length) return null;
+  const skip = unhooked && typeof unhooked === 'object' ? unhooked : {};
+  const open = (items ?? []).filter((x) => !CLOSED.has(x.status));
+  // 每个开着的清单项属于哪几件：写的时候没开对号、存的是裸编号的，这里再对一次。
+  const owners = new Map();
+  for (const x of open) {
+    for (const ref of x.of ?? []) {
+      const r = resolveTodo(ref, ms, lang);
+      if (r.problem) continue;
+      if (!owners.has(r.key)) owners.set(r.key, []);
+      if (!owners.get(r.key).includes(x)) owners.get(r.key).push(x);
+    }
+  }
+  const several = ms.length > 1;
+  const doing = (st) => st === '在做' || /^doing$/i.test(st);
+  const out = [];
+  const sig = [];
+  for (const m of ms) {
+    const ref = (id) => (several ? `${m.workspace} ${id}` : id);
+    const loose = [];
+    const off = [];
+    for (const t of m.todo) {
+      const key = `${m.workspace} ${t.id}`;
+      const ls = owners.get(key) ?? [];
+      const ids = ls.map((x) => x.id).join(T('、', ', '));
+      if (t.closed) {
+        if (ls.length) off.push(T(`${t.id} 那边已关，属于它的 ${ids} 还开着`, `${t.id} is closed there but ${ids} belonging to it ${ls.length > 1 ? 'are' : 'is'} still open`));
+        continue;
+      }
+      if (!ls.length) { if (!skip[key]) loose.push(t); continue; }
+      if (doing(t.state) && ls.every((x) => x.status === '以后')) {
+        off.push(T(`${t.id} 在做，属于它的 ${ids} 全是以后`, `${t.id} is in progress but ${ids} belonging to it ${ls.length > 1 ? 'are all' : 'is'} later`));
+      }
+    }
+    if (loose.length) {
+      sig.push(...loose.map((t) => `${m.workspace} ${t.id}`));
+      const first = ref(loose[0].id);
+      out.push((titled) => T(
+        `稿件 ${m.workspace} 开着、清单里没挂：${titled ? loose.map((t) => `${t.id} ${brief(t.title)}·${t.state}`).join('、') : `${loose.map((t) => t.id).join('、')}（标题同上一轮）`}。`
+          + `挂上写「Lx 属于：${first}」，不挂写「${first} 不挂：<理由>」。`,
+        `Manuscript ${m.workspace} has open items no list item belongs to: ${titled ? loose.map((t) => `${t.id} ${brief(t.title, 'en')} (${t.state})`).join(', ') : `${loose.map((t) => t.id).join(', ')} (titles as last turn)`}. `
+          + `To hook one up write "Lx belongs to: ${first}"; to leave it out write "${first} not hooked: <reason>".`));
+    }
+    if (off.length) {
+      const text = T(`稿件 ${m.workspace} 对不上：${off.join('；')}。`, `Manuscript ${m.workspace} doesn't match the list: ${off.join('; ')}.`);
+      out.push(() => text);
+    }
+  }
+  return { sig: sig.sort().join('|'), lines: (titled) => out.map((f) => f(titled)) };
+}
+
 /** 开着的项里写了「挡着」的，按挡着的开着的项与外部事件的多少排，取前三（spec D2 的候选，只给数不替模型选）。 */
 export function blockCandidates(items) {
   const open = new Set(items.filter((x) => !CLOSED.has(x.status)).map((x) => x.id));
@@ -550,9 +688,12 @@ export function nextProblem(next, items, lang = 'zh') {
  * 否则只列等你的、N 轮没动的和问题，并说其余和第几轮列的一样。shown 是新的「上次完整列出」，没完整列就原样返回。
  * 上一次有变化的那一轮留下的问题照样带上，直到下一份快照。
  */
-export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = 'zh') {
+export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = 'zh', manuscripts = undefined) {
   const T = (zh, en) => pick(lang, zh, en);
-  const cur = readList(sessionId);
+  // 开了对号的稿件（spec「稿件待做挂上对话清单」D3）：只在普通轮说；还没有清单时也要说，没挂上的正是这时最多。
+  const ms = mode === 'full' ? (manuscripts ?? hookupNotes(sessionId)) : [];
+  let cur = readList(sessionId);
+  if (cur === null && ms.length) cur = { items: [], problems: [] };
   if (cur === null) return { text: null, shown: lastShown };
   if (cur.error) return { text: T(`【Wishing-Willow · 清单】清单文件读不出（${cur.error}），不能当作没有开着的事。`,
     `[Wishing-Willow · List] The list file can't be read (${cur.error}). Don't take that as nothing being open.`), shown: lastShown };
@@ -569,12 +710,14 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = '
     if (lang === 'en') {
       return `${x.id} ${label(x, lang)}: ${x.text}`
         + (x.blocks?.length ? ` (blocks ${x.blocks.join(', ')})` : '')
+        + (x.of?.length ? ` (belongs to ${x.of.join(', ')})` : '')
         + (x.basis && x.basis !== '预测' ? ` (basis: ${x.basis})` : '')
         + (x.approvedTurn ? ' (approved)' : '')
         + (idle >= staleAt(x) ? ` (untouched for ${idle} turns)` : '');
     }
     return `${x.id} ${label(x)}：${x.text}`
       + (x.blocks?.length ? `（挡着 ${x.blocks.join('、')}）` : '')
+      + (x.of?.length ? `（属于 ${x.of.join('、')}）` : '')
       + (x.basis && x.basis !== '预测' ? `（依据：${x.basis}）` : '')
       + (x.approvedTurn ? '（已认可）' : '')
       + (idle >= staleAt(x) ? `（${idle} 轮没动）` : '');
@@ -594,7 +737,12 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = '
     tail.push(T(`按挡着的多少：${cands.map((c) => `${c.id}（挡着 ${c.n} 件）`).join('、')}`,
       `By what they block: ${cands.map((c) => `${c.id} (blocks ${c.n})`).join(', ')}`));
   }
+  // 稿件待做对号：非空就每轮说（作者 10-04 认可）；没挂上的那一组变了（或压缩后）才写标题，其余轮只写编号。
+  const hk = hookupCheck(cur.items, ms, cur.unhooked, lang);
+  if (hk) tail.push(...hk.lines(!lastShown || lastShown.hookup !== hk.sig));
   // 每条回复都带：短确认、系统信封开始的一轮也一样。
   tail.push(T(`回复末尾照写这一行（本轮有变化就先改好）：\n${inlineLine(open)}`, `End your reply with this line (update it first if the list changed this turn):\n${inlineLine(open, lang)}`));
-  return { text: [head, ...lines, ...tail].join('\n'), shown: full ? { snap, turn: turnIndex } : lastShown, items: cur.items };
+  let shown = full ? { snap, turn: turnIndex } : lastShown;
+  if (hk) shown = { ...(shown ?? {}), hookup: hk.sig };
+  return { text: [head, ...lines, ...tail].join('\n'), shown, items: cur.items };
 }

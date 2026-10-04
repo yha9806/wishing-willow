@@ -1,0 +1,7 @@
+{
+  "session_id": "test-sess-99",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "hook_event_name": "SessionStart",
+  "source": "compact"
+}

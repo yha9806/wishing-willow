@@ -60,3 +60,26 @@ export function inboxText(sessionId, promptId, mode, lang = 'zh', said = null) {
     `[Wishing-Willow] Messages that can't be read: ${bad.join(', ')}. This turn doesn't carry what they say; don't take that as there being none.`));
   return { text: out.length ? out.join('\n\n') : null, said: Object.keys(next).length ? next : null };
 }
+
+/**
+ * 开了对号的稿件（2026-10-04 spec「稿件待做挂上对话清单」D3）：本会话是它的改稿会话（primary）、留言里 hookup 为 true、
+ * todo 是数组的那几份，各给出 {workspace, todo: [{id, title, state, closed}]}。历史来源会话、没开的、todo 为 null
+ * （没有主张清单或算不出）的都不算：null 不是「全关了」，不对号也就不说。读不出的留言 inboxText 照实说，这里跳过。
+ * opts.dir 换一个留言目录、opts.anySwitch 不管开关：只给预览用（listctl --hookup-preview）。
+ */
+export function hookupNotes(sessionId, opts = {}) {
+  const dir = opts.dir ?? join(stateDir(), 'inbox');
+  if (!existsSync(dir)) return [];
+  const out = [];
+  for (const f of readdirSync(dir).filter((x) => x.endsWith('.json')).sort()) {
+    let e;
+    try { e = JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch { continue; }
+    const s = e?.sessions?.[sessionId];
+    if (!s || s.role !== 'primary' || (e.hookup !== true && !opts.anySwitch) || !Array.isArray(e.todo)) continue;
+    const todo = e.todo.filter((t) => t && typeof t.id === 'string' && t.id.trim()).map((t) => ({
+      id: t.id.trim(), title: str(t.title) ?? '', state: str(t.state) ?? '', closed: t.closed === true,
+    }));
+    out.push({ workspace: str(e.workspace) ?? f, todo });
+  }
+  return out;
+}

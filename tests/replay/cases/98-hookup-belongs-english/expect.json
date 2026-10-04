@@ -1,0 +1,37 @@
+{
+  "note": "「属于」的英文写法 belongs to 也认；写 none 清空。没有开了对号的稿件时照记不核。",
+  "session_id": "test-sess-98",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "added L1",
+        "added L2"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-clear.json",
+      "stdout_includes": [
+        "L1 belongs to no manuscript item now"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "of": null,
+      "text": "synthetic step one"
+    },
+    "L2": {
+      "of": [
+        "N8"
+      ],
+      "text": "synthetic step two"
+    }
+  }
+}

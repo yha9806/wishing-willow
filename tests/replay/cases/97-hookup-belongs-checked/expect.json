@@ -1,0 +1,62 @@
+{
+  "note": "稿件待做挂上对话清单（spec D2，验收 A4）：开了对号时「属于」要核——稿件那边没有的编号、两篇稿子都有的裸编号、没开对号的稿件名都记问题；全都不对时不改原来的；对的照记，注入时带「属于」。另一篇没挂上的照说。",
+  "session_id": "test-sess-97",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "exit": 1,
+      "stdout_includes": [
+        "新增 L1",
+        "稿件那边没有 N9"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-amb.json",
+      "exit": 1,
+      "stdout_includes": [
+        "N1 在 合成稿、合成稿二 都有"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-ok.json",
+      "stdout_includes": [
+        "L1 属于 合成稿二 N1"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-nows.json",
+      "exit": 1,
+      "stdout_includes": [
+        "没有开了对号的稿件 合成稿三"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成步骤一（属于 合成稿二 N1）",
+        "稿件 合成稿 开着、清单里没挂：N1 合成待做甲·在做、N2 合成待做乙·在做",
+        "挂上写「Lx 属于：合成稿 N1」"
+      ],
+      "context_excludes": [
+        "稿件 合成稿二 开着"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "of": [
+        "合成稿二 N1"
+      ]
+    }
+  }
+}

@@ -5,10 +5,14 @@
 // 一行的写法和回复末尾「清单变化：」里的一样（_list.mjs parseOps）。命令一跑就追加一份快照，
 // 刘海不用等这一轮结束；快照记下 via = 'command' 和原样的行，同一轮回复末尾再写一遍时 extract 跳过。
 // 只改已有会话的清单：会话号对不上就不写——写错一个号会凭空多出一张清单。
+//
+// node listctl.mjs --session <会话号> --hookup-preview [--inbox <目录>]：开对号之前，看这场对话现在会报出哪几行
+// （spec「稿件待做挂上对话清单」D4）。只读，不管开关；--inbox 换一个留言目录（写作循环那边的改动还没装上时，用它生成的留言）。
 
 import { readFileSync } from 'node:fs';
 import { readState } from './_willow.mjs';
-import { parseOps, applyOps, readList, appendSnapshot, inlineLine } from './_list.mjs';
+import { parseOps, applyOps, readList, appendSnapshot, inlineLine, hookupCheck } from './_list.mjs';
+import { hookupNotes } from './_inbox.mjs';
 import { sessionLang, pick } from './_lang.mjs';
 
 // 回话的语言：会话记下的；还没读到会话时按系统语言。
@@ -24,10 +28,14 @@ let sessionId = null;
 // --by author：作者在 lintel 面板里点的（app 代为调用，spec 清单实时 C）。快照记 via = 'author'，下一轮告诉模型。
 let by = null;
 let lines = [];
+let preview = false;
+let inboxDir = null;
 const argv = process.argv.slice(2);
 if (argv.length) {
   for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === '--session') { sessionId = argv[i + 1] ?? null; i += 1; } else if (argv[i] === '--by') { by = argv[i + 1] ?? null; i += 1; } else lines.push(argv[i]);
+    if (argv[i] === '--session') { sessionId = argv[i + 1] ?? null; i += 1; } else if (argv[i] === '--by') { by = argv[i + 1] ?? null; i += 1; }
+    else if (argv[i] === '--hookup-preview') preview = true;
+    else if (argv[i] === '--inbox') { inboxDir = argv[i + 1] ?? null; i += 1; } else lines.push(argv[i]);
   }
 } else {
   try {
@@ -41,10 +49,24 @@ lines = lines.flatMap((l) => l.split('\n')).map((l) => l.trim()).filter(Boolean)
 
 if (by !== null && by !== 'author') fail(T('--by 只认 author', '--by only accepts author'));
 if (!sessionId || !/^[A-Za-z0-9._-]+$/.test(sessionId)) fail(T('要 --session <会话号>', 'needs --session <session id>'));
-if (!lines.length) fail(T('没有要记的行', 'no lines to record'));
+if (!preview && !lines.length) fail(T('没有要记的行', 'no lines to record'));
 const prev = readState(sessionId);
 if (!prev) fail(T(`没有这个会话：${sessionId}`, `no such session: ${sessionId}`));
 lang = sessionLang(prev);
+
+if (preview) {
+  const ms = hookupNotes(sessionId, { dir: inboxDir ?? undefined, anySwitch: true });
+  if (!ms.length) {
+    process.stdout.write(T('这场对话没有带待做的稿件留言（要本会话是那篇稿子的改稿会话、留言里有 todo），开了也不会说什么。\n',
+      'No manuscript note with to-do items for this conversation (it must be the manuscript\'s own conversation and the note must carry todo); turning it on would say nothing.\n'));
+    process.exit(0);
+  }
+  const cur = readList(sessionId);
+  if (cur?.error) fail(T(`清单文件读不出（${cur.error}）`, `the list file can't be read (${cur.error})`), 1);
+  const said = hookupCheck(cur?.items ?? [], ms, cur?.unhooked, lang).lines(true);
+  process.stdout.write((said.length ? said.join('\n') : T('开着的待做都挂上了，也没有对不上的：开了这一轮什么也不说。', 'Every open item is hooked up and nothing mismatches: turning it on would say nothing now.')) + '\n');
+  process.exit(0);
+}
 
 // 一行一块地读：parseOps 在认不出的行处结束一个块，多行拼成一块时一行写错会连带丢掉后面的。
 const ops = parseOps(lines.map((l) => `清单变化：\n${l}`));   // 块头两种语言都认，这里用哪个都一样
@@ -61,7 +83,8 @@ const cur = readList(sessionId);
 if (cur?.error) fail(T(`清单文件读不出（${cur.error}），没写——拿空清单盖掉它比读不出更糟`, `the list file can't be read (${cur.error}); nothing written — overwriting it with an empty list would be worse`), 1);
 
 const turn = { turnId: prev.turnId ?? null, turnIndex: prev.turnIndex ?? null };
-const r = applyOps(cur?.items, ops, turn, lang);
+// 开了对号的稿件：「属于」「不挂」写的编号对它们核（spec「稿件待做挂上对话清单」D2）。
+const r = applyOps(cur?.items, ops, turn, lang, { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked });
 appendSnapshot(sessionId, {
   at: new Date().toISOString(), ...turn, ...r, rows: [], via: by === 'author' ? 'author' : 'command', lines: known.map((o) => o.raw),
 });

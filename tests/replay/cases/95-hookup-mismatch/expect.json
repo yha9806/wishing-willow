@@ -1,0 +1,43 @@
+{
+  "note": "稿件待做挂上对话清单（spec D3，验收 A2）：稿件那边在做、属于它的清单项全是以后，报对不上；稿件那边关了、属于它的清单项还开着，也报。",
+  "session_id": "test-sess-95",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1",
+        "新增 L2"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "稿件 合成稿 对不上：N2 在做，属于它的 L2 全是以后"
+      ],
+      "context_excludes": [
+        "清单里没挂",
+        "那边已关"
+      ]
+    },
+    {
+      "copy": "note-v2.json",
+      "to": "inbox/awt-loop.synthetic.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "N1 那边已关，属于它的 L1 还开着",
+        "N2 在做，属于它的 L2 全是以后"
+      ]
+    }
+  ]
+}
