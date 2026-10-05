@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-98",
+  "prompt_id": "p98a",
+  "transcript_path": "/tmp/fake/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "Compare the three config files in the synthetic repo and list the fields that differ"
+}

@@ -1,0 +1,41 @@
+{
+  "note": "稿件待做挂上对话清单（spec D3，验收 A3）：历史来源会话、没开 hookup 的、todo 为 null（没有主张清单）的留言都不对号，什么也不说；这时写的「属于」照记，不核。",
+  "session_id": "test-sess-96",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_excludes": [
+        "清单里没挂",
+        "对不上"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成步骤一（属于 N1）"
+      ],
+      "context_excludes": [
+        "清单里没挂",
+        "对不上"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "of": [
+        "N1"
+      ]
+    }
+  }
+}

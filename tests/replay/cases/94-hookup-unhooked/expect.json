@@ -1,0 +1,69 @@
+{
+  "note": "稿件待做挂上对话清单（2026-10-04 spec D2、D3，验收 A1）：改稿会话、留言开了 hookup，稿件那边开着的待做没有任何开着的清单项属于它、也没写不挂，每轮在【清单】里说出来；集合变了的那一轮写标题，没变只写编号。写「N2 不挂：理由」之后不再报；没写理由不收。关了的 N4 不报。",
+  "session_id": "test-sess-94",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "稿件 合成稿 开着、清单里没挂：N1 合成待做甲·在做、N2 合成待做乙·在做、N3 合成待做丙·等作者",
+        "挂上写「Lx 属于：N1」，不挂写「N1 不挂：<理由>」"
+      ],
+      "context_excludes": [
+        "N4"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-skip.json",
+      "stdout_includes": [
+        "合成稿 N2 不挂"
+      ]
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-skip-bad.json",
+      "exit": 1,
+      "stdout_includes": [
+        "N3 不挂没写理由，没记"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成步骤一（属于 N1）",
+        "稿件 合成稿 开着、清单里没挂：N3 合成待做丙·等作者"
+      ],
+      "context_excludes": [
+        "N1 合成待做甲",
+        "N2 合成待做乙"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "稿件 合成稿 开着、清单里没挂：N3（标题同上一轮）",
+        "不挂写「N3 不挂：<理由>」"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "of": [
+        "合成稿 N1"
+      ]
+    }
+  }
+}

@@ -10,6 +10,7 @@ import {
   turnAssistantRows, turnLastAt, turnFirstAt, turnCommits } from './_willow.mjs';
 import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine, nextProblem, heldProblem, sweepDue, sweepText, openAsked } from './_list.mjs';
 import { sessionLang } from './_lang.mjs';
+import { hookupNotes } from './_inbox.mjs';
 import { cardProblem } from './_card.mjs';
 
 try {
@@ -53,7 +54,7 @@ try {
       if (!cur?.error) {
         const turn = { turnId: prev?.turnId ?? null, turnIndex: prev?.turnIndex ?? null };
         const rows = fresh.filter((r) => r.uuid !== null && parseOps(r.texts).length).map((r) => r.uuid);
-        appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn, sessionLang(prev)), rows });
+        appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn, sessionLang(prev), { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked }), rows });
       }
     }
   } catch { /* 见上 */ }

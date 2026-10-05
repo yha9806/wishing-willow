@@ -118,6 +118,7 @@ export function inheritList(sessionId, transcriptPath, turnIndex, nowMs = Date.n
       turnId: null,
       turnIndex,
       items,
+      ...(old.unhooked ? { unhooked: old.unhooked } : {}),   // 写过「不挂」的稿件待做一起带过来
       changes: [],
       problems: [],
       // 旧会话执行过的消息照样不再执行：抄过来的消息 uuid 不变。

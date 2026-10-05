@@ -1,0 +1,36 @@
+{
+  "note": "「属于」只在完整列出清单的那一轮注在行尾；清单没变、只列等你的轮次不注（A5 实测：每轮都注，十项挂久的就多一百多字）。只开了一篇稿子时只写编号。",
+  "session_id": "test-sess-100",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 等你：合成步骤二（属于 N1）"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-c.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 等你：合成步骤二"
+      ],
+      "context_excludes": [
+        "合成步骤二（属于"
+      ]
+    }
+  ]
+}
