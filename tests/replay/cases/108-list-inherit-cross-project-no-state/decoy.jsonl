@@ -1,0 +1,2 @@
+{"type":"custom-title","customTitle":"合成会话","sessionId":"decoy-sess-108"}
+{"parentUuid":null,"type":"user","uuid":"1089001-0000-4000-8000-000000000001","sessionId":"decoy-sess-108","timestamp":"2026-09-01T09:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"合成无关请求"}]},"promptId":"p108x"}
