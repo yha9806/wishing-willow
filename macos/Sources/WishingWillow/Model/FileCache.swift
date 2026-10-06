@@ -7,8 +7,7 @@ import Foundation
 /// 只缓存「读文件」这一步，按时间算的东西（陈旧、计时）照旧每次重算。读不到属性的文件不缓存，照常读。
 final class FileCache<Value>: @unchecked Sendable {
     private struct Entry {
-        let size: UInt64
-        let mtime: Date
+        let stamp: FileStamp
         let value: Value
     }
 
@@ -16,21 +15,41 @@ final class FileCache<Value>: @unchecked Sendable {
     private let lock = NSLock()
 
     func value(at url: URL, load: (URL) -> Value) -> Value {
-        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
-        let size = (attrs?[.size] as? NSNumber)?.uint64Value
-        let mtime = attrs?[.modificationDate] as? Date
-        if let size, let mtime {
+        let stamp = FileStamp.of(url.path)
+        if let stamp {
             lock.lock()
             let hit = entries[url.path]
             lock.unlock()
-            if let hit, hit.size == size, hit.mtime == mtime { return hit.value }
+            if let hit, hit.stamp == stamp { return hit.value }
         }
         let v = load(url)
-        if let size, let mtime {
+        if let stamp {
             lock.lock()
-            entries[url.path] = Entry(size: size, mtime: mtime, value: v)
+            entries[url.path] = Entry(stamp: stamp, value: v)
             lock.unlock()
         }
         return v
+    }
+}
+
+/// 文件的大小 + 修改时间（秒、纳秒），用一次 lstat 取。
+///
+/// 先前到处用 FileManager.attributesOfItem，它还会把扩展属性逐个读出来（listxattr + getxattr）：
+/// 2026-10-06 采样，来源进程的系统调用里这两样排在读文件前面（K10 第二轮）。与 attributesOfItem 一样不跟符号链接。
+struct FileStamp: Equatable, Sendable {
+    let size: Int64
+    let sec: Int
+    let nsec: Int
+
+    /// 换算次序照 Foundation 的 attributesOfItem（先换到 2001 纪元再加纳秒）：换个次序浮点舍入不同，
+    /// 导出的毫秒会差 1（2026-10-06 改前改后对照，119 份里 2 份因此不一致）。
+    var modified: Date {
+        Date(timeIntervalSinceReferenceDate: (TimeInterval(sec) - Date.timeIntervalBetween1970AndReferenceDate) + TimeInterval(nsec) / 1_000_000_000.0)
+    }
+
+    static func of(_ path: String) -> FileStamp? {
+        var st = stat()
+        guard lstat(path, &st) == 0 else { return nil }
+        return FileStamp(size: Int64(st.st_size), sec: st.st_mtimespec.tv_sec, nsec: st.st_mtimespec.tv_nsec)
     }
 }

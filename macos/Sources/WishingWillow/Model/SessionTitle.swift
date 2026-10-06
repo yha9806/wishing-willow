@@ -33,11 +33,11 @@ enum SessionTitle {
 @MainActor
 final class SessionTitleCache {
     static let shared = SessionTitleCache()
-    private var cache: [String: (size: UInt64, title: String?)] = [:]
+    private var cache: [String: (size: Int64, title: String?)] = [:]
 
     func title(path: String?) -> String? {
         guard let path else { return nil }
-        let size = ((try? FileManager.default.attributesOfItem(atPath: path))?[.size] as? NSNumber)?.uint64Value ?? 0
+        let size = FileStamp.of(path)?.size ?? 0
         if let c = cache[path], c.size == size { return c.title }
         let t = SessionTitle.read(path: path)
         cache[path] = (size, t)

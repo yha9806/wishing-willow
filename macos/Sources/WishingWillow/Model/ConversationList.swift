@@ -34,7 +34,7 @@ enum ConversationList {
     }
 
     static func read(sessionId: String, directory: URL) -> Result {
-        let url = directory.appendingPathComponent("\(sessionId).list.jsonl")
+        let url = directory.appendingPathComponent("\(sessionId).list.jsonl", isDirectory: false)
         guard FileManager.default.fileExists(atPath: url.path) else { return .none }
         let t = tail(url)
         guard t.readable else { return .unreadable(L("文件打不开", "cannot open the file")) }
@@ -44,7 +44,7 @@ enum ConversationList {
 
     /// 最后一份之前的那一份（比出这一轮变了什么用）；没有或读不出是 nil。
     static func previous(sessionId: String, directory: URL) -> ListSnapshot? {
-        let url = directory.appendingPathComponent("\(sessionId).list.jsonl")
+        let url = directory.appendingPathComponent("\(sessionId).list.jsonl", isDirectory: false)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         return tail(url).previous
     }

@@ -190,6 +190,8 @@ final class WillowStore {
         liveTimer = nil
     }
 
+    private static let records = FileCache<WillowRecord?>()
+
     func reload() {
         let now = Date()
         lastScan = now
@@ -204,15 +206,14 @@ final class WillowStore {
 
         var found: [SessionState] = []
         for name in names where name.hasSuffix(".json") {
-            let url = directory.appendingPathComponent(name)
-            guard let data = try? Data(contentsOf: url),
-                  let record = try? JSONDecoder().decode(WillowRecord.self, from: data)
-            else { continue }   // 半写入或旧格式：跳过，下一次扫描会看到完整的
+            let url = directory.appendingPathComponent(name, isDirectory: false)
+            // 文件没变就用上次解出来的记录（K10 第二轮：重载每次把上百个状态文件整份重读、重解 JSON）。
+            guard let record = Self.records.value(at: url, load: { u in
+                (try? Data(contentsOf: u)).flatMap { try? JSONDecoder().decode(WillowRecord.self, from: $0) }
+            }) else { continue }   // 半写入或旧格式：跳过，下一次扫描会看到完整的
             let lp = liveProgress["\(record.sessionId)|\(record.turnId ?? "")"]
             // 「在跑 / 空闲」按状态文件与聊天记录最后一次写入里较晚的算（用户 2026-09-13 定）。
-            let written = record.transcriptPath.flatMap {
-                (try? FileManager.default.attributesOfItem(atPath: $0))?[.modificationDate] as? Date
-            }
+            let written = record.transcriptPath.flatMap { FileStamp.of($0)?.modified }
             found.append(SessionState(record: record, now: now,
                                       liveLastEvent: lp?.lastEventAt, liveInterruptedAt: lp?.interruptedAt,
                                       transcriptWrittenAt: written))

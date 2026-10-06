@@ -766,10 +766,10 @@ enum ActivityExport {
     static func write(_ activity: [String: Any], to dir: URL, force: Bool = false) throws -> Bool {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let id = activity["id"] as! String
-        let url = dir.appendingPathComponent("\(id).json")
+        let url = dir.appendingPathComponent("\(id).json", isDirectory: false)
         let data = try encode(fitted(activity))
         if !force, let old = try? Data(contentsOf: url), old == data { return false }
-        let tmp = dir.appendingPathComponent(".\(id).json.\(getpid()).tmp")
+        let tmp = dir.appendingPathComponent(".\(id).json.\(getpid()).tmp", isDirectory: false)
         try data.write(to: tmp)
         if FileManager.default.fileExists(atPath: url.path) {
             _ = try FileManager.default.replaceItemAt(url, withItemAt: tmp)

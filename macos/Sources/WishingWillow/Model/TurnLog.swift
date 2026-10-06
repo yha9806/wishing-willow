@@ -67,7 +67,7 @@ enum TurnLog {
     /// plugin renames into place, but a reader should never assume that.
     static func read(sessionId: String, directory: URL) -> [TurnLogEntry] {
         // 每次导出读两遍、每个会话都读（K10 功耗）：文件没变就用上一次读出的。
-        cache.value(at: directory.appendingPathComponent("\(sessionId).log.jsonl"), load: load)
+        cache.value(at: directory.appendingPathComponent("\(sessionId).log.jsonl", isDirectory: false), load: load)
     }
 
     private static let cache = FileCache<[TurnLogEntry]>()
