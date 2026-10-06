@@ -1,0 +1,29 @@
+{
+  "note": "capture 那一刻聊天记录还没建出来（续接、或新会话的第一轮），偏移记成空。结束钩子按这一轮的 promptId（提问那一行和工具结果行都带着，等于 capture 记下的 turnId）找回这一轮从哪个字节开始，写回状态；写在中间那段回复里的清单变化照样记上。以前偏移为空时只读得到最后一段，中间的清单变化整块丢掉。",
+  "session_id": "test-sess-103",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject"
+    },
+    {
+      "append": "turn.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    }
+  ],
+  "state_file": {
+    "transcriptOffset": 81,
+    "tag": "核对配置"
+  },
+  "list_items": {
+    "L1": {
+      "status": "在做",
+      "text": "合成事项甲"
+    },
+    "L2": null
+  }
+}

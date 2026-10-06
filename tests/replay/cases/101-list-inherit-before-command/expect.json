@@ -1,0 +1,66 @@
+{
+  "note": "续接成新会话号时，capture 可能比 Claude Code 抄旧消息还早，判成新会话；这一轮很长，模型在轮中用命令记清单。命令要先把前身的清单接上、再记这次的改动，并在输出里说继承自哪里——否则这一条命令就成了本会话自己的清单，以后再也接不上（10-06 实见：前身的清单整份没接上，模型只好凭记忆重建）。",
+  "session_id": "test-sess-101",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "old-sess-101.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-101.list.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "context_excludes": [
+        "合成事项乙",
+        "继承自"
+      ]
+    },
+    {
+      "append": "new.jsonl"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-a.json",
+      "stdout_includes": [
+        "清单继承自会话 old-sess-101",
+        "新增 L4",
+        "L2 在做"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L2 在做：合成事项乙",
+        "L3 以后：合成事项丙",
+        "L4 在做：合成事项丁"
+      ],
+      "context_excludes": [
+        "继承自",
+        "L1 在做"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "status": "做完",
+      "text": "合成事项甲"
+    },
+    "L2": {
+      "status": "在做",
+      "text": "合成事项乙"
+    },
+    "L3": {
+      "status": "以后"
+    },
+    "L4": {
+      "status": "在做",
+      "text": "合成事项丁"
+    },
+    "L5": null
+  }
+}

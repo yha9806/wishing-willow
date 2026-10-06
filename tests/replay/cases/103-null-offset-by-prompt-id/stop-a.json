@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-103",
+  "prompt_id": "p103a",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "对完了。\n\n下一步：L1 合成事项甲——接着做"
+}

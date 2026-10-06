@@ -10,10 +10,11 @@
 // （spec「稿件待做挂上对话清单」D4）。只读，不管开关；--inbox 换一个留言目录（写作循环那边的改动还没装上时，用它生成的留言）。
 
 import { readFileSync } from 'node:fs';
-import { readState } from './_willow.mjs';
+import { readState, writeState } from './_willow.mjs';
 import { parseOps, applyOps, readList, appendSnapshot, inlineLine, hookupCheck } from './_list.mjs';
 import { hookupNotes } from './_inbox.mjs';
 import { sessionLang, pick } from './_lang.mjs';
+import { retryInherit, inheritedLine } from './_inherit.mjs';
 
 // 回话的语言：会话记下的；还没读到会话时按系统语言。
 let lang = sessionLang(null);
@@ -79,6 +80,16 @@ if (ops.length < lines.length) {
 }
 if (!ops.length) fail(T('没有认得的清单变化', 'no list changes it could read'));
 
+// 续接时 capture 比抄旧消息还早、清单还没接上：先接上前身的清单，再记这次的改动——不然这一条命令就成了
+// 本会话自己的清单，以后再也接不上（10-06 实见：一轮里先用命令记了清单，前身的清单整份没接上，模型只好凭记忆重建）。
+// 命令的输出就是对模型说了；作者在面板里点的（--by author）模型没看见，记 told: false，留给下一轮开头说。
+let inheritedFrom = null;
+const li = retryInherit(sessionId, prev.listInherit ?? null, prev.transcriptPath, prev.turnIndex);
+if (li) {
+  writeState(sessionId, { ...prev, listInherit: li.from && by === 'author' ? { ...li, told: false } : li });
+  inheritedFrom = li.from;
+}
+
 const cur = readList(sessionId);
 if (cur?.error) fail(T(`清单文件读不出（${cur.error}），没写——拿空清单盖掉它比读不出更糟`, `the list file can't be read (${cur.error}); nothing written — overwriting it with an empty list would be worse`), 1);
 
@@ -90,6 +101,7 @@ appendSnapshot(sessionId, {
 });
 const open = r.items.filter((x) => x.status !== '做完' && x.status !== '撤掉');
 process.stdout.write([
+  inheritedFrom ? inheritedLine(inheritedFrom, lang) : null,
   r.changes.length ? T(`记下了：${r.changes.join('、')}`, `Recorded: ${r.changes.join(', ')}`) : T('没有改动', 'No change'),
   r.problems.length ? T(`问题：${r.problems.join('；')}`, `Problems: ${r.problems.join('; ')}`) : null,
   inlineLine(open, lang),

@@ -1,0 +1,60 @@
+{
+  "note": "续接时 capture 判成新会话，这一轮没用命令，清单变化写在回复末尾。结束钩子要先把前身的清单接上，再记这一轮的变化（L2 做完要落在继承来的 L2 上，新增的接着编号）；下一轮开头说一次继承自哪里。",
+  "session_id": "test-sess-102",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "old-sess-102.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-102.list.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "context_excludes": [
+        "合成事项乙",
+        "继承自"
+      ]
+    },
+    {
+      "append": "new.jsonl"
+    },
+    {
+      "append": "turn.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单继承自会话 old-sess-102",
+        "L3 以后：合成事项丙",
+        "L4 等你：合成事项戊"
+      ],
+      "context_excludes": [
+        "L2 等你",
+        "L1 等你"
+      ]
+    }
+  ],
+  "list_items": {
+    "L2": {
+      "status": "做完",
+      "text": "合成事项乙"
+    },
+    "L3": {
+      "status": "以后"
+    },
+    "L4": {
+      "status": "等你",
+      "text": "合成事项戊"
+    },
+    "L5": null
+  }
+}

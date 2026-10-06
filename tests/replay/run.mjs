@@ -117,13 +117,15 @@ for (const name of caseNames) {
         for (const k of Object.keys(st)) {
           if (!STEP_KEYS.has(k)) check(name, `steps[${i}].keys`, false, `runner 不认识步骤键 ${k}`);
         }
+        // 夹具里的 <NOW> 换成写入这一刻：真正的新会话，第一条消息和聊天记录文件差不多同时写下（104）。
+        const stamped = (p) => readFileSync(p, 'utf8').replaceAll('<NOW>', new Date().toISOString());
         if (st.append) {
-          appendFileSync(join(stateDir, 'transcript.jsonl'), readFileSync(join(dir, st.append)));
+          appendFileSync(join(stateDir, 'transcript.jsonl'), stamped(join(dir, st.append)));
           continue;
         }
         // 两轮之间换掉状态目录里的一份文件（待触发清单）：用例目录本身不许被测试改写。
         if (st.copy) {
-          writeFileSync(join(stateDir, st.to ?? st.copy), readFileSync(join(dir, st.copy), 'utf8'));
+          writeFileSync(join(stateDir, st.to ?? st.copy), stamped(join(dir, st.copy)));
           continue;
         }
         const script = { capture: 'capture.mjs', extract: 'extract.mjs', end: 'end.mjs', compacted: 'compacted.mjs', listctl: 'listctl.mjs' }[st.hook] ?? null;
@@ -238,7 +240,8 @@ for (const name of caseNames) {
         const SPECIAL = new Set(['prompt_startswith']);
         for (const [k, want] of Object.entries(expect.state_file)) {
           if (SPECIAL.has(k)) continue;
-          const got = state[k] ?? null;
+          // 「listInherit.why」这样带点的键逐层取：整个对象里有每次都不同的时刻，只比其中一项。
+          const got = (k.includes('.') ? k.split('.').reduce((o, x) => o?.[x], state) : state[k]) ?? null;
           // "<NONNULL>"：只断言「写了」，不断言写了什么（时间戳这类每次都不同的值）。
           // 数组与对象（计划块）按 JSON 逐字比，其余照旧用 ===。
           const hit = want === '<NONNULL>' ? got !== null

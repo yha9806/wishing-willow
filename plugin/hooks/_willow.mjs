@@ -607,6 +607,40 @@ export function turnSlice(path, from) {
   return kept.join('\n');
 }
 
+/**
+ * capture 没记下偏移时（那一刻聊天记录还没建出来：续接时比抄旧消息早，10-06 实见早 73 毫秒；新会话的第一轮也可能），
+ * 按这一轮的 promptId 找回这一轮在记录里从哪个字节开始。提问那一行和这一轮的工具结果行都带着 promptId，
+ * 等于 capture 记下的 turnId（10-06 核对本机记录）；最早那一行就是这一轮的开头。
+ * 只在末尾 max 字节里找；最早那一行的行头不在窗口里就返回 null——从半截开始读会漏掉这一轮前面的声明，
+ * 不如照旧走没有偏移的老路。
+ */
+export function locateTurnStart(path, turnId, max = 64 << 20) {
+  if (typeof path !== 'string' || !path || typeof turnId !== 'string' || !turnId) return null;
+  const pat = Buffer.from(`"promptId":"${turnId}"`);
+  let fd;
+  try {
+    const size = statSync(path).size;
+    const from = Math.max(0, size - max);
+    fd = openSync(path, 'r');
+    const buf = Buffer.alloc(size - from);
+    const n = readSync(fd, buf, 0, buf.length, from);
+    const text = buf.subarray(0, n);
+    for (let i = text.indexOf(pat); i >= 0; i = text.indexOf(pat, i + 1)) {
+      const start = text.lastIndexOf(0x0a, i) + 1;
+      if (start === 0 && from > 0) return null;
+      const end = text.indexOf(0x0a, i);
+      let row = null;
+      try { row = JSON.parse(text.subarray(start, end < 0 ? n : end).toString('utf8')); } catch { /* 没写完的半行 */ }
+      if (row?.promptId === turnId) return from + start;   // 键在顶层，不是哪段输出里碰巧有这串字
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) { try { closeSync(fd); } catch { /* nothing to do */ } }
+  }
+}
+
 /** Read from `from` to EOF, at most `max` bytes. Returns '' on any failure. */
 function slice(path, from, max) {
   let fd;

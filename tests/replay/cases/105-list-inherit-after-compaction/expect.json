@@ -1,0 +1,54 @@
+{
+  "note": "续接时 capture 判成新会话，这一轮还没结束就被压缩。压缩后重交清单之前先补查：接上前身的清单，重交的就是接上的那份，并说继承自哪里；下一轮开头不再重复说。",
+  "session_id": "test-sess-105",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "old-sess-105.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-105.list.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "context_excludes": [
+        "合成事项乙",
+        "继承自"
+      ]
+    },
+    {
+      "append": "new.jsonl"
+    },
+    {
+      "hook": "compacted",
+      "input": "compact.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单继承自会话 old-sess-105",
+        "L2 等你：合成事项乙"
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L2 等你：合成事项乙"
+      ],
+      "context_excludes": [
+        "继承自"
+      ]
+    }
+  ],
+  "list_items": {
+    "L2": {
+      "status": "等你",
+      "text": "合成事项乙"
+    },
+    "L3": {
+      "status": "以后"
+    }
+  }
+}
