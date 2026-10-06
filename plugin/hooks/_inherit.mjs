@@ -26,11 +26,15 @@ import { pick } from './_lang.mjs';
 const HEAD_BUDGET = 8 * 1024 * 1024;     // 找第一条消息最多读这么多（抄过来的文件快照行可能很大）
 const SCAN_BUDGET = 1024 * 1024 * 1024;  // 在旧记录里找 uuid，所有候选加起来最多读这么多
 const CHUNK = 8 * 1024 * 1024;
-// 判「抄来的历史」：第一条消息比聊天记录文件建出来的时刻早这么多以上。新会话的第一条消息和文件差不多同时写下，
-// 续接时抄过来的旧消息在文件出现之前早就有了。这个判据什么时候查都一样准，所以判成新会话（why=new）就是定论。
-const COPIED_BEFORE_BIRTH_MS = 60 * 1000;
-// 拿不到文件建立时刻（有的文件系统不记）才退回旧判据：第一条消息比这一刻早这么多才算抄来的。
+// 判「抄来的历史」：第一条消息比这个会话第一次查清单的时刻（since，记在 listInherit 里一路带着）早这么多以上。
+// 新会话的第一条消息就是用户刚敲的那条，和第一次 capture 差不到两秒；续接时抄过来的旧消息至少是前身会话第一轮的，
+// 早得多（10-06 核对本机记录：新会话最多差 1.2 秒，续接的最少早 9 秒，claude -p 刚聊完一轮就分叉早 7 秒）。这个判据什么时候查都一样准，所以判成新会话（why=new）就是定论。
+// 不用记录文件的建立时刻：前身刚聊完一轮就续接时，它的第一条消息只比新文件早几秒（10-06 实测 7 秒），
+// 分不出来；since 是同一台机器上钩子自己记的时刻，三秒只是给钩子启动留的余量。
+const COPIED_BEFORE_FIRST_CHECK_MS = 3 * 1000;
+// 不知道 since（状态是旧版本写的）才退回旧判据：第一条消息比这一刻早这么多才算抄来的。
 // 它只在一轮开头准——补查点挪到轮末以后，第一轮超过五分钟的新会话也会被当成续接——所以那时判成新会话不算定论（why=fresh），下次再查。
+// 判错成续接的代价只是白找一遍候选（结果是 no-predecessor），判错成新会话才会漏接。
 const COPIED_AFTER_MS = 5 * 60 * 1000;
 const MESSAGE_TYPES = new Set(['user', 'assistant', 'system']);
 
@@ -59,15 +63,7 @@ function firstMessage(path) {
   } finally { closeSync(fd); }
 }
 
-/** 聊天记录文件建出来的时刻（毫秒）；拿不到是 null。 */
-function bornAt(path) {
-  try {
-    const ms = statSync(path).birthtimeMs;
-    return Number.isFinite(ms) && ms > 0 ? ms : null;
-  } catch { return null; }
-}
-
-/** 还没有定论：上次查的时候读不到记录，或拿不到建立时刻又还没满五分钟。这两种到下一个补查点再查。 */
+/** 还没有定论：上次查的时候读不到记录，或不知道 since 又还没满五分钟。这两种到下一个补查点再查。 */
 export function inheritPending(li) {
   return !li || li.why === 'fresh' || li.why === 'no-transcript';
 }
@@ -84,8 +80,9 @@ export function inheritedLine(from, lang) {
  */
 export function retryInherit(sessionId, li, transcriptPath, turnIndex) {
   if (!inheritPending(li) || existsSync(listPath(sessionId))) return null;
-  try { return inheritList(sessionId, transcriptPath, typeof turnIndex === 'number' ? turnIndex : null); } catch (e) {
-    return { from: null, at: new Date().toISOString(), why: 'error', error: String(e?.message ?? e).slice(0, 200) };
+  const since = typeof li?.since === 'number' ? li.since : null;
+  try { return inheritList(sessionId, transcriptPath, typeof turnIndex === 'number' ? turnIndex : null, since); } catch (e) {
+    return { from: null, at: new Date().toISOString(), why: 'error', error: String(e?.message ?? e).slice(0, 200), since };
   }
 }
 
@@ -113,16 +110,18 @@ function tailContains(path, needle, budget) {
 /**
  * 需要时继承前身的清单。返回记进状态的结果：{from, at, why}——from 是前身会话号，没继承就是 null。
  * turnIndex 是这一轮的轮次：旧清单里每项「几轮没动」按旧会话的轮次算，抄过来时整体平移到新会话的轮次上。
+ * since 是这个会话第一次查的时刻（毫秒）：第一次 capture 传当时的时刻，之后从 listInherit.since 取；不知道就是 null。
+ * 没定论的结果（fresh、no-transcript）都带着 since，下一个补查点接着用。
  */
-export function inheritList(sessionId, transcriptPath, turnIndex, nowMs = Date.now()) {
+export function inheritList(sessionId, transcriptPath, turnIndex, since = null, nowMs = Date.now()) {
   const at = new Date(nowMs).toISOString();
+  const tail = typeof since === 'number' ? { since } : {};
   if (existsSync(listPath(sessionId))) return { from: null, at, why: 'own-list' };
-  if (typeof transcriptPath !== 'string' || !transcriptPath) return { from: null, at, why: 'no-transcript' };
+  if (typeof transcriptPath !== 'string' || !transcriptPath) return { from: null, at, why: 'no-transcript', ...tail };
   const first = firstMessage(transcriptPath);
-  if (!first || !Number.isFinite(first.at)) return { from: null, at, why: 'fresh' };
-  const born = bornAt(transcriptPath);
-  if (born !== null) {
-    if (!(first.at < born - COPIED_BEFORE_BIRTH_MS)) return { from: null, at, why: 'new' };
+  if (!first || !Number.isFinite(first.at)) return { from: null, at, why: 'fresh', ...tail };
+  if (typeof since === 'number') {
+    if (!(first.at < since - COPIED_BEFORE_FIRST_CHECK_MS)) return { from: null, at, why: 'new', ...tail };
   } else if (!(first.at < nowMs - COPIED_AFTER_MS)) return { from: null, at, why: 'fresh' };
 
   const dir = stateDir();

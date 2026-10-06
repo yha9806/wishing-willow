@@ -118,7 +118,9 @@ for (const name of caseNames) {
           if (!STEP_KEYS.has(k)) check(name, `steps[${i}].keys`, false, `runner 不认识步骤键 ${k}`);
         }
         // 夹具里的 <NOW> 换成写入这一刻：真正的新会话，第一条消息和聊天记录文件差不多同时写下（104）。
-        const stamped = (p) => readFileSync(p, 'utf8').replaceAll('<NOW>', new Date().toISOString());
+        // <NOW-20s> 是写入前 20 秒：前身刚聊完一轮就续接，抄来的第一条消息只比新会话早几秒（106）。
+        const stamped = (p) => readFileSync(p, 'utf8')
+          .replace(/<NOW(?:-(\d+)s)?>/g, (_, s) => new Date(Date.now() - (s ? Number(s) * 1000 : 0)).toISOString());
         if (st.append) {
           appendFileSync(join(stateDir, 'transcript.jsonl'), stamped(join(dir, st.append)));
           continue;

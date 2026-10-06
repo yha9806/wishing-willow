@@ -152,9 +152,11 @@ try {
   let listInherit = prev?.listInherit ?? null;
   // 「读不到记录」不是最终结论：续接时第一次 capture 可能比 Claude Code 抄旧消息还早
   // （09-28 实见，早 0.2 秒），那一次判成新会话。这种下一轮再查，轮中的补查点也会查（_inherit.mjs）；
-  // 真正的新会话按记录文件的建立时刻判，一查到就是定论。
+  // 真正的新会话按「第一条消息比第一次查的时刻早多少」判，一查到就是定论。第一次查就是这个会话的第一次 capture
+  // （之前没有状态）；旧版本写的状态里没有 since，不知道就传 null，退回五分钟的旧判据。
   if (inheritPending(listInherit)) {
-    try { listInherit = inheritList(sessionId, input.transcript_path, (prev?.turnIndex ?? -1) + 1); } catch (e) {
+    const since = prev ? (typeof listInherit?.since === 'number' ? listInherit.since : null) : Date.parse(now);
+    try { listInherit = inheritList(sessionId, input.transcript_path, (prev?.turnIndex ?? -1) + 1, since); } catch (e) {
       listInherit = { from: null, at: now, why: 'error', error: String(e?.message ?? e).slice(0, 200) };
     }
   }
@@ -242,7 +244,7 @@ try {
     touched: prev?.touched ?? null,   // 本会话用工具动过的路径，extract 每轮并进来；跨轮带着走
     shown,                 // 这一轮说了哪些待触发条目、各在什么阶段；下一轮拿来说「本轮变化」
     listShown,             // 长清单上次完整列出是哪份快照、第几轮；没变就不重列（_list.mjs）
-    listInherit,           // 续接时从前身继承清单：查过一次就记下，{from, at, why}（_inherit.mjs）
+    listInherit,           // 续接时从前身继承清单：查到有定论为止，{from, at, why, since?}（_inherit.mjs）
     nextProblem: null,     // 上一轮「下一步」没点清单上开着的项时的问题，extract 写、下一轮 capture 说（spec D2）
     listHeld: null,        // 上一轮很长、清单变化全攒到回复末尾时的问题，extract 写、下一轮 capture 说（spec 清单实时 A）
     listSweep: null,       // 上一轮提交过时请模型逐条核的等你，extract 写、下一轮 capture 说一次（_list.mjs sweepDue）
