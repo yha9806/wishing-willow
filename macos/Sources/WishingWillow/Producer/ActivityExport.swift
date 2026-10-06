@@ -216,6 +216,9 @@ enum ActivityExport {
                 if !x.blocks.isEmpty { out["blocks"] = x.blocks.prefix(16).map { $0.count > 64 ? String($0.prefix(63)) + "…" : $0 } }
                 // lintel 的注上限 64 字，超了整份活动被拒收、会话从刘海上消失（09-24 实见）：这边先截短。
                 if let note { out["note"] = note.count > 64 ? String(note.prefix(63)) + "…" : note }
+                // 到了日子的「等别的」「以后」（ops-private spec 2026-10-06 刘海 D1）：天数和字这边算好，lintel 只看有没有。
+                // 10-06 实见：一件答应了两周多没做的、一件约在当天的，都在「以后」「等别的」里，弹出框不放以后、窗口里以后折着。
+                if let due = due(x.text, state: state) { out["due"] = due }
                 if x.approved { out["approved"] = true }
                 if state == "doing", let n = now, let t = x.touched, n - t >= 5 { out["idle"] = n - t }
                 if state == "you", let n = now, let t = x.touched, n - t >= staleWaitingTurns { out["idle"] = n - t }
@@ -261,6 +264,28 @@ enum ActivityExport {
         default: word = L("待做", "to do")
         }
         return "K\(latest) \(done)/\(mine.count) · \(word)"
+    }
+
+    /// 这一项要不要带 `due`：只看「等别的」「以后」，标题里认得出日期、已过或 DueDate.window 天内到。
+    static func due(_ text: String, state: String, today: Date = Date()) -> [String: Any]? {
+        guard state == "other" || state == "later", let d = dueDays(text, today: today), d <= DueDate.window else { return nil }
+        return ["days": d, "text": DueDate.text(d)]
+    }
+
+    /// 标题 → 离今天几天。导出几秒一次，同一个标题同一天只解析一次（全局〈十五〉）；换了一天整个清掉，攒多了也清。
+    private static var dueMemo: [String: Int?] = [:]
+    private static var dueMemoDay: DateComponents?
+
+    static func dueDays(_ text: String, today: Date = Date()) -> Int? {
+        let day = Calendar.current.dateComponents([.year, .month, .day], from: today)
+        if day != dueMemoDay || dueMemo.count > 2_000 {
+            dueMemo = [:]
+            dueMemoDay = day
+        }
+        if let hit = dueMemo[text] { return hit }
+        let d = DueDate.days(text, today: today)
+        dueMemo[text] = d
+        return d
     }
 
     /// 「等你」算新的：最近几轮提出或动过（插件 applyOps 在新增、改状态时写 touched）。
