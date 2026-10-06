@@ -17,7 +17,11 @@ struct ExportCostBench {
         let t0 = Date()
         for _ in 0..<runs { _ = ActivityExport.activities(store) }
         let ms = Date().timeIntervalSince(t0) * 1000 / Double(runs)
-        print(String(format: "BENCH sessions=%d export_ms=%.1f", store.sessions.count, ms))
+        // 重载（目录监视每次触发都跑一遍）：同一份目录、文件没变时的耗时。
+        let t1 = Date()
+        for _ in 0..<runs { store.reload() }
+        let reloadMs = Date().timeIntervalSince(t1) * 1000 / Double(runs)
+        print(String(format: "BENCH sessions=%d export_ms=%.1f reload_ms=%.1f", store.sessions.count, ms, reloadMs))
         #expect(store.sessions.count > 0)
     }
 }
