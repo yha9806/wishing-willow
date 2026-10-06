@@ -50,8 +50,10 @@ function runHook(script, stdinPath, stateDir, extraEnv) {
 }
 
 /** 状态目录里唯一的那个 .json（hook 以 session id 命名）。 */
-function readState(stateDir) {
+function readState(stateDir, sessionId) {
   if (!existsSync(stateDir)) return null;
+  // 状态目录里可能还有前身的状态文件（107）：知道会话号就读它自己的那份。
+  if (sessionId && existsSync(join(stateDir, `${sessionId}.json`))) return read(join(stateDir, `${sessionId}.json`));
   const files = readdirSync(stateDir).filter((f) => f.endsWith('.json'));
   if (files.length === 0) return null;
   return read(join(stateDir, files[0]));
@@ -74,7 +76,7 @@ for (const name of caseNames) {
   // 都必须报错而不是静默跳过 —— 2026-09-12 这一族已经吃了两次：
   // state_file 的未知键（14-tag-line 假绿）和这里的 log_* 。
   const TOP_KEYS = new Set([
-    'note', 'env', 'transcript_two_phase', 'runtime_fields_exempt',
+    'note', 'env', 'transcript', 'transcript_two_phase', 'runtime_fields_exempt',
     'capture', 'extract', 'state_file', 'state_keys', 'log_lines', 'log_last', 'list_items', 'steps', 'session_id',
   ]);
   for (const k of Object.keys(expect)) {
@@ -102,7 +104,9 @@ for (const name of caseNames) {
     // 两阶段 transcript：提交那一刻文件里只有历史，本轮的内容是之后才追加的。
     // 这个顺序本身就是被测的东西 —— capture 记下的偏移必须是「本轮之前」的长度。
     const twoPhase = expect.transcript_two_phase === true;
-    const liveTranscript = join(stateDir, 'transcript.jsonl');
+    // 聊天记录默认在状态目录顶层；跨项目目录的续接（107、108）要把它放进子目录，载荷里的 transcript_path 跟着写。
+    const liveTranscript = join(stateDir, expect.transcript ?? 'transcript.jsonl');
+    mkdirSync(dirname(liveTranscript), { recursive: true });
     if (twoPhase) {
       mkdirSync(stateDir, { recursive: true });
       writeFileSync(liveTranscript, readFileSync(join(dir, 'transcript.pre.jsonl')));
@@ -119,15 +123,19 @@ for (const name of caseNames) {
         }
         // 夹具里的 <NOW> 换成写入这一刻：真正的新会话，第一条消息和聊天记录文件差不多同时写下（104）。
         // <NOW-20s> 是写入前 20 秒：前身刚聊完一轮就续接，抄来的第一条消息只比新会话早几秒（106）。
+        // <STATE_DIR> 换成状态目录：前身的状态文件里记着它聊天记录的绝对路径（107）。
         const stamped = (p) => readFileSync(p, 'utf8')
-          .replace(/<NOW(?:-(\d+)s)?>/g, (_, s) => new Date(Date.now() - (s ? Number(s) * 1000 : 0)).toISOString());
+          .replace(/<NOW(?:-(\d+)s)?>/g, (_, s) => new Date(Date.now() - (s ? Number(s) * 1000 : 0)).toISOString())
+          .replaceAll('<STATE_DIR>', stateDir);
         if (st.append) {
-          appendFileSync(join(stateDir, 'transcript.jsonl'), stamped(join(dir, st.append)));
+          appendFileSync(liveTranscript, stamped(join(dir, st.append)));
           continue;
         }
         // 两轮之间换掉状态目录里的一份文件（待触发清单）：用例目录本身不许被测试改写。
         if (st.copy) {
-          writeFileSync(join(stateDir, st.to ?? st.copy), stamped(join(dir, st.copy)));
+          const to = join(stateDir, st.to ?? st.copy);
+          mkdirSync(dirname(to), { recursive: true });   // 前身的聊天记录可以放在别的项目目录里（107、108）
+          writeFileSync(to, stamped(join(dir, st.copy)));
           continue;
         }
         const script = { capture: 'capture.mjs', extract: 'extract.mjs', end: 'end.mjs', compacted: 'compacted.mjs', listctl: 'listctl.mjs' }[st.hook] ?? null;
@@ -220,7 +228,7 @@ for (const name of caseNames) {
     }
 
     // ── 状态文件 ──────────────────────────────────────────────────────────
-    const state = readState(stateDir);
+    const state = readState(stateDir, expect.session_id);
     if (expect.state_file === null) {
       check(name, 'state_file', state === null, '期望不写状态文件，却写了');
       marks.push(`state:${state === null ? 'ok' : 'FAIL'}`);

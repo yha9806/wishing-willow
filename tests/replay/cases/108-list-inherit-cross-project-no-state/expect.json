@@ -1,0 +1,58 @@
+{
+  "note": "前身在别的项目目录，而且它的状态文件已经被清理（超过 7 天没动的会被删，本机 64 份清单里 11 份没有状态文件）。聊天记录都在同一个 projects 目录下，按会话号到各个兄弟项目目录里找。干扰项：另一个会话的清单更新、它的记录在第三个项目目录里，但没有那条消息，不能接它的。",
+  "session_id": "test-sess-108",
+  "transcript": "projects/proj-new/transcript.jsonl",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "projects/proj-old/old-sess-108.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-108.list.jsonl"
+    },
+    {
+      "copy": "decoy.jsonl",
+      "to": "projects/proj-decoy/decoy-sess-108.jsonl"
+    },
+    {
+      "copy": "decoy.list.jsonl",
+      "to": "decoy-sess-108.list.jsonl"
+    },
+    {
+      "append": "new.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单继承自会话 old-sess-108",
+        "L2 等你：合成事项乙",
+        "L3 以后：合成事项丙"
+      ],
+      "context_excludes": [
+        "合成无关事项",
+        "L1 等你"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "status": "做完",
+      "text": "合成事项甲"
+    },
+    "L2": {
+      "status": "等你",
+      "text": "合成事项乙"
+    },
+    "L3": {
+      "status": "以后"
+    },
+    "L4": null
+  },
+  "state_file": {
+    "listInherit.why": "inherited",
+    "listInherit.from": "old-sess-108"
+  }
+}

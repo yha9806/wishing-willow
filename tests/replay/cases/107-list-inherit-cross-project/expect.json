@@ -1,0 +1,53 @@
+{
+  "note": "前身在别的项目目录（续接到另一个 worktree，聊天记录换了项目目录），只在本项目目录里找就找不到（10-03 到 10-06 三次实见：判成 no-predecessor，清单整份没接上）。前身的状态文件里记着它聊天记录的绝对路径，照那个路径找。放在状态目录的子目录里，不和新会话的聊天记录同级，同级扫描找不到，只能靠状态文件。",
+  "session_id": "test-sess-107",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "elsewhere/proj-old/old-sess-107.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-107.list.jsonl"
+    },
+    {
+      "copy": "old.state.json",
+      "to": "old-sess-107.json"
+    },
+    {
+      "append": "new.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单继承自会话 old-sess-107",
+        "L2 等你：合成事项乙",
+        "L3 以后：合成事项丙"
+      ],
+      "context_excludes": [
+        "合成无关事项",
+        "L1 等你"
+      ]
+    }
+  ],
+  "list_items": {
+    "L1": {
+      "status": "做完",
+      "text": "合成事项甲"
+    },
+    "L2": {
+      "status": "等你",
+      "text": "合成事项乙"
+    },
+    "L3": {
+      "status": "以后"
+    },
+    "L4": null
+  },
+  "state_file": {
+    "listInherit.why": "inherited",
+    "listInherit.from": "old-sess-107"
+  }
+}

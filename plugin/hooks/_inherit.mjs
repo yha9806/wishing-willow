@@ -14,10 +14,12 @@
 //
 // capture 挡着用户的回车，所以查法要便宜：
 // - 新会话在第一轮时聊天记录里没有更早的消息，只读文件开头就能判定，不去翻别的文件；
-// - 候选只看状态目录里有清单的会话，而且记录得在同一个项目目录下；
+// - 候选只看状态目录里有清单的会话；它的记录先在本项目目录找，再按它状态文件里记的路径找，最后到兄弟项目目录里找
+//   （续接到另一个 worktree 时项目目录跟着换，只在本项目目录找会判成 no-predecessor，清单从 L1 重新编号）；
+// - 记录最后一次写入早于那条消息的不可能含有它，不读；
 // - 抄来的消息落在旧记录的末段，所以从尾往前按块找，总共最多读 SCAN_BUDGET 字节。
 
-import { openSync, readSync, closeSync, fstatSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { openSync, readSync, closeSync, fstatSync, existsSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { stateDir } from './_willow.mjs';
 import { readList, listPath, appendSnapshot, appliedRows } from './_list.mjs';
@@ -37,6 +39,47 @@ const COPIED_BEFORE_FIRST_CHECK_MS = 3 * 1000;
 // 判错成续接的代价只是白找一遍候选（结果是 no-predecessor），判错成新会话才会漏接。
 const COPIED_AFTER_MS = 5 * 60 * 1000;
 const MESSAGE_TYPES = new Set(['user', 'assistant', 'system']);
+// 记录的修改时刻比那条消息早这么多以上，才算「不可能含有它」：消息的时间戳和写进文件之间差的那一点，留足余量。
+const WRITTEN_BEFORE_SLACK_MS = 60 * 1000;
+// Claude Code 的聊天记录放在 <配置目录>/projects/<项目目录>/<会话号>.jsonl；只在这个结构下才去兄弟目录找，别处的目录不扫。
+const PROJECTS_DIR_NAME = 'projects';
+
+/**
+ * 候选会话的聊天记录在哪；找不到是 null。
+ * 先看本项目目录（同一个 worktree 续接，最常见），再看它状态文件里记的路径（超过 7 天没动的状态文件会被清理），
+ * 最后到兄弟项目目录里找（状态文件已被清理、又续接到了别的 worktree）。siblings 是按需列一次的兄弟目录。
+ */
+function transcriptOf(sid, dir, projectDir, siblings) {
+  const same = join(projectDir, `${sid}.jsonl`);
+  if (existsSync(same)) return same;
+  try {
+    const p = JSON.parse(readFileSync(join(dir, `${sid}.json`), 'utf8'))?.transcriptPath;
+    if (typeof p === 'string' && basename(p) === `${sid}.jsonl` && existsSync(p)) return p;
+  } catch { /* 没有状态文件或读不出：往下找 */ }
+  for (const d of siblings()) {
+    const p = join(d, `${sid}.jsonl`);
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
+/** 兄弟项目目录：只在 projectDir 的上一级叫 projects 时才列，列一次。 */
+function siblingDirs(projectDir) {
+  let cache = null;
+  return () => {
+    if (cache) return cache;
+    cache = [];
+    const root = dirname(projectDir);
+    if (basename(root) !== PROJECTS_DIR_NAME) return cache;
+    try {
+      for (const name of readdirSync(root)) {
+        const d = join(root, name);
+        if (d !== projectDir) cache.push(d);
+      }
+    } catch { /* 列不出就不找 */ }
+    return cache;
+  };
+}
 
 /** 聊天记录里第一条消息：{uuid, at}；没有就是 null。 */
 function firstMessage(path) {
@@ -127,17 +170,21 @@ export function inheritList(sessionId, transcriptPath, turnIndex, since = null, 
   const dir = stateDir();
   const projectDir = dirname(transcriptPath);
   const self = basename(transcriptPath);
+  const siblings = siblingDirs(projectDir);
   let names = [];
   try { names = readdirSync(dir); } catch { return { from: null, at, why: 'no-state-dir' }; }
   const candidates = [];
   for (const name of names) {
     if (!name.endsWith('.list.jsonl')) continue;
     const sid = name.slice(0, -'.list.jsonl'.length);
-    if (sid === sessionId) continue;
-    const transcript = join(projectDir, `${sid}.jsonl`);
-    if (`${sid}.jsonl` === self || !existsSync(transcript)) continue;
+    if (sid === sessionId || `${sid}.jsonl` === self) continue;
+    const transcript = transcriptOf(sid, dir, projectDir, siblings);
+    if (!transcript || transcript === transcriptPath) continue;
     let mtime = 0;
-    try { mtime = statSync(join(dir, name)).mtimeMs; } catch { continue; }
+    try {
+      if (statSync(transcript).mtimeMs < first.at - WRITTEN_BEFORE_SLACK_MS) continue;
+      mtime = statSync(join(dir, name)).mtimeMs;
+    } catch { continue; }
     candidates.push({ sid, transcript, mtime });
   }
   // 连续续接过几次（甲→乙→丙）时，丙的第一条消息甲乙两份里都有；清单最近动过的那个是直接前身。

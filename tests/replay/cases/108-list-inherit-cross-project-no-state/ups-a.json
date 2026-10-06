@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-108",
+  "prompt_id": "p108a",
+  "transcript_path": "<STATE_DIR>/projects/proj-new/transcript.jsonl",
+  "cwd": "/tmp/fake/project-new",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "把合成仓库里两个配置文件对一遍，列出对不上的字段"
+}
