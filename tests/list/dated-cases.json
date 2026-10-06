@@ -1,0 +1,404 @@
+[
+ {
+  "name": "mmdd-overdue",
+  "text": "合成事项甲，09-18 说好的",
+  "today": "2026-10-06",
+  "days": -18
+ },
+ {
+  "name": "mmdd-today",
+  "text": "合成回执，对方 10-06 回",
+  "today": "2026-10-06",
+  "days": 0
+ },
+ {
+  "name": "md-day14",
+  "text": "10 月 20 日前交合成说明",
+  "today": "2026-10-06",
+  "days": 14
+ },
+ {
+  "name": "mmdd-day15",
+  "text": "10-21 前交合成说明",
+  "today": "2026-10-06",
+  "days": 15
+ },
+ {
+  "name": "month-end",
+  "text": "10 月底前给合成档案馆交说明",
+  "today": "2026-10-20",
+  "days": 11
+ },
+ {
+  "name": "month-end-with-year",
+  "text": "合成说明 2026 年 10 月底交",
+  "today": "2026-10-20",
+  "days": 11
+ },
+ {
+  "name": "month-end-no-spaces",
+  "text": "2026年10月底前",
+  "today": "2026-10-20",
+  "days": 11
+ },
+ {
+  "name": "year-form-masked",
+  "text": "合成旧事 2020 年 10 月底前",
+  "today": "2026-10-06",
+  "days": -2166
+ },
+ {
+  "name": "iso-overdue",
+  "text": "合成课程，2026-09-30 前",
+  "today": "2026-10-06",
+  "days": -6
+ },
+ {
+  "name": "iso-far",
+  "text": "合成课程约 4 小时，2027-07-31 前",
+  "today": "2026-10-06",
+  "days": 298
+ },
+ {
+  "name": "iso-one-digit",
+  "text": "合成 2026-1-5 前",
+  "today": "2026-10-06",
+  "days": -274
+ },
+ {
+  "name": "year-rolls-forward",
+  "text": "合成材料 01-05 前交",
+  "today": "2026-12-28",
+  "days": 8
+ },
+ {
+  "name": "year-rolls-back",
+  "text": "合成回执，12-20 答应",
+  "today": "2027-01-03",
+  "days": -14
+ },
+ {
+  "name": "month-end-rolls-back",
+  "text": "合成 12 月底交",
+  "today": "2027-01-03",
+  "days": -3
+ },
+ {
+  "name": "tie-takes-later",
+  "text": "合成 03-01 交",
+  "today": "2027-08-31",
+  "days": 183
+ },
+ {
+  "name": "latest-wins",
+  "text": "09-18 答应，10-10 前发合成信",
+  "today": "2026-10-06",
+  "days": 4
+ },
+ {
+  "name": "latest-wins-far",
+  "text": "09-18 答应，10-30 前发合成信",
+  "today": "2026-10-06",
+  "days": 24
+ },
+ {
+  "name": "hao",
+  "text": "合成 10 月 15 号交",
+  "today": "2026-10-06",
+  "days": 9
+ },
+ {
+  "name": "year-hao",
+  "text": "合成 2026 年 10 月 15 号交",
+  "today": "2026-10-06",
+  "days": 9
+ },
+ {
+  "name": "ideographic-space",
+  "text": "合成 10　月　15　日交",
+  "today": "2026-10-06",
+  "days": 9
+ },
+ {
+  "name": "bom-space",
+  "text": "合成 10﻿月15日交",
+  "today": "2026-10-06",
+  "days": 9
+ },
+ {
+  "name": "english",
+  "text": "Synthetic reply due 10-07",
+  "today": "2026-10-06",
+  "days": 1
+ },
+ {
+  "name": "english-overdue",
+  "text": "Synthetic report, promised 09-18",
+  "today": "2026-10-06",
+  "days": -18
+ },
+ {
+  "name": "basis-stripped",
+  "text": "合成事项 10-08 前（依据：2099-01-01 的信）",
+  "today": "2026-10-06",
+  "days": 2
+ },
+ {
+  "name": "basis-stripped-en",
+  "text": "合成事项 10-08 前 (Basis: 2099-01-01)",
+  "today": "2026-10-06",
+  "days": 2
+ },
+ {
+  "name": "basis-only",
+  "text": "合成事项（依据：10-08 前）",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "feb-29-next-valid-year",
+  "text": "合成报名 02-29 前",
+  "today": "2027-02-20",
+  "days": 374
+ },
+ {
+  "name": "undated",
+  "text": "合成事项没写日子",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "day-without-month",
+  "text": "合成导师定 13 还是 14 日",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "missing-ri",
+  "text": "合成稿 10月15前交",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "manuscript-id",
+  "text": "ABCD-26-0517 合成返修",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "clock",
+  "text": "合成来信 10:07 到",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "manuscript-id-year",
+  "text": "ABCD-2026-0517 合成状态",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "bad-month",
+  "text": "合成 13-14 之间定",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "bad-day",
+  "text": "合成 02-30 前",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "clock-range",
+  "text": "合成会 10:07-10:30 开",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "manuscript-id-valid-slice",
+  "text": "ABCD-10-0612 合成返修",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "version-dot",
+  "text": "合成 v1.10-12 版",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "three-part",
+  "text": "合成 10-07-10 版",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "full-width-digits",
+  "text": "合成 １０-０８ 前",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "full-width-before",
+  "text": "合成１10-08 前",
+  "today": "2026-10-06",
+  "days": 2
+ },
+ {
+  "name": "cue-version-final",
+  "text": "合成平台上取回 08-14 定稿",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-version-pdf",
+  "text": "核对 08-14 终版合成讲义（合成方 08-14 已寄出）",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-attachment",
+  "text": "整理合成纪要（附 08-03 表格）",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-past-step",
+  "text": "合成申请 08-01 送审",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-morning-skipped",
+  "text": "合成 08-27 上午定了方向",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-uncued-later-ignored",
+  "text": "10-01 前交合成稿（10-03 定稿）",
+  "today": "2026-10-06",
+  "days": -5
+ },
+ {
+  "name": "cue-clock-zone-then-before",
+  "text": "合成材料 10-04 18:00 UTC 前",
+  "today": "2026-10-06",
+  "days": -2
+ },
+ {
+  "name": "cue-before-with-clock",
+  "text": "合成回执（截止 10-02 12:00 BST）",
+  "today": "2026-10-06",
+  "days": -4
+ },
+ {
+  "name": "cue-evening-send",
+  "text": "合成周报 10-08 晚发",
+  "today": "2026-10-06",
+  "days": 2
+ },
+ {
+  "name": "cue-weekday",
+  "text": "周四 10-01 15:00 合成例会链接",
+  "today": "2026-10-06",
+  "days": -5
+ },
+ {
+  "name": "cue-approx",
+  "text": "等合成样品到货，约 10-19",
+  "today": "2026-10-06",
+  "days": 13
+ },
+ {
+  "name": "cue-contract-not-approx",
+  "text": "合成合约 08-01 版",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-appointment",
+  "text": "预约 10-08 合成体检",
+  "today": "2026-10-06",
+  "days": 2
+ },
+ {
+  "name": "cue-class",
+  "text": "合成 10-13 的课",
+  "today": "2026-10-06",
+  "days": 7
+ },
+ {
+  "name": "cue-after-class",
+  "text": "写合成 09-27 课后反馈",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-past-le",
+  "text": "合成联系人 10-05 回了",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-said-ambiguous",
+  "text": "合成账号，对方 10-06 说会再看",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-received-not-cue",
+  "text": "08-03 收到合成样品后登记",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-default-review",
+  "text": "合成订阅，默认 11-30 复查",
+  "today": "2026-10-06",
+  "days": 55
+ },
+ {
+  "name": "cue-scheduled",
+  "text": "合成通知已定时 10-09 09:00 GMT",
+  "today": "2026-10-06",
+  "days": 3
+ },
+ {
+  "name": "cue-whether",
+  "text": "看 10-13 能否开合成会",
+  "today": "2026-10-06",
+  "days": 7
+ },
+ {
+  "name": "cue-month-end-alone",
+  "text": "合成说明 10 月底",
+  "today": "2026-10-20",
+  "days": null
+ },
+ {
+  "name": "cue-en-by",
+  "text": "Synthetic form by 10-12",
+  "today": "2026-10-06",
+  "days": 6
+ },
+ {
+  "name": "cue-en-deadline-after",
+  "text": "Synthetic 10-12 deadline",
+  "today": "2026-10-06",
+  "days": 6
+ },
+ {
+  "name": "cue-en-version",
+  "text": "Synthetic final PDF of 09-28",
+  "today": "2026-10-06",
+  "days": null
+ },
+ {
+  "name": "cue-en-word-boundary",
+  "text": "Synthetic standby 10-12",
+  "today": "2026-10-06",
+  "days": null
+ }
+]

@@ -1,0 +1,35 @@
+{
+  "note": "清单那一行：带日期、日期已过或 14 天内到的「等别的」「以后」项露出标题和天数（ops-private spec 2026-10-06 D1–D8）。用带年份的日期，结果不随跑测试那天变：2020 年的永远已过，2099 年的永远不到。listctl 打出来的那一行和下一轮注入里让模型照抄的那一行是同一行。",
+  "session_id": "test-sess-109",
+  "steps": [
+    {
+      "hook": "capture",
+      "input": "ups-a.json"
+    },
+    {
+      "hook": "listctl",
+      "input": "cmd-add.json",
+      "stdout_includes": [
+        "新增 L1",
+        "⬚ 等别的 2：L3 合成回执",
+        "▫ 以后 2：L1 交合成报告",
+        "（已过 "
+      ]
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "回复末尾照写这一行",
+        "⬚ 等别的 2：L3 合成回执",
+        "▫ 以后 2：L1 交合成报告"
+      ],
+      "context_excludes": [
+        "：L2 交合成年报",
+        "、L2 交合成年报",
+        "：L4 合成事项"
+      ]
+    }
+  ]
+}
