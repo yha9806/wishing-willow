@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- make autostart 用：登录时打开一次 build/ 里的灵动岛。@BUNDLE@ 由 Makefile 换成绝对路径。 -->
+<!-- make autostart 用：登录时起一次 build/ 里那份 app 的程序。@BUNDLE@、@LOG@ 由 Makefile 换成绝对路径。
+     不经 open：exec 之后 launchd 看着的就是许愿柳本身，`launchctl print` 能看到它的退出码或信号。
+     每次启动先在日志里记一行时间，再把 stderr（只有出错时才写；不加 --producer-log）接到同一个文件，停了能查到是哪一次起的。
+     日志过 1 MB 就在下次启动时挪成 .1。 -->
 <plist version="1.0">
 <dict>
 	<key>Label</key>
 	<string>org.vulca.wishingwillow</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/usr/bin/open</string>
-		<string>@BUNDLE@</string>
+		<string>/bin/sh</string>
+		<string>-c</string>
+		<string>log="@LOG@"; mkdir -p "$(dirname "$log")"; [ "$(stat -f %z "$log" 2&gt;/dev/null || echo 0)" -gt 1048576 ] &amp;&amp; mv -f "$log" "$log.1"; echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) start pid=$$ @BUNDLE@" &gt;&gt; "$log"; exec "@BUNDLE@/Contents/MacOS/WishingWillow" 2&gt;&gt; "$log"</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>

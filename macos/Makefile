@@ -9,6 +9,7 @@ BIN      := .build/release/$(APP)
 INSTALL  := /Applications/$(APP).app
 
 AGENT    := $(HOME)/Library/LaunchAgents/org.vulca.wishingwillow.plist
+LOG      := $(HOME)/Library/Logs/wishing-willow/producer.log
 
 .PHONY: all build app run register install autostart autostart-off test clean
 
@@ -39,16 +40,16 @@ install: app
 	@cp -R "$(BUNDLE)" "$(INSTALL)"
 	@echo "→ $(INSTALL)"
 
-# 登录后自动打开 app。指向 build/ 里这一份：本机只留一份，`make app` 换掉的就是开机打开的那个，
-# 不会出现 /Applications 里的旧版和刚编译的新版各跑各的。只在登录时打开一次（RunAtLoad），不 KeepAlive——
-# 手动退出或录素材时关掉它，不会被立刻拉起来。装上时会立刻打开一次。
+# 登录后自动起 app。指向 build/ 里这一份：本机只留一份，`make app` 换掉的就是开机起的那个，
+# 不会出现 /Applications 里的旧版和刚编译的新版各跑各的。只在登录时起一次（RunAtLoad），不 KeepAlive——
+# 手动退出或录素材时关掉它，不会被立刻拉起来。装上时会立刻起一次。出错写进 $(LOG)（见 plist 模板）。
 autostart:
 	@test -d "$(BUNDLE)" || { echo "先 make app"; exit 1; }
 	@mkdir -p "$(dir $(AGENT))"
-	@sed "s|@BUNDLE@|$(abspath $(BUNDLE))|" Resources/org.vulca.wishingwillow.plist.in > "$(AGENT)"
+	@sed -e "s|@BUNDLE@|$(abspath $(BUNDLE))|g" -e "s|@LOG@|$(LOG)|g" Resources/org.vulca.wishingwillow.plist.in > "$(AGENT)"
 	@launchctl bootout gui/$$(id -u) "$(AGENT)" 2>/dev/null || true
 	@launchctl bootstrap gui/$$(id -u) "$(AGENT)"
-	@echo "→ $(AGENT)（登录时打开 $(abspath $(BUNDLE))）"
+	@echo "→ $(AGENT)（登录时起 $(abspath $(BUNDLE))；日志 $(LOG)）"
 
 autostart-off:
 	@launchctl bootout gui/$$(id -u) "$(AGENT)" 2>/dev/null || true
