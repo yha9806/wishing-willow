@@ -567,11 +567,100 @@ function label(x, lang = 'zh') {
 // 英文词长，同样一眼的量要多给些字符。
 const brief = (t, lang = 'zh') => { const n = lang === 'en' ? 24 : 12; return t.length > n ? t.slice(0, n) + '…' : t; };
 
+// 那一行里带日期的「等别的」「以后」（ops-private spec 2026-10-06 D1–D8）。10-06 实见：一件答应了两周多还没做的事、
+// 一件约在当天的事，都只算在「以后」「等别的」的个数里，作者以为没记上。
+// 日期已过、或 DATED_DAYS 天内到的，露出标题和天数，全行最多 DATED_MAX 项。只认下面几种写法，认不出就当没有日期，不猜；
+// 日期每次从标题现算，不进清单数据。
+export const DATED_DAYS = 14;
+export const DATED_MAX = 2;
+const DAY_MS = 86400000;
+// 月、日超出范围（02-30、13-14）不是日期：Date.UTC 会把它进位成别的日子，回算一遍对得上才认。
+function dayNo(y, m, d) {
+  if (m < 1 || m > 12 || d < 1) return null;
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCMonth() === m - 1 && t.getUTCDate() === d ? Math.round(t.getTime() / DAY_MS) : null;
+}
+const monthEnd = (y, m) => (m >= 1 && m <= 12 ? Math.round(Date.UTC(y, m, 0) / DAY_MS) : null);
+// 带年份的：2027-07-31、2027 年 7 月 31 日、2026 年 10 月底。
+const WITH_YEAR = [
+  [/(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)/g, (m) => dayNo(+m[1], +m[2], +m[3])],
+  [/(?<!\d)(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]/g, (m) => dayNo(+m[1], +m[2], +m[3])],
+  [/(?<!\d)(\d{4})\s*年\s*(\d{1,2})\s*月底/g, (m) => monthEnd(+m[1], +m[2])],
+];
+// 不带年份的：09-18（月、日都两位；前后紧挨数字、字母、- : / 的不认，免得从 ABCD-26-0517、10:07-11:30 里切出一段）、
+// 10 月 15 日、10 月底。返回 [月, 日]，日为 0 表示月底。
+const NO_YEAR = [
+  [/(?<![\dA-Za-z\-:/.])(\d{2})-(\d{2})(?![\d\-:/])/g, (m) => [+m[1], +m[2]]],
+  [/(?<!\d)(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]/g, (m) => [+m[1], +m[2]]],
+  [/(?<!\d)(\d{1,2})\s*月底/g, (m) => [+m[1], 0]],
+];
+
+// 日期要挨着提示词才算（ops-private spec 2026-10-06「只认截止日期，久过期的让位」D9）。10-06 装上后实见：
+// 标题里一份文件的版本日期被当成截止日，露成「已过 8 天」。后面的提示词前可以隔钟点、时区、上午晚上之类和一个「的」；
+// 「交了」「发过」「课后」是过去的事，不算。「约」前面是别的汉字（合约、旧约）不算。认不准的照旧当没有日期。
+const CUE_SKIP = /^\s*(?:\d{1,2}[:：]\d{2}|\d{1,2}\s*点)?\s*(?:(?:UTC|BST|GMT|CST)(?![A-Za-z]))?\s*(?:上午|下午|晚上|早上|中午|晚|早)?\s*的?\s*/i;
+const CUE_AFTER = /^(?:前|之前|以前|截止|截至|到期|答应|说好|(?:提交|交|发|付|见|回)(?![了过])|课(?!后)|上课|会议|开会|冻结|终检|复查|能否|(?:deadline|due)(?![A-Za-z]))/i;
+const CUE_BEFORE = /(?:截止|截至|最晚|不晚于|默认|建议|定时|(?:^|[^\p{Script=Han}]|[大预])约|周[一二三四五六日天]|星期[一二三四五六日天]|(?<![A-Za-z])(?:due|by|before|until|promised|deadline))[\s:：]*$/iu;
+const cued = (s, at, len) => CUE_AFTER.test(s.slice(at + len).replace(CUE_SKIP, '')) || CUE_BEFORE.test(s.slice(0, at));
+
+function todayNo(today) {
+  if (typeof today === 'string') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today);
+    return m ? { no: dayNo(+m[1], +m[2], +m[3]), y: +m[1] } : null;
+  }
+  const d = today instanceof Date ? today : new Date();
+  return { no: dayNo(d.getFullYear(), d.getMonth() + 1, d.getDate()), y: d.getFullYear() };
+}
+
+/**
+ * 标题里认得出、挨着提示词的日期离今天几天（负数是已过）；几个日期取最晚的（早的多半是「哪天说的」，晚的多半是截止）；认不出是 null。
+ * 没写年份的在去年、今年、明年里取离今天最近的，一样近取晚的。today 是 'YYYY-MM-DD' 或 Date，不传就是本机今天。
+ */
+export function datedDays(text, today = new Date()) {
+  const t = todayNo(today);
+  if (!t || t.no === null) return null;
+  let s = String(text ?? '').replace(BASIS_TAIL, '');
+  const found = [];
+  for (const [re, f] of WITH_YEAR) {
+    for (const m of s.matchAll(re)) { const n = f(m); if (n !== null && cued(s, m.index, m[0].length)) found.push(n); }
+    s = s.replace(re, (x) => ' '.repeat(x.length));   // 带年份的认过了，不让后面再从里面切出「07-31」
+  }
+  for (const [re, f] of NO_YEAR) {
+    for (const m of s.matchAll(re)) {
+      if (!cued(s, m.index, m[0].length)) continue;
+      const [mo, d] = f(m);
+      let best = null;
+      for (const y of [t.y - 1, t.y, t.y + 1]) {
+        const n = d === 0 ? monthEnd(y, mo) : dayNo(y, mo, d);
+        if (n === null) continue;
+        if (best === null || Math.abs(n - t.no) < Math.abs(best - t.no) || (Math.abs(n - t.no) === Math.abs(best - t.no) && n > best)) best = n;
+      }
+      if (best !== null) found.push(best);
+    }
+  }
+  return found.length ? Math.max(...found) - t.no : null;
+}
+
+/**
+ * 到了日子的项里取哪几项（spec D10）：已过的最多占一个，取过得最少的；其余给今天和最近的；只有一类就在那一类里取。
+ * 10-06 前是「越早越先」，一件已过一个月、作者决定先放着的事会一直排第一，今天到的反而挤不进来。
+ * due 的每项是 {d: 天数, i: 清单顺序}；取出来照旧按天数从早到晚排，一样的按清单顺序。
+ */
+export function pickDue(due, max = DATED_MAX) {
+  const past = due.filter((e) => e.d < 0).sort((a, b) => (b.d - a.d) || (a.i - b.i));
+  const next = due.filter((e) => e.d >= 0).sort((a, b) => (a.d - b.d) || (a.i - b.i));
+  const out = past.length && max > 0 ? [past.shift()] : [];
+  while (out.length < max && next.length) out.push(next.shift());
+  while (out.length < max && past.length) out.push(past.shift());
+  return out.sort((a, b) => (a.d - b.d) || (a.i - b.i));
+}
+
 /**
  * 回复里的那一行清单（作者 09-24：「每次回复应该有一个 inline 的 todolist」）。钩子写好，模型照抄——
  * 让模型从十几项里自己摘，摘法每轮会不一样；照抄一行，本轮有变化再改。
+ * today 只给测试用（'YYYY-MM-DD'），平时按本机今天算带日期的项。
  */
-export function inlineLine(open, lang = 'zh') {
+export function inlineLine(open, lang = 'zh', today = new Date()) {
   const T = (zh, en) => pick(lang, zh, en);
   const by = (st) => open.filter((x) => x.status === st);
   const parts = [];
@@ -586,10 +675,24 @@ export function inlineLine(open, lang = 'zh') {
   if (you.length) {
     parts.push(T(`□ 等你 ${you.length}：`, `□ Waiting on you ${you.length}: `) + you.slice(0, 2).map((x) => `${x.id} ${brief(x.text, lang)}`).join(T('、', ', ')) + (you.length > 2 ? '…' : ''));
   }
+  // 等别的、以后：只写个数，带日期、到了日子的露出来（全行最多 DATED_MAX 项，取法见 pickDue）。
+  // 一组里还有到了日子、因为上限没露的，末尾加「…」，和等你组的写法一样。
+  const due = open.map((x, i) => ({ x, i, d: x.status === '等' || x.status === '以后' ? datedDays(x.text, today) : null }))
+    .filter((e) => e.d !== null && e.d <= DATED_DAYS);
+  const picked = pickDue(due);
+  const when = (d) => (d < 0 ? T(`已过 ${-d} 天`, `${-d} day${d === -1 ? '' : 's'} ago`)
+    : d === 0 ? T('今天', 'today') : T(`还有 ${d} 天`, `in ${d} day${d === 1 ? '' : 's'}`));
+  const withDue = (st, head) => {
+    const shown = picked.filter((e) => e.x.status === st);
+    if (!shown.length) return head;
+    const more = due.some((e) => e.x.status === st && !picked.includes(e));
+    return head + T('：', ': ') + shown.map((e) => `${e.x.id} ${brief(e.x.text, lang)}${T(`（${when(e.d)}）`, ` (${when(e.d)})`)}`).join(T('、', ', '))
+      + (more ? '…' : '');
+  };
   const other = by('等');
-  if (other.length) parts.push(T(`⬚ 等别的 ${other.length}`, `⬚ Waiting on other ${other.length}`));
+  if (other.length) parts.push(withDue('等', T(`⬚ 等别的 ${other.length}`, `⬚ Waiting on other ${other.length}`)));
   const later = by('以后');
-  if (later.length) parts.push(T(`▫ 以后 ${later.length}`, `▫ Later ${later.length}`));
+  if (later.length) parts.push(withDue('以后', T(`▫ 以后 ${later.length}`, `▫ Later ${later.length}`)));
   return parts.length ? T('清单：', 'List: ') + parts.join(T(' ｜ ', ' | ')) : T('清单：没有开着的事', 'List: nothing open');
 }
 
