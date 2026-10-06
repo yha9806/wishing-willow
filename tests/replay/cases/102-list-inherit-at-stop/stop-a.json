@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-102",
+  "prompt_id": "p102a",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "你批准的：核对合成配置\n我读成了：核对合成配置文件\n我补上的：无\n标签：核对配置\n\n对完了。\n\n清单变化：\nL2 做完：合成证据二\n+ 等你：合成事项戊\n\n下一步：L4 合成事项戊——等你看"
+}

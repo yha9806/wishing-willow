@@ -1,0 +1,6 @@
+{"type":"custom-title","customTitle":"合成会话","sessionId":"test-sess-101"}
+{"parentUuid":null,"type":"user","uuid":"1010001-0000-4000-8000-000000000001","sessionId":"test-sess-101","timestamp":"2026-09-01T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"合成请求一"}]},"promptId":"p101a"}
+{"parentUuid":null,"type":"assistant","uuid":"1010002-0000-4000-8000-000000000002","sessionId":"test-sess-101","timestamp":"2026-09-01T10:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"合成回答一\n\n清单变化：\n+ 等你：合成事项乙"}]}}
+{"parentUuid":null,"type":"user","uuid":"1010003-0000-4000-8000-000000000003","sessionId":"test-sess-101","timestamp":"2026-09-01T10:05:00.000Z","message":{"role":"user","content":[{"type":"text","text":"合成请求二"}]},"promptId":"p101a"}
+{"parentUuid":null,"type":"assistant","uuid":"1010004-0000-4000-8000-000000000004","sessionId":"test-sess-101","timestamp":"2026-09-01T10:05:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"合成回答二"}]}}
+{"parentUuid":null,"type":"user","uuid":"1010005-0000-4000-8000-000000000005","sessionId":"test-sess-101","timestamp":"2026-09-01T11:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"把合成仓库里两个配置文件对一遍，列出对不上的字段"}]},"promptId":"p101a"}

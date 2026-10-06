@@ -1,0 +1,3 @@
+{"type":"custom-title","customTitle":"合成会话","sessionId":"test-sess-104"}
+{"parentUuid":null,"type":"user","uuid":"104-u1","sessionId":"test-sess-104","timestamp":"<NOW>","message":{"role":"user","content":[{"type":"text","text":"把合成仓库里两个配置文件对一遍，列出对不上的字段"}]},"promptId":"p104a"}
+{"parentUuid":null,"type":"assistant","uuid":"104-a1","sessionId":"test-sess-104","timestamp":"<NOW>","message":{"role":"assistant","content":[{"type":"text","text":"你批准的：核对合成配置\n我读成了：核对合成配置文件\n我补上的：无\n标签：核对配置\n\n对完了。\n\n清单变化：\n+ 在做：合成事项戊\n\n下一步：L1 合成事项戊——接着做"}]}}

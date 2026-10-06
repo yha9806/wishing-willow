@@ -607,6 +607,49 @@ export function turnSlice(path, from) {
   return kept.join('\n');
 }
 
+/**
+ * capture 没记下偏移时（那一刻聊天记录还没建出来：续接时比抄旧消息早，10-06 实见早 73 毫秒；新会话的第一轮也可能），
+ * 按这一轮的 promptId 找回这一轮在记录里从哪个字节开始。提问那一行和这一轮的工具结果行都带着 promptId，
+ * 等于 capture 记下的 turnId（10-06 核对本机记录）。
+ * 不能取最早那一行：续接时抄过来的旧用户消息，promptId 也被改写成新会话第一轮的（10-06 两次实测：
+ * 桌面端一次 132 行同号，含前身的提问；claude -p 分叉一次同样），最早那行落在抄来的历史里，
+ * 会把前身整段当成这一轮重读。抄来的行都在这一轮提问之前，所以取同号的最后一条人敲的提问（isUserTurn）。
+ * 压缩摘要行除外：这一轮中途压缩时，摘要也是一条同号的用户行，排在提问之后（10-06 实见两次：
+ * 桌面端分叉的第一轮、10-04 一个新会话的第一轮），取了它会漏掉压缩前写下的声明。
+ * 只在末尾 max 字节里找；那一行不在窗口里就返回 null——从半截开始读会漏掉这一轮前面的声明，
+ * 不如照旧走没有偏移的老路。
+ */
+export function locateTurnStart(path, turnId, max = 64 << 20) {
+  if (typeof path !== 'string' || !path || typeof turnId !== 'string' || !turnId) return null;
+  const pat = Buffer.from(`"promptId":"${turnId}"`);
+  let fd;
+  try {
+    const size = statSync(path).size;
+    const from = Math.max(0, size - max);
+    fd = openSync(path, 'r');
+    const buf = Buffer.alloc(size - from);
+    const n = readSync(fd, buf, 0, buf.length, from);
+    const text = buf.subarray(0, n);
+    let found = null;
+    for (let i = text.indexOf(pat); i >= 0; i = text.indexOf(pat, i + 1)) {
+      const start = text.lastIndexOf(0x0a, i) + 1;
+      if (start === 0 && from > 0) continue;                 // 窗口切开的半行
+      const end = text.indexOf(0x0a, i);
+      let row = null;
+      try { row = JSON.parse(text.subarray(start, end < 0 ? n : end).toString('utf8')); } catch { /* 没写完的半行 */ }
+      // 键在顶层，不是哪段输出里碰巧有这串字；工具结果行、压缩摘要行同号但不是提问。
+      if (row?.promptId === turnId && isUserTurn(row) && row.isCompactSummary !== true) found = from + start;
+      if (end < 0) break;
+      i = end;
+    }
+    return found;
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) { try { closeSync(fd); } catch { /* nothing to do */ } }
+  }
+}
+
 /** Read from `from` to EOF, at most `max` bytes. Returns '' on any failure. */
 function slice(path, from, max) {
   let fd;

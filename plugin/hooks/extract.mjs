@@ -7,11 +7,12 @@
 
 import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
-  turnAssistantRows, turnLastAt, turnFirstAt, turnCommits } from './_willow.mjs';
+  turnAssistantRows, turnLastAt, turnFirstAt, turnCommits, locateTurnStart } from './_willow.mjs';
 import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine, nextProblem, heldProblem, sweepDue, sweepText, openAsked } from './_list.mjs';
 import { sessionLang } from './_lang.mjs';
 import { hookupNotes } from './_inbox.mjs';
 import { cardProblem } from './_card.mjs';
+import { retryInherit } from './_inherit.mjs';
 
 try {
   const input = parseInput(readStdin());
@@ -20,7 +21,13 @@ try {
   const sessionId = input.session_id;
   if (typeof sessionId !== 'string') quietExit();
 
-  const prev = readState(sessionId);
+  let prev = readState(sessionId);
+  // capture 那一刻聊天记录还没建出来，偏移是空的：按这一轮的 promptId 找回开头，下面读这一轮的都靠它，写回状态。
+  // 没有它，这一轮只读得到最后一段文字，写在中间的清单变化、动过的文件、提交都丢掉（10-06 实见）。
+  if (prev && typeof prev.transcriptOffset !== 'number') {
+    const off = locateTurnStart(input.transcript_path, prev.turnId);
+    if (off !== null) prev = { ...prev, transcriptOffset: off };
+  }
   const found = findDeclaration(input, prev);
   const decode = found?.decode ?? null;
   const tag = found?.tag ?? null;
@@ -37,6 +44,14 @@ try {
 
   // 长清单：这一轮的「清单变化：」块应用到上一份快照上，追加一份新的。旧清单读不出就不写——
   // 拿空清单盖掉它比读不出更糟；capture 会照实说读不出。清单出错不许拖垮下面声明的记录。
+  // 续接时 capture 比抄旧消息还早、清单还没接上：先接上前身的清单，再记这一轮的变化（_inherit.mjs）。
+  // 这一轮没对模型说过继承自哪里，记 told: false，下一轮开头说一次。
+  let listInherit = prev?.listInherit ?? null;
+  if (prev) {
+    const r = retryInherit(sessionId, listInherit, typeof input.transcript_path === 'string' ? input.transcript_path : prev.transcriptPath, prev.turnIndex);
+    if (r) listInherit = r.from ? { ...r, told: false } : r;
+  }
+
   let held = null;
   try {
     // 已经执行过的消息不再执行：压缩会把它们原样重写进这一轮后面（见 appliedRows、turnSlice）。
@@ -85,7 +100,7 @@ try {
 
   if (prev) {
     writeState(sessionId, { ...prev, decode, tag, plan, next, touched, turnEndedAt: endedAt, updatedAt: endedAt, nextProblem: nextIssue, listHeld: held,
-      listSweep: sweep, listSwept: swept, cardProblem: card });
+      listSweep: sweep, listSwept: swept, cardProblem: card, listInherit });
     // 只在 capture 跑过的时候记日志：没有 capture 就没有原话，也没有「问没问」，
     // 记一条三个字段都是 null 的东西只会让统计更难看懂。
     appendTurnLog(sessionId, {

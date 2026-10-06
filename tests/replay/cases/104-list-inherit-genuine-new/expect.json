@@ -1,0 +1,51 @@
+{
+  "note": "真正的新会话：第一条消息就是刚敲的提问（<NOW> 由 runner 换成写入那一刻），capture 时记录还没建出来。补查点挪到轮末以后，判据不能再是「比此刻早五分钟」——第一轮超过五分钟的新会话会被当成续接、去翻别的记录。改按「第一条消息比第一次查的时刻早多少」判：判成新会话（why=new）就是定论，不扫描、以后不再查。",
+  "session_id": "test-sess-104",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "old-sess-104.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-104.list.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "context_excludes": [
+        "合成事项乙",
+        "继承自"
+      ]
+    },
+    {
+      "append": "turn.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "L1 在做：合成事项戊"
+      ],
+      "context_excludes": [
+        "继承自",
+        "合成事项乙"
+      ]
+    }
+  ],
+  "state_file": {
+    "listInherit.why": "new"
+  },
+  "list_items": {
+    "L1": {
+      "status": "在做",
+      "text": "合成事项戊"
+    },
+    "L2": null
+  }
+}

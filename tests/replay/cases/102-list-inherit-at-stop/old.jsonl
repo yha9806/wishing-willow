@@ -1,0 +1,5 @@
+{"type":"custom-title","customTitle":"合成会话","sessionId":"old-sess-102"}
+{"parentUuid":null,"type":"user","uuid":"1020001-0000-4000-8000-000000000001","sessionId":"old-sess-102","timestamp":"2026-09-01T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"合成请求一"}]}}
+{"parentUuid":null,"type":"assistant","uuid":"1020002-0000-4000-8000-000000000002","sessionId":"old-sess-102","timestamp":"2026-09-01T10:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"合成回答一\n\n清单变化：\n+ 等你：合成事项乙"}]}}
+{"parentUuid":null,"type":"user","uuid":"1020003-0000-4000-8000-000000000003","sessionId":"old-sess-102","timestamp":"2026-09-01T10:05:00.000Z","message":{"role":"user","content":[{"type":"text","text":"合成请求二"}]}}
+{"parentUuid":null,"type":"assistant","uuid":"1020004-0000-4000-8000-000000000004","sessionId":"old-sess-102","timestamp":"2026-09-01T10:05:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"你批准的：旧的合成请求\n我读成了：旧的合成请求\n我补上的：无\n标签：旧的标签\n\n合成回答二\n\n清单变化：\n+ 以后：合成事项己"}]}}

@@ -13,7 +13,7 @@ import {
 import { triggerBlock } from './_triggers.mjs';
 import { inboxText } from './_inbox.mjs';
 import { listBlock, listRules, commandRule, authorChanges, idleDue, idleText, openAsked, ACCEPT, suggestedReply, acceptText } from './_list.mjs';
-import { inheritList } from './_inherit.mjs';
+import { inheritList, inheritPending, inheritedLine } from './_inherit.mjs';
 import { cardRule } from './_card.mjs';
 import { linkNews, selfLine } from './_links.mjs';
 import { promptLang, sessionLang, pick } from './_lang.mjs';
@@ -148,13 +148,15 @@ try {
   let listShown = prev?.listShown ?? null;
   let listSwept = prev?.listSwept ?? null;   // {编号: 上次问的轮次}：提交后核对与挂久点名共用
   let listLinks = prev?.listLinks ?? null;   // {编号: 上次说的结论}：挂在别的对话编号上的项（_links.mjs）
-  // 续接成新会话号的对话，清单还在前身名下：每个会话查一次，没有自己的清单才继承（_inherit.mjs）。
+  // 续接成新会话号的对话，清单还在前身名下：查到有定论为止，没有自己的清单才继承（_inherit.mjs）。
   let listInherit = prev?.listInherit ?? null;
-  // 「新会话」「没有聊天记录」不是最终结论：续接时第一次 capture 可能比 Claude Code 抄旧消息还早
-  // （09-28 实见，早 0.2 秒），那一次判成新会话，记下来就再也不查了。这两种下一轮再查；
-  // 真正的新会话每轮只多读一次记录开头，第一条消息满五分钟后查一次就定为「没有前身」。
-  if (!listInherit || listInherit.why === 'fresh' || listInherit.why === 'no-transcript') {
-    try { listInherit = inheritList(sessionId, input.transcript_path, (prev?.turnIndex ?? -1) + 1); } catch (e) {
+  // 「读不到记录」不是最终结论：续接时第一次 capture 可能比 Claude Code 抄旧消息还早
+  // （09-28 实见，早 0.2 秒），那一次判成新会话。这种下一轮再查，轮中的补查点也会查（_inherit.mjs）；
+  // 真正的新会话按「第一条消息比第一次查的时刻早多少」判，一查到就是定论。第一次查就是这个会话的第一次 capture
+  // （之前没有状态）；旧版本写的状态里没有 since，不知道就传 null，退回五分钟的旧判据。
+  if (inheritPending(listInherit)) {
+    const since = prev ? (typeof listInherit?.since === 'number' ? listInherit.since : null) : Date.parse(now);
+    try { listInherit = inheritList(sessionId, input.transcript_path, (prev?.turnIndex ?? -1) + 1, since); } catch (e) {
       listInherit = { from: null, at: now, why: 'error', error: String(e?.message ?? e).slice(0, 200) };
     }
   }
@@ -192,9 +194,10 @@ try {
       list += T(`\n你在面板里改了：${byAuthor.join('、')}（这些是你本人点的，照此更新计划）。`,
         `\nYou changed on the panel: ${byAuthor.join(', ')} (you clicked these yourself; plan accordingly).`);
     }
-    if (list && listInherit.from && !prev?.listInherit?.from) {
-      list = T(`【Wishing-Willow · 清单】这场对话是续接的：清单继承自会话 ${listInherit.from}，编号接着用。\n`,
-        `[Wishing-Willow · List] This conversation was resumed: the list is carried over from session ${listInherit.from}, and the IDs continue.\n`) + list;
+    // 这一轮开头刚接上的，或者轮中补查接上了却还没对模型说过的（told: false，结束钩子写），说一次。
+    if (list && listInherit.from && (!prev?.listInherit?.from || prev.listInherit.told === false)) {
+      list = T('【Wishing-Willow · 清单】', '[Wishing-Willow · List] ') + inheritedLine(listInherit.from, lang) + '\n' + list;
+      listInherit = { ...listInherit, told: true };
     }
   } catch {
     list = T('【Wishing-Willow · 清单】清单读不出，不能当作没有开着的事。', '[Wishing-Willow · List] The list can\'t be read. Don\'t take that as nothing being open.');
@@ -241,7 +244,7 @@ try {
     touched: prev?.touched ?? null,   // 本会话用工具动过的路径，extract 每轮并进来；跨轮带着走
     shown,                 // 这一轮说了哪些待触发条目、各在什么阶段；下一轮拿来说「本轮变化」
     listShown,             // 长清单上次完整列出是哪份快照、第几轮；没变就不重列（_list.mjs）
-    listInherit,           // 续接时从前身继承清单：查过一次就记下，{from, at, why}（_inherit.mjs）
+    listInherit,           // 续接时从前身继承清单：查到有定论为止，{from, at, why, since?}（_inherit.mjs）
     nextProblem: null,     // 上一轮「下一步」没点清单上开着的项时的问题，extract 写、下一轮 capture 说（spec D2）
     listHeld: null,        // 上一轮很长、清单变化全攒到回复末尾时的问题，extract 写、下一轮 capture 说（spec 清单实时 A）
     listSweep: null,       // 上一轮提交过时请模型逐条核的等你，extract 写、下一轮 capture 说一次（_list.mjs sweepDue）

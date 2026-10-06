@@ -13,6 +13,7 @@ import { listBlock, listRules, commandRule } from './_list.mjs';
 import { selfLine } from './_links.mjs';
 import { cardRule } from './_card.mjs';
 import { sessionLang, pick } from './_lang.mjs';
+import { retryInherit, inheritedLine } from './_inherit.mjs';
 
 const HEAD_ZH = '【Wishing-Willow · 压缩后】上下文刚被压缩，这一轮开头交给你的清单和写法可能已经不在了，这里重交一份。'
   + '这一轮里已经做完或变了的事，照下面的写法在回复末尾补上。';
@@ -27,14 +28,19 @@ try {
 
   const prev = readState(sessionId);
   const lang = sessionLang(prev);
+  // 续接后第一轮就被压缩、清单还没接上：先补查，重交的就是接上的那份，并说继承自哪里（_inherit.mjs）。
+  let listInherit = prev?.listInherit ?? null;
+  const r = prev ? retryInherit(sessionId, listInherit, typeof input.transcript_path === 'string' ? input.transcript_path : prev.transcriptPath, prev.turnIndex) : null;
   let list = null;
   try {
     list = listBlock(sessionId, 'full', prev?.turnIndex ?? null, null, lang).text;
+    if (list && r?.from) list = pick(lang, '【Wishing-Willow · 清单】', '[Wishing-Willow · List] ') + inheritedLine(r.from, lang) + '\n' + list;
   } catch {
     list = pick(lang, '【Wishing-Willow · 清单】清单读不出，不能当作没有开着的事。', '[Wishing-Willow · List] The list can\'t be read. Don\'t take that as nothing being open.');
   }
   // 写作循环等别的来源转达过什么也一起忘掉：上下文里那份可能已被压缩掉，下一轮全部重说（_inbox.mjs）。
-  if (prev) writeState(sessionId, { ...prev, listShown: null, shown: null, inboxSaid: null });
+  if (r) listInherit = r.from ? { ...r, told: !!list } : r;
+  if (prev) writeState(sessionId, { ...prev, listShown: null, shown: null, inboxSaid: null, listInherit });
 
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {

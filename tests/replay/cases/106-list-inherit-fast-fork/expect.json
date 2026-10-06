@@ -1,0 +1,66 @@
+{
+  "note": "前身刚聊完一轮就续接：抄来的第一条消息只比新会话早二十秒（10-06 用 claude -p 实测是 7 秒）。按聊天记录文件的建立时刻判，差不到一分钟就判成新会话、永远不接（10-06 实测漏接）；按第一次查的时刻判，早三秒以上就是抄来的，要接上。",
+  "session_id": "test-sess-106",
+  "steps": [
+    {
+      "copy": "old.jsonl",
+      "to": "old-sess-106.jsonl"
+    },
+    {
+      "copy": "old.list.jsonl",
+      "to": "old-sess-106.list.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-a.json",
+      "context_excludes": [
+        "合成事项乙",
+        "继承自"
+      ]
+    },
+    {
+      "append": "new.jsonl"
+    },
+    {
+      "append": "turn.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop-a.json"
+    },
+    {
+      "hook": "capture",
+      "input": "ups-b.json",
+      "stdout": "inject",
+      "context_includes": [
+        "清单继承自会话 old-sess-106",
+        "L3 以后：合成事项丙",
+        "L4 等你：合成事项戊"
+      ],
+      "context_excludes": [
+        "L2 等你",
+        "L1 等你"
+      ]
+    }
+  ],
+  "list_items": {
+    "L2": {
+      "status": "做完",
+      "text": "合成事项乙"
+    },
+    "L3": {
+      "status": "以后"
+    },
+    "L4": {
+      "status": "等你",
+      "text": "合成事项戊"
+    },
+    "L5": null
+  },
+  "state_file": {
+    "listInherit.why": "inherited"
+  },
+  "log_last": {
+    "tag": "核对配置"
+  }
+}
