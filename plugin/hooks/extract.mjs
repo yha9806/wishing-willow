@@ -14,6 +14,7 @@ import { hookupNotes, sessionVerdicts } from './_inbox.mjs';
 import { cardProblem } from './_card.mjs';
 import { claimProblem } from './_claim.mjs';
 import { retryInherit } from './_inherit.mjs';
+import { readChecks, startChecker } from './_check.mjs';
 
 try {
   const input = parseInput(readStdin());
@@ -70,7 +71,8 @@ try {
       if (!cur?.error) {
         const turn = { turnId: prev?.turnId ?? null, turnIndex: prev?.turnIndex ?? null };
         const rows = fresh.filter((r) => r.uuid !== null && parseOps(r.texts).length).map((r) => r.uuid);
-        appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn, sessionLang(prev), { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked }), rows });
+        appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn, sessionLang(prev),
+          { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked, checks: readChecks(sessionId), now: endedAt }), rows });
       }
     }
   } catch { /* 见上 */ }
@@ -94,6 +96,12 @@ try {
       }
     }
   } catch { /* 不判 */ }
+
+  // 做完判据（_check.mjs）：开着的项里有该核的，起一个脱离的核查进程，不等它；结果下一轮开头读。
+  try {
+    const latest = readList(sessionId);
+    if (latest && !latest.error && latest.items.some((x) => x.check)) startChecker(sessionId, latest.items);
+  } catch { /* 不核 */ }
 
   // 计划卡的形状（轻计划 D2）：超过 8 行、有步没写「→ 怎么验」，下一轮说一次。读不出这一轮就不判。
   let card = null;

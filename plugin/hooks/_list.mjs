@@ -5,6 +5,7 @@
 //   + 在做：… / + 等你：… / + 等 <什么>：… / + 以后：…（末尾可带「（依据：…）」，不带就是预测）
 //   L3 做完：<证据>   L3 → <状态>[：说明]   L3 撤掉：<原因>   L3 挪到以后：<条件>   L3 认可
 //   L3 属于：E5（挂到稿件那边的一件待做）   E6 不挂：<理由>（稿件那边这件不挂到清单上）
+//   L3 判据：合并 o/r#12（做完的判据，机器去核，满足了点名一次；新增行末尾也可带「（判据：…）」，见 _check.mjs）
 // 编号由这里分配。一项只能靠明写的一行离开清单；没提到的原样留着，所以「悄悄消失」在写法上就不会发生。
 // 撤掉没写原因的不撤，做完没附证据的照记，引用了不存在的编号——都记为问题，下一轮说出来。
 //
@@ -19,6 +20,7 @@ import { stateDir } from './_willow.mjs';
 import { pick } from './_lang.mjs';
 import { replyIn } from './_reply.mjs';
 import { hookupNotes } from './_inbox.mjs';
+import { parseCheck, itemCheck, checkLabel, readChecks } from './_check.mjs';
 
 // 清单的写法，每轮开头随提醒注入（capture.mjs），压缩后原样重交一次（compacted.mjs）。
 // 长清单（2026-09-24 用户：要整场对话的长链路清单，跟着对话变，不只下一步）。旧的「计划：」块并进来：
@@ -30,6 +32,7 @@ const LIST_RULES_ZH =
   '「+ 在做：<事>」「+ 等你：<事>」「+ 等 <什么>：<事>」「+ 以后：<事>」新增，有事实依据就在末尾加「（依据：<提交号、文件或 CI>）」，不加算预测；' +
   '「L3 做完：<证据>」「L3 → 等你：<为什么>」「L3 撤掉：<原因>」「L3 认可」（用户本轮认可）「L3 改题：<新标题>」（原标题读着像还悬着）' +
   '「L3 挡着：L5、L7」（落地能放开哪几项，可写外部的事，写「无」清空）。' +
+  '机器能核的完成条件写在末尾「（判据：合并 o/r#12）」，还认「推到 o/r 分支 提交号」「文件 ~/路径」「进程退出 pid」，「；」连写；已有的项写「L3 判据：…」；满足了这里点名一次，关不关仍由你写。' +
   '标题一行约 40 字，背景进依据；编号只在本对话算数，提到别的对话的编号要带上对话名（「会话甲的 L3」）；没提到的项原样留着，没变化就不写这块。\n' +
   '回复的最后一行写「下一步：Lx <这件事>——<为什么是它>」：有开着的项就点名一项，说它为什么排第一（挡着别的、在等你、快到期）；' +
   '没有就写之后等用户什么或你接着做什么。要用户回话或拍板时，末尾再加「；回「<用户可以原样回的一句>」」，用户只回「.」就等于回了这一句；' +
@@ -42,6 +45,8 @@ const LIST_RULES_EN =
   + '"+ Doing: <item>", "+ Waiting on you: <item>", "+ Waiting on <what>: <item>", "+ Later: <item>" to add (end with "(basis: <commit, file or CI>)" when a fact backs it; else it is a forecast); '
   + '"L3 done: <evidence>", "L3 → waiting on you: <why>", "L3 dropped: <reason>", "L3 approved" (the user approved it this turn), "L3 retitled: <new title>" (the old title reads as still open), '
   + '"L3 blocks: L5, L7" (what it frees once it lands; outside events allowed; "none" clears). '
+  + 'A done condition a machine can check goes at the end as "(check: merged o/r#12)"; also "pushed o/r branch sha", "file ~/path", "exited pid", joined with ";"; '
+  + 'for an existing item write "L3 check: …"; you are told once here when it holds, and closing it is still yours to write. '
   + 'One-line titles (about 80 characters), background in the basis; IDs count only in this conversation, so name the conversation for another one\'s ID ("session A\'s L3"); '
   + 'unmentioned items stay; no change, no block.\n'
   + 'Last line: "Next: Lx <the item> — <why it comes first>": with open items, name one and say why it comes first (blocks others, waits on the user, due); '
@@ -87,6 +92,8 @@ const BLOCKS = /^(L\d+)\s*(?:挡着|blocks)\s*[：:]\s*(.+)$/i;
 // 一项属于稿件那边的哪件待做（2026-10-04 spec「稿件待做挂上对话清单」D2）：「L33 属于：E5」；
 // 对话绑了几篇稿子时写「ipm E5」。稿件那边一件不挂到清单上，写「E6 不挂：<理由>」（D3）。
 const OF = /^(L\d+)\s*(?:属于|belongs to)\s*[：:]\s*(.+)$/i;
+// 做完的判据（ops-private spec 2026-10-07 D1）：「L3 判据：合并 o/r#12」，写「无」清空。
+const CHECK = /^(L\d+)\s*(?:判据|check)\s*[：:]\s*(.+)$/i;
 const NOHOOK = /^((?:[\w.\-\u2e80-\u9fff]+\s+)?[A-Za-z]+\d+)\s*(?:不挂|not hooked)\s*(?:[：:]\s*(.*))?$/i;
 // 末尾的「（挡着：…）」「（依据：…）」：从句尾往回数括号找到配对的那个开括号，里面再套括号也拆得开
 // （09-28 实测一张真实清单：依据里写了带括号的文件名或说明，整段依据留在了标题里）。
@@ -110,6 +117,8 @@ function tail(text, label) {
 const BLOCKS_LABEL = /^\s*(?:挡着|blocks)\s*[：:]\s*([\s\S]+)$/i;
 const OF_LABEL = /^\s*(?:属于|belongs to)\s*[：:]\s*([\s\S]+)$/i;
 const BASIS_LABEL = /^\s*(?:依据|basis)\s*[：:]\s*([\s\S]+)$/i;
+const CHECK_LABEL = /^\s*(?:判据|check)\s*[：:]\s*([\s\S]+)$/i;
+const NONE = /^(无|none|nothing|-)$/i;
 const TARGETS = /\s*[、,，;；]\s*|\s+(?=L\d)/;
 export function splitTargets(t) {
   const v = String(t).trim();
@@ -197,19 +206,22 @@ export function parseOps(texts) {
       let m;
       const before = ops.length;
       if ((m = ADD.exec(line))) {
-        // 末尾的「（依据：…）」「（挡着：…）」「（属于：…）」都可以有，先后不论。
-        let text = m[2], basis = '预测', blocks = null, of = null;
-        for (let k = 0; k < 3; k++) {
+        // 末尾的「（依据：…）」「（挡着：…）」「（属于：…）」「（判据：…）」都可以有，先后不论。
+        let text = m[2], basis = '预测', blocks = null, of = null, check = null;
+        for (let k = 0; k < 4; k++) {
           const b = tail(text, BASIS_LABEL);
           if (b) { basis = b.value; text = text.slice(0, b.index); continue; }
+          const c = tail(text, CHECK_LABEL);
+          if (c) { check = NONE.test(c.value) ? null : c.value; text = text.slice(0, c.index); continue; }
           const t = tail(text, BLOCKS_LABEL);
           if (t) { blocks = splitTargets(t.value); text = text.slice(0, t.index); continue; }
           const o = tail(text, OF_LABEL);
           if (o) { of = splitTargets(o.value); text = text.slice(0, o.index); }
         }
-        ops.push({ op: 'add', ...status(m[1]), text: text.trim(), basis, ...(blocks ? { blocks } : {}), ...(of ? { of } : {}) });
+        ops.push({ op: 'add', ...status(m[1]), text: text.trim(), basis, ...(blocks ? { blocks } : {}), ...(of ? { of } : {}), ...(check ? { check } : {}) });
       } else if ((m = BLOCKS.exec(line))) ops.push({ op: 'blocks', id: m[1], targets: splitTargets(m[2]) });
       else if ((m = OF.exec(line))) ops.push({ op: 'of', id: m[1], targets: splitTargets(m[2]) });
+      else if ((m = CHECK.exec(line))) ops.push({ op: 'check', id: m[1], check: NONE.test(m[2].trim()) ? null : m[2].trim() });
       else if ((m = DONE.exec(line))) ops.push({ op: 'done', id: m[1], note: (m[2] ?? '').trim() });
       else if ((m = MOVE.exec(line))) ops.push({ op: 'move', id: m[1], ...status(m[2]), note: (m[3] ?? '').trim() });
       else if ((m = DROP.exec(line))) ops.push({ op: 'drop', id: m[1], note: (m[2] ?? '').trim() });
@@ -255,6 +267,7 @@ export function resolveTodo(ref, manuscripts, lang = 'zh') {
  * 把一轮的操作应用到上一份快照上。turn = {turnId, turnIndex}。
  * ctx.manuscripts：开了对号的稿件（_inbox.mjs hookupNotes）；有就核「属于」「不挂」写的编号，没有就照记不核。
  * ctx.unhooked：上一份快照里写过「不挂」的 {'ipm E6': {reason, turn}}，带到这一份。
+ * ctx.checks：做完判据的核查结果（_check.mjs readChecks），ctx.now：这一刻（ISO）。有就在做完时记时间、核对判据（spec 2026-10-07 D6、D8）。
  */
 export function applyOps(prevItems, ops, turn, lang = 'zh', ctx = {}) {
   const T = (zh, en) => pick(lang, zh, en);
@@ -276,6 +289,14 @@ export function applyOps(prevItems, ops, turn, lang = 'zh', ctx = {}) {
   };
   let next = items.reduce((n, x) => Math.max(n, Number(String(x.id).slice(1)) || 0), 0) + 1;
   const find = (id) => items.find((x) => x.id === id);
+  // 判据里认不出的部分照记，人工判；说一次（spec 2026-10-07 D2）。
+  const checkProblem = (id, check) => {
+    const { bad } = parseCheck(check);
+    if (bad.length) {
+      problems.push(T(`${id} 的判据「${bad.join('；')}」机器核不了（只认 合并 o/r#n、推到 o/r 分支 提交号、文件 路径、进程退出 pid），照记、人工判`,
+        `${id}'s check "${bad.join('; ')}" can't be checked by machine (only merged o/r#n, pushed o/r branch sha, file path, exited pid); kept, judged by hand`));
+    }
+  };
   for (const o of ops) {
     if (o.op === 'bad') { problems.push(T(`看不懂这一行：${o.line}`, `Can't read this line: ${o.line}`)); continue; }
     if (o.op === 'add') {
@@ -290,8 +311,9 @@ export function applyOps(prevItems, ops, turn, lang = 'zh', ctx = {}) {
       const of = o.of ? ofTargets(id, o.of) : null;
       items.push({ id, text: o.text, status: o.status, wait: o.wait, basis: o.basis,
         sourceTurn: turn.turnId ?? null, since: turn.turnIndex ?? null, touched: turn.turnIndex ?? null,
-        ...(o.blocks && o.blocks.length ? { blocks: o.blocks } : {}), ...(of && of.length ? { of } : {}) });
+        ...(o.blocks && o.blocks.length ? { blocks: o.blocks } : {}), ...(of && of.length ? { of } : {}), ...(o.check ? { check: o.check } : {}) });
       changes.push(T(`新增 ${id}`, `added ${id}`));
+      if (o.check) checkProblem(id, o.check);
       if (titleWidth(o.text) > TITLE_MAX) {
         problems.push(T(`${id} 的标题太长（一行写完，约 40 字内），背景写进依据或说明；可以「${id} 改题：…」改短`,
           `${id}'s title is too long (keep it to one line, about 80 characters); put background in the basis or the note, or shorten it with "${id} retitled: …"`));
@@ -334,6 +356,13 @@ export function applyOps(prevItems, ops, turn, lang = 'zh', ctx = {}) {
         : T(`${o.id} 不再属于稿件待做`, `${o.id} belongs to no manuscript item now`));
       continue;
     }
+    if (o.op === 'check') {
+      if (o.check) it.check = o.check; else delete it.check;
+      it.touched = turn.turnIndex ?? it.touched;
+      changes.push(o.check ? T(`${o.id} 判据`, `${o.id} check set`) : T(`${o.id} 不再带判据`, `${o.id} check cleared`));
+      if (o.check) checkProblem(o.id, o.check);
+      continue;
+    }
     if (o.op === 'approve') { it.approvedTurn = turn.turnId ?? null; changes.push(T(`${o.id} 认可`, `${o.id} approved`)); continue; }
     if (o.op === 'blocks') {
       // 编号只认这场对话里有的；外部的事（投稿、截止）照写。写「无」清空。
@@ -358,6 +387,16 @@ export function applyOps(prevItems, ops, turn, lang = 'zh', ctx = {}) {
     }
     if (o.op === 'drop' && !o.note) { problems.push(T(`${o.id} 撤掉没写原因，没撤`, `${o.id} dropped without a reason, so not dropped`)); continue; }
     if (o.op === 'done' && !o.note) problems.push(T(`${o.id} 做完没附证据`, `${o.id} done without evidence`));
+    if (o.op === 'done' && it.check && !CLOSED.has(it.status)) {
+      // 带判据的项写做完：记两个时间（现实里成立、第一次核到），和写做完的这一刻；判据核到没满足就说一次，照记做完（D6、D8）。
+      const s = ctx?.checks ? itemCheck(it, ctx.checks) : null;
+      if (s?.state === 'met') { it.checkMetAt = s.metAt; it.checkSeenAt = s.seenAt; }
+      if (s?.state === 'unmet') {
+        problems.push(T(`${o.id} 写了做完，但判据核到未满足（${it.check}）：核一下证据，或改判据`,
+          `${o.id} was marked done but its check does not hold yet (${it.check}): recheck the evidence or change the check`));
+      }
+      if (ctx?.now) it.doneAt = ctx.now;
+    }
     if (o.op === 'done') { it.status = '做完'; it.wait = null; it.evidence = o.note || null; }
     else if (o.op === 'drop') { it.status = '撤掉'; it.wait = null; it.reason = o.note; }
     // 不带说明的转状态清掉旧说明：旧那句说的是上一个状态，留着面板就显示过期的话（L15，_list.mjs 原 119 行）。
@@ -810,6 +849,8 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = '
   const shownItems = full ? open : open.filter((x) => x.status === '等你' || (mode === 'full' && x.status === '在做' && idleOf(x) >= STALE_TURNS));
   // 「属于」只在完整列出的那一轮注：其余轮列出的等你、挂久的项，关系在那一轮已经交给模型了（A5 实测：每轮都注，
   // 十项挂久的就多一百多字）。只开了一篇稿子时只写编号。
+  // 做完判据的状态（spec 2026-10-07 D5）：带判据的项后面标出来。核查结果只在有带判据的项时读。
+  const checks = open.some((x) => x.check) ? readChecks(sessionId) : null;
   const ofs = (x) => (full && x.of?.length ? x.of.map((r) => (ms.length === 1 && r.startsWith(`${ms[0].workspace} `) ? r.slice(ms[0].workspace.length + 1) : r)) : null);
   const lines = shownItems.map((x) => {
     const idle = idleOf(x);
@@ -818,6 +859,7 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = '
         + (x.blocks?.length ? ` (blocks ${x.blocks.join(', ')})` : '')
         + (ofs(x) ? ` (belongs to ${ofs(x).join(', ')})` : '')
         + (x.basis && x.basis !== '预测' ? ` (basis: ${x.basis})` : '')
+        + (x.check ? checkLabel(x, checks, lang) : '')
         + (x.approvedTurn ? ' (approved)' : '')
         + (idle >= staleAt(x) ? ` (untouched for ${idle} turns)` : '');
     }
@@ -825,6 +867,7 @@ export function listBlock(sessionId, mode, turnIndex, lastShown = null, lang = '
       + (x.blocks?.length ? `（挡着 ${x.blocks.join('、')}）` : '')
       + (ofs(x) ? `（属于 ${ofs(x).join('、')}）` : '')
       + (x.basis && x.basis !== '预测' ? `（依据：${x.basis}）` : '')
+      + (x.check ? checkLabel(x, checks) : '')
       + (x.approvedTurn ? '（已认可）' : '')
       + (idle >= staleAt(x) ? `（${idle} 轮没动）` : '');
   });
