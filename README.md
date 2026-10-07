@@ -121,6 +121,8 @@ When Claude writes its reading, the notch opens by itself for six seconds with y
 
 If you also use the [writing loop](https://github.com/yha9806/academic-writing-toolkit) from Academic Writing Toolkit, a manuscript it tracks appears nested under the conversation that is editing it.
 
+The loop can also leave its verdict on the manuscript in its note: `"verdict": {"ready": false, "text": "<one line>"}` (`ready` true or false, `text` one line; documented in `plugin/hooks/_inbox.mjs`). If the last part of a reply, after Claude's last tool call, says the work is done or ready to submit while a note of that conversation says it is not ready, the next turn says so once, quoting both. Only a short, listed set of phrases counts (`plugin/hooks/_claim.mjs`, with the misses it knows about). Without a verdict nothing changes; a verdict of any other shape is reported as unreadable, not skipped.
+
 ## The conversation's list
 
 <p align="center">
@@ -230,6 +232,7 @@ node tests/contract/run.mjs    # registration, exactly as hooks.json spells it
 node tests/runtime/run.mjs     # field names, read from the installed claude binary
 node tests/triggers/run.mjs    # the trigger list's check command
 node tests/list/run.mjs        # the list line: when dated items show
+node tests/claim/run.mjs       # "done" claims against a source's verdict
 cd macos && swift test         # the app: 66 tests in 20 suites
 ```
 

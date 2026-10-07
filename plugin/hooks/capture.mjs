@@ -252,6 +252,7 @@ try {
     listLinks,             // {编号: 上次说的结论}：挂在别的对话编号上的项，同一结论只说一次（_links.mjs）
     listAuthorSeen: now,   // 这一刻之前作者在面板里的改动都已经说过；下一轮只说这之后的（spec 清单实时 C）
     cardProblem: null,     // 上一轮计划卡的形状问题，extract 写、这一轮 capture 说一次（_card.mjs）
+    claimProblem: null,    // 上一轮回复说做完了、留言判的是没就绪，extract 写、这一轮 capture 说一次（_claim.mjs）
     inboxSaid,             // {<留言文件>:<段>: 文字}：上次转达给这个会话的信息段，没变就不再说（_inbox.mjs，注入瘦身 D1）
     // 这一轮还没结束。extract 在 Stop 时写下时间戳。没有这一位，读方分不清
     // 「模型还在回答」和「答完了没写声明」—— 2026-09-12 用户实测：每一轮一开头
@@ -262,8 +263,11 @@ try {
 
   // 上一轮计划卡超长或少了「→ 怎么验」：这一轮说一次，短确认的轮次也说（extract 写，_card.mjs）。
   const card = typeof prev?.cardProblem === 'string' ? prev.cardProblem : null;
+  // 上一轮回复说做完了、本会话所属的留言判的是没就绪：这一轮说一次，跟在留言后面、同一个出口（extract 写，_claim.mjs）。
+  // 短确认的轮次也说。上面写状态时已经清掉：这一轮被打断、压缩之后，都不再说。
+  const claim = typeof prev?.claimProblem === 'string' ? prev.claimProblem : null;
 
-  if (bypass && !block && !inbox && !list && !card && !accept) quietExit();
+  if (bypass && !block && !inbox && !list && !card && !accept && !claim) quietExit();
 
   // Must be complete, valid JSON: Claude Code treats output starting with '{'
   // but not ending in '}' as plain text.
@@ -274,7 +278,7 @@ try {
       additionalContext: (envelopeRulesProblem && !bypass
         ? T(`【Wishing-Willow】${envelopeRulesProblem}：后台通知等可能被当成你的话记下。\n`,
           `[Wishing-Willow] ${envelopeRulesProblem}: background notifications may be recorded as the user's words.\n`) : '')
-        + [accept, bypass ? null : `${reminder(lang)}\n${commandRule(sessionId, lang)}\n${selfLine(sessionId, lang)}`, card, block, list, inbox].filter(Boolean).join('\n\n'),
+        + [accept, bypass ? null : `${reminder(lang)}\n${commandRule(sessionId, lang)}\n${selfLine(sessionId, lang)}`, card, block, list, inbox, claim].filter(Boolean).join('\n\n'),
     },
   }));
   process.exit(0);

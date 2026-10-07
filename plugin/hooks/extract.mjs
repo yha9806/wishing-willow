@@ -7,11 +7,12 @@
 
 import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
-  turnAssistantRows, turnLastAt, turnFirstAt, turnCommits, locateTurnStart } from './_willow.mjs';
+  turnAssistantRows, turnLastAt, turnFirstAt, turnCommits, locateTurnStart, turnFinalText } from './_willow.mjs';
 import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine, nextProblem, heldProblem, sweepDue, sweepText, openAsked } from './_list.mjs';
 import { sessionLang } from './_lang.mjs';
-import { hookupNotes } from './_inbox.mjs';
+import { hookupNotes, sessionVerdicts } from './_inbox.mjs';
 import { cardProblem } from './_card.mjs';
+import { claimProblem } from './_claim.mjs';
 import { retryInherit } from './_inherit.mjs';
 
 try {
@@ -98,9 +99,14 @@ try {
   let card = null;
   try { card = cardProblem(turnAssistantRows(input, prev).flatMap((r) => r.texts), sessionLang(prev)); } catch { card = null; }
 
+  // 回复最后一段说做完了、可以投了，本会话所属的留言却判的是没就绪：下一轮开头说一次（_claim.mjs）。读不出就不判。
+  // 同一轮里结束钩子跑了两次（别的 Stop 钩子把这一轮拦回去接着做）：前一次记下的不丢。capture 每轮开头清掉，所以 prev 里的只会是这一轮的。
+  let claim = null;
+  try { claim = claimProblem(turnFinalText(input, prev), () => sessionVerdicts(sessionId), sessionLang(prev)); } catch { claim = null; }
+
   if (prev) {
     writeState(sessionId, { ...prev, decode, tag, plan, next, touched, turnEndedAt: endedAt, updatedAt: endedAt, nextProblem: nextIssue, listHeld: held,
-      listSweep: sweep, listSwept: swept, cardProblem: card, listInherit });
+      listSweep: sweep, listSwept: swept, cardProblem: card, claimProblem: claim ?? prev.claimProblem ?? null, listInherit });
     // 只在 capture 跑过的时候记日志：没有 capture 就没有原话，也没有「问没问」，
     // 记一条三个字段都是 null 的东西只会让统计更难看懂。
     appendTurnLog(sessionId, {

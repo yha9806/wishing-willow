@@ -121,6 +121,8 @@ Claude 写出理解时，刘海自己弹开 6 秒，放着你的原话和它的�
 
 如果你也在用学术写作工具包里的[写作循环](https://github.com/yha9806/academic-writing-toolkit)，它跟的稿件会挂在正在改它的那场对话下面。
 
+写作循环还可以在留言里写它对这篇稿子的判定：`"verdict": {"ready": false, "text": "<一行>"}`（`ready` 为 true 或 false，`text` 一行；写法见 `plugin/hooks/_inbox.mjs`）。一条回复的最后一段（Claude 最后一次调用工具之后写的）说做完了、可以投，而这场对话的留言判的是没就绪，下一轮开头就说一次，两边原话都带上。认的说法只有一张短表（`plugin/hooks/_claim.mjs`，已知的漏报写在表后）。没有判定就什么都不变；判定写成别的形状，照实说读不出，不跳过。
+
 ## 整场对话的清单
 
 <p align="center">
@@ -230,6 +232,7 @@ node tests/contract/run.mjs    # 按 hooks.json 原样执行
 node tests/runtime/run.mjs     # 字段名，从本机装的 claude 二进制里读
 node tests/triggers/run.mjs    # 待触发清单的检查命令
 node tests/list/run.mjs        # 清单那一行：带日期的项什么时候露出
+node tests/claim/run.mjs       # 说做完了，对上来源的判定
 cd macos && swift test         # app：20 组 66 个测试
 ```
 

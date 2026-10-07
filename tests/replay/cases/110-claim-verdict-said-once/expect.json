@@ -1,0 +1,24 @@
+{
+  "note": "回复最后一段说「都做完了」，本会话所属的留言判定没就绪：下一轮开头说一次，和留言同一个出口。说过就清掉：那一轮被打断（没有 Stop）、之后没再说完成、压缩之后，都不再说。已就绪的那份留言不点名。",
+  "session_id": "test-sess-110",
+  "steps": [
+    { "append": "transcript.pre.jsonl" },
+    { "hook": "capture", "input": "ups-a.json", "stdout": "inject",
+      "context_excludes": ["上一轮回复说"] },
+    { "hook": "extract", "input": "stop-a.json" },
+    { "hook": "capture", "input": "ups-b.json", "stdout": "inject",
+      "context_includes": [
+        "【Wishing-Willow】上一轮回复说「都做完了」，但「写作循环 · 合成稿」的判定是「合成状态：未就绪（阶段：合成改稿）」。说完成要按来源的判定说；单项检查通过不等于完成。",
+        "〔循环〕合成说明块：涉及稿件时在回复最后加解释块"
+      ],
+      "context_excludes": ["「合成来源乙」的判定"] },
+    { "hook": "capture", "input": "ups-c.json", "stdout": "inject",
+      "context_excludes": ["上一轮回复说"] },
+    { "hook": "extract", "input": "stop-c.json" },
+    { "hook": "compacted", "input": "start-compact.json", "stdout": "inject",
+      "context_excludes": ["上一轮回复说"] },
+    { "hook": "capture", "input": "ups-d.json", "stdout": "inject",
+      "context_excludes": ["上一轮回复说"] }
+  ],
+  "state_file": { "claimProblem": null }
+}

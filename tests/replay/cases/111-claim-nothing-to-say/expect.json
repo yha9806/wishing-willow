@@ -1,0 +1,18 @@
+{
+  "note": "不说的三种：说了完成，但本会话所属的留言一份已就绪、一份没有判定（没就绪的那份不是本会话的）；留言改成没就绪以后，回复没说完成。没有判定的留言照旧转达。",
+  "session_id": "test-sess-111",
+  "steps": [
+    { "append": "transcript.pre.jsonl" },
+    { "hook": "capture", "input": "ups-a.json", "stdout": "inject",
+      "context_includes": ["覆盖：合成稿甲一行", "覆盖：合成稿乙一行"],
+      "context_excludes": ["覆盖：合成稿丙一行"] },
+    { "hook": "extract", "input": "stop-a.json" },
+    { "hook": "capture", "input": "ups-b.json", "stdout": "inject",
+      "context_excludes": ["上一轮回复说", "判定"] },
+    { "hook": "extract", "input": "stop-b.json" },
+    { "copy": "ready-now-not.json", "to": "inbox/awt-loop.ready.json" },
+    { "hook": "capture", "input": "ups-c.json", "stdout": "inject",
+      "context_excludes": ["上一轮回复说", "判定"] }
+  ],
+  "state_file": { "claimProblem": null }
+}

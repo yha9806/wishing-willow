@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "source": "awt-loop",
+  "label": "写作循环 · 合成稿丙",
+  "sessions": { "another-session": { "role": "primary", "since": "an-earlier-prompt" } },
+  "always": "覆盖：合成稿丙一行",
+  "verdict": { "ready": false, "text": "合成稿丙：未就绪" },
+  "updatedAt": "2026-01-01T00:00:00Z"
+}
