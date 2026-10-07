@@ -1,0 +1,16 @@
+{
+  "note": "只看这一轮最后一次调用工具之后写的文字：中途「检查甲都做完了，接着跑乙」是进度，不说；最后一段说「可以投了」才说。最后一段分在两条消息里也一起读：载荷里的 last_assistant_message 只有最后那条「下一步」，说法在它前一条。",
+  "session_id": "test-sess-114",
+  "steps": [
+    { "append": "transcript.pre.jsonl" },
+    { "hook": "capture", "input": "ups-a.json", "stdout": "inject" },
+    { "append": "turn-a.jsonl" },
+    { "hook": "extract", "input": "stop-a.json" },
+    { "hook": "capture", "input": "ups-b.json", "stdout": "inject",
+      "context_excludes": ["上一轮回复说"] },
+    { "append": "turn-b.jsonl" },
+    { "hook": "extract", "input": "stop-b.json" },
+    { "hook": "capture", "input": "ups-c.json", "stdout": "inject",
+      "context_includes": ["【Wishing-Willow】上一轮回复说「可以投了」，但「写作循环 · 合成稿」的判定是「合成状态：未就绪」。"] }
+  ]
+}

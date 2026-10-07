@@ -1,0 +1,12 @@
+{
+  "note": "英文会话说的是英文那一句；历史来源会话也算属于这份留言。",
+  "session_id": "test-sess-112",
+  "steps": [
+    { "append": "transcript.pre.jsonl" },
+    { "hook": "capture", "input": "ups-a.json", "stdout": "inject" },
+    { "hook": "extract", "input": "stop-a.json" },
+    { "hook": "capture", "input": "ups-b.json", "stdout": "inject",
+      "context_includes": ["[Wishing-Willow] Your last reply said \"All done\", but \"Writing loop · synthetic draft\" says \"Synthetic state: not ready (stage: revising)\". Call it finished only as the source's verdict does; single checks passing is not finished."],
+      "context_excludes": ["上一轮回复说"] }
+  ]
+}

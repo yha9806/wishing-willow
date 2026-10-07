@@ -9,6 +9,11 @@
 //
 // 两个 UserPromptSubmit 钩子是并行跑的。写作循环第一次见到一个会话，这一轮它自己说，
 // 并在 since 里记下这一轮的 prompt_id；这里见到 since 等于这一轮就不再重复。
+//
+// 一份留言可以带这份稿件的判定（verdict，可选，2026-10-07）：顶层 "verdict": {"ready": true | false, "text": "<一行>"}，
+// 一份留言（一份稿件）一个。这里不转达它；结束钩子拿它对这一轮回复里的「做完了」（_claim.mjs）。
+// 没有这个键，一切照旧。有就必须是这个形状：ready 是布尔，text 是非空字符串（换行折成空格，别的键不管）；
+// 别的值（null 也算）是读不出，对属于它的会话每轮照实说，不当作没有、也不当作就绪。没有判定就别写这个键。
 
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -34,12 +39,15 @@ export function inboxText(sessionId, promptId, mode, lang = 'zh', said = null) {
   const next = { ...(said ?? {}) };
   const entries = [];
   const bad = [];
+  const badVerdict = [];
   for (const f of readdirSync(dir).filter((x) => x.endsWith('.json')).sort()) {
     let e;
     try { e = JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch { bad.push(f); continue; }
     if (!e || typeof e !== 'object' || !e.sessions || typeof e.sessions !== 'object') { bad.push(f); continue; }
     const s = e.sessions[sessionId];
     if (!s || typeof s !== 'object') continue;
+    // 判定读不出：留言别的部分照旧转达，只把这一处照实说出来。写作循环自己说的那一轮（下面 since）它也不知道，照样说。
+    if (verdictOf(e) === 'bad') badVerdict.push(f);
     const history = s.role === 'history';
     const info = history ? str(e.history) : str(e.always);
     const key = `${f}:${history ? 'history' : 'always'}`;
@@ -58,6 +66,9 @@ export function inboxText(sessionId, promptId, mode, lang = 'zh', said = null) {
   const out = entries.map((x) => x.text);
   if (bad.length) out.push(pick(lang, `【Wishing-Willow】留言读不出：${bad.join('、')}。这一轮没带上它们要说的话，不能当作没有。`,
     `[Wishing-Willow] Messages that can't be read: ${bad.join(', ')}. This turn doesn't carry what they say; don't take that as there being none.`));
+  if (badVerdict.length) out.push(pick(lang,
+    `【Wishing-Willow】留言里的判定读不出：${badVerdict.join('、')}（verdict 要写成 {"ready": true 或 false, "text": "<一行>"}）。不知道它判的是什么，不能当作已就绪。`,
+    `[Wishing-Willow] A verdict in a message can't be read: ${badVerdict.join(', ')} (verdict must be {"ready": true or false, "text": "<one line>"}). What it says is unknown; don't take it as ready.`));
   return { text: out.length ? out.join('\n\n') : null, said: Object.keys(next).length ? next : null };
 }
 
@@ -80,6 +91,36 @@ export function hookupNotes(sessionId, opts = {}) {
       id: t.id.trim(), title: str(t.title) ?? '', state: str(t.state) ?? '', closed: t.closed === true,
     }));
     out.push({ workspace: str(e.workspace) ?? f, todo });
+  }
+  return out;
+}
+
+/**
+ * 一份留言里的判定（见文件头）：没有 verdict 这个键是 null；形状对是 {ready, text}；别的（null、ready 不是布尔、text 为空……）是 'bad'。
+ */
+export function verdictOf(e) {
+  if (!e || typeof e !== 'object' || !Object.hasOwn(e, 'verdict')) return null;
+  const v = e.verdict;
+  const text = v && typeof v === 'object' && !Array.isArray(v) ? str(v.text) : null;
+  if (typeof v?.ready !== 'boolean' || !text) return 'bad';
+  return { ready: v.ready, text: text.replace(/\s*\n\s*/g, ' ') };
+}
+
+/**
+ * 本会话所属的各份留言（sessions 里有这个会话，改稿会话与历史来源会话都算）里读得出的判定：[{file, label, ready, text}]。
+ * 读不出的文件、没有判定的、判定读不出的都不在里面——后两种 inboxText 每轮照实说。
+ */
+export function sessionVerdicts(sessionId) {
+  const dir = join(stateDir(), 'inbox');
+  if (!existsSync(dir)) return [];
+  const out = [];
+  for (const f of readdirSync(dir).filter((x) => x.endsWith('.json')).sort()) {
+    let e;
+    try { e = JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch { continue; }
+    const s = e?.sessions?.[sessionId];
+    if (!s || typeof s !== 'object') continue;
+    const v = verdictOf(e);
+    if (v && v !== 'bad') out.push({ file: f, label: str(e.label) ?? str(e.source) ?? f, ...v });
   }
   return out;
 }

@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "source": "awt-loop",
+  "label": "写作循环 · 合成稿乙",
+  "sessions": { "test-sess-111": { "role": "primary", "since": "an-earlier-prompt" } },
+  "always": "覆盖：合成稿乙一行",
+  "updatedAt": "2026-01-01T00:00:00Z"
+}

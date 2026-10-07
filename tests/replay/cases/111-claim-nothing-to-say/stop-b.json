@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-111",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "prompt_id": "p-test-sess-111-b",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "合成第三节还差一张合成表。\n\n下一步：L1 补合成表——它挡着第三节"
+}

@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "source": "awt-loop",
+  "label": "写作循环 · 别的合成稿",
+  "sessions": { "another-session": { "role": "primary", "since": "an-earlier-prompt" } },
+  "always": "覆盖：别的合成稿一行",
+  "verdict": null,
+  "updatedAt": "2026-01-01T00:00:00Z"
+}

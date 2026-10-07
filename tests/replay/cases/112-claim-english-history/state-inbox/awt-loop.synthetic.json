@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "source": "awt-loop",
+  "label": "Writing loop · synthetic draft",
+  "sessions": { "test-sess-112": { "role": "history", "since": "an-earlier-prompt" } },
+  "always": "Coverage: synthetic line",
+  "history": "Synthetic draft (this conversation is one of its history sources): synthetic line",
+  "verdict": { "ready": false, "text": "Synthetic state: not ready (stage: revising)" },
+  "updatedAt": "2026-01-01T00:00:00Z"
+}

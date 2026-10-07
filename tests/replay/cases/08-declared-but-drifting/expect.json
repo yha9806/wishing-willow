@@ -45,6 +45,7 @@
     "listSwept",
     "listLinks",
     "inboxSaid",
-    "cardProblem"
+    "cardProblem",
+    "claimProblem"
   ]
 }

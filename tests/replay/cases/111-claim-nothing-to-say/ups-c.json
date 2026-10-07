@@ -1,0 +1,9 @@
+{
+  "session_id": "test-sess-111",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "prompt_id": "p-test-sess-111-c",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "那就先补合成表，补完给我看"
+}

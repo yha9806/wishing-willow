@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "source": "other",
+  "label": "合成来源乙",
+  "sessions": {
+    "test-sess-110": {
+      "role": "history",
+      "since": "an-earlier-prompt"
+    }
+  },
+  "history": "合成来源乙：历史一行",
+  "verdict": {
+    "ready": true,
+    "text": "合成来源乙：已就绪"
+  },
+  "updatedAt": "2026-01-01T00:00:00Z"
+}

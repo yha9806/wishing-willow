@@ -574,6 +574,34 @@ export function turnAssistantTexts(input, prev) {
   return turnAssistantRows(input, prev).flatMap((r) => r.texts);
 }
 
+/**
+ * 这一轮最后一段文字：最后一次调用工具之后助手写的全部文字，按顺序拼起来（一轮没调工具就是整条回复）。
+ * 「做完了」看的是这一段（_claim.mjs）：调工具之间的「装好了、甲跑完了」是进度，不是交差。
+ * 最后一段可能分在几条消息里，last_assistant_message 只有最后一条；读不到聊天记录、或这一段还没写进记录时才退回它。
+ */
+export function turnFinalText(input, prev) {
+  const path = input?.transcript_path;
+  if (typeof path === 'string' && path && typeof prev?.transcriptOffset === 'number') {
+    const text = turnSlice(path, prev.transcriptOffset);
+    if (text) {
+      let tail = [];
+      for (const line of text.split('\n')) {
+        if (!line.trim()) continue;
+        let row;
+        try { row = JSON.parse(line); } catch { continue; }
+        if (row?.type !== 'assistant' || row.isSidechain === true) continue;
+        const c = row.message?.content;
+        for (const b of typeof c === 'string' ? [{ type: 'text', text: c }] : Array.isArray(c) ? c : []) {
+          if (b?.type === 'tool_use') tail = [];
+          else if (b?.type === 'text' && typeof b.text === 'string') tail.push(b.text);
+        }
+      }
+      if (tail.length) return tail.join('\n');
+    }
+  }
+  return typeof input?.last_assistant_message === 'string' ? input.last_assistant_message : '';
+}
+
 // 压缩会把旧消息原样重写进聊天记录末尾。2026-09-24 实测：一轮中途自动压缩之后，3,836 行旧消息带着原来的 uuid
 // 和时间戳（最新的也比这一轮早三小时）追加在本轮偏移之后；结束钩子把它们当成这一轮，旧消息里 31 项清单操作又执行了一遍。
 // 从偏移往后读到的因此不全是这一轮：时间比这一段第一行早 COPY_SKEW_MS 以上的不算，同一个 uuid 只算第一次。
