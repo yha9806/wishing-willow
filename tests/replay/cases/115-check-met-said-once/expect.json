@@ -1,0 +1,17 @@
+{
+  "note": "做完判据（ops-private spec 2026-10-07 D5）：核查进程写下判据已满足，下一轮开头点名一次，完整列出时项后标「已满足」；再下一轮不再点名。核查进程的结果由 copy 放进状态目录（它本身在 tests/check 里测），WILLOW_CHECK_SPAWN=0 让 listctl 不起真的核查进程。",
+  "session_id": "test-sess-115",
+  "env": { "WILLOW_CHECK_SPAWN": "0" },
+  "steps": [
+    { "hook": "capture", "input": "ups-a.json" },
+    { "hook": "listctl", "input": "cmd-add.json", "stdout_includes": ["新增 L1"] },
+    { "copy": "checks.json", "to": "test-sess-115.checks" },
+    { "hook": "capture", "input": "ups-b.json", "stdout": "inject",
+      "context_includes": [
+        "L1 的判据已经满足（synth/repo#12 已合并",
+        "L1 在做：合成事项甲（判据：合并 synth/repo#12，已满足）"
+      ] },
+    { "hook": "capture", "input": "ups-c.json", "stdout": "inject",
+      "context_excludes": ["L1 的判据已经满足"] }
+  ]
+}

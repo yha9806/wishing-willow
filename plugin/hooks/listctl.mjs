@@ -15,6 +15,7 @@ import { parseOps, applyOps, readList, appendSnapshot, inlineLine, hookupCheck }
 import { hookupNotes } from './_inbox.mjs';
 import { sessionLang, pick } from './_lang.mjs';
 import { retryInherit, inheritedLine } from './_inherit.mjs';
+import { readChecks, startChecker } from './_check.mjs';
 
 // 回话的语言：会话记下的；还没读到会话时按系统语言。
 let lang = sessionLang(null);
@@ -95,11 +96,14 @@ if (cur?.error) fail(T(`清单文件读不出（${cur.error}），没写——�
 
 const turn = { turnId: prev.turnId ?? null, turnIndex: prev.turnIndex ?? null };
 // 开了对号的稿件：「属于」「不挂」写的编号对它们核（spec「稿件待做挂上对话清单」D2）。
-const r = applyOps(cur?.items, ops, turn, lang, { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked });
+const at = new Date().toISOString();
+const r = applyOps(cur?.items, ops, turn, lang, { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked, checks: readChecks(sessionId), now: at });
 appendSnapshot(sessionId, {
-  at: new Date().toISOString(), ...turn, ...r, rows: [], via: by === 'author' ? 'author' : 'command', lines: known.map((o) => o.raw),
+  at, ...turn, ...r, rows: [], via: by === 'author' ? 'author' : 'command', lines: known.map((o) => o.raw),
 });
 const open = r.items.filter((x) => x.status !== '做完' && x.status !== '撤掉');
+// 记了判据就起核查进程，结果在下一轮开头之前多半已经写好（_check.mjs）。
+try { if (open.some((x) => x.check)) startChecker(sessionId, open); } catch { /* 不核 */ }
 process.stdout.write([
   inheritedFrom ? inheritedLine(inheritedFrom, lang) : null,
   r.changes.length ? T(`记下了：${r.changes.join('、')}`, `Recorded: ${r.changes.join(', ')}`) : T('没有改动', 'No change'),

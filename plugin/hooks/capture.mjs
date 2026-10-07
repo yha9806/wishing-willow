@@ -16,6 +16,7 @@ import { listBlock, listRules, commandRule, authorChanges, idleDue, idleText, op
 import { inheritList, inheritPending, inheritedLine } from './_inherit.mjs';
 import { cardRule } from './_card.mjs';
 import { linkNews, selfLine } from './_links.mjs';
+import { checkNews, readChecks } from './_check.mjs';
 import { promptLang, sessionLang, pick } from './_lang.mjs';
 
 /**
@@ -148,6 +149,7 @@ try {
   let listShown = prev?.listShown ?? null;
   let listSwept = prev?.listSwept ?? null;   // {编号: 上次问的轮次}：提交后核对与挂久点名共用
   let listLinks = prev?.listLinks ?? null;   // {编号: 上次说的结论}：挂在别的对话编号上的项（_links.mjs）
+  let listChecks = prev?.listChecks ?? null; // {编号: 上次点名的判据}：做完判据满足了只点一次（_check.mjs）
   // 续接成新会话号的对话，清单还在前身名下：查到有定论为止，没有自己的清单才继承（_inherit.mjs）。
   let listInherit = prev?.listInherit ?? null;
   // 「读不到记录」不是最终结论：续接时第一次 capture 可能比 Claude Code 抄旧消息还早
@@ -185,6 +187,12 @@ try {
     if (list && Array.isArray(r.items)) {
       const news = linkNews(r.items, sessionId, listLinks, lang);
       listLinks = news.said;
+      if (news.lines.length) list += `\n${news.lines.join('\n')}`;
+    }
+    // 做完判据满足、项还开着：点名一次（_check.mjs checkNews）。只读核查进程写下的结果，这里不核——这个钩子挡着回车。
+    if (list && Array.isArray(r.items) && r.items.some((x) => x.check)) {
+      const news = checkNews(r.items, readChecks(sessionId), listChecks, lang);
+      listChecks = news.said;
       if (news.lines.length) list += `\n${news.lines.join('\n')}`;
     }
     // 作者在 lintel 面板里做的改动（spec 清单实时 C）：上一轮开始以来的都说一遍，模型不用从清单里自己找。
@@ -250,6 +258,7 @@ try {
     listSweep: null,       // 上一轮提交过时请模型逐条核的等你，extract 写、下一轮 capture 说一次（_list.mjs sweepDue）
     listSwept,             // {编号: 上次问的轮次}：提交后核对与挂久点名共用，问过的几轮内不再问
     listLinks,             // {编号: 上次说的结论}：挂在别的对话编号上的项，同一结论只说一次（_links.mjs）
+    listChecks,            // {编号: 上次点名的判据}：做完判据满足了，同一项同一句只点一次（_check.mjs）
     listAuthorSeen: now,   // 这一刻之前作者在面板里的改动都已经说过；下一轮只说这之后的（spec 清单实时 C）
     cardProblem: null,     // 上一轮计划卡的形状问题，extract 写、这一轮 capture 说一次（_card.mjs）
     claimProblem: null,    // 上一轮回复说做完了、留言判的是没就绪，extract 写、这一轮 capture 说一次（_claim.mjs）
