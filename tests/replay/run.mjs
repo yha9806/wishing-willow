@@ -42,7 +42,9 @@ function runHook(script, stdinPath, stateDir, extraEnv) {
     input,
     // 系统语言钉成中文（插件没从原话里定出语言时的退路），WILLOW_LANG 清空：用例结果不随跑测试那台机器的语言变。
     // 要测英文系统的用例，在 expect.env 里自己写 LANG。
-    env: { ...process.env, LANG: 'zh_CN.UTF-8', LC_ALL: '', LC_MESSAGES: '', WILLOW_LANG: '', WILLOW_STATE_DIR: stateDir, ...(extraEnv ?? {}) },
+    // 回复末尾的「清单变化：」钉成写清单（extract.mjs 的开关，对照期默认只写影子）：这些用例测的是清单本身怎么变，
+    // 改回写清单那条路也得一直有人测着。测默认值的用例在 expect.env 里把它清空。
+    env: { ...process.env, LANG: 'zh_CN.UTF-8', LC_ALL: '', LC_MESSAGES: '', WILLOW_LANG: '', WILLOW_REPLY_PATH: 'list', WILLOW_STATE_DIR: stateDir, ...(extraEnv ?? {}) },
     encoding: 'utf8',
     timeout: 10_000,
   });
@@ -77,7 +79,7 @@ for (const name of caseNames) {
   // state_file 的未知键（14-tag-line 假绿）和这里的 log_* 。
   const TOP_KEYS = new Set([
     'note', 'env', 'transcript', 'transcript_two_phase', 'runtime_fields_exempt',
-    'capture', 'extract', 'state_file', 'state_keys', 'log_lines', 'log_last', 'list_items', 'steps', 'session_id',
+    'capture', 'extract', 'state_file', 'state_keys', 'log_lines', 'log_last', 'list_items', 'shadow_items', 'shadow_lines', 'steps', 'session_id',
   ]);
   for (const k of Object.keys(expect)) {
     if (!TOP_KEYS.has(k)) check(name, 'expect.keys', false, `runner 不认识期望键 ${k}`);
@@ -312,26 +314,34 @@ for (const name of caseNames) {
     }
     // ── 清单最后一份快照 ───────────────────────────────────────────────────
     // list_items: {"L2": {"status": "以后", "note": null}, "L3": null}——null 表示这一项不该存在；字段值 null 表示这个键不该有值。
-    if (expect.list_items !== undefined) {
+    // shadow_items 同样的写法，查的是影子文件（回复末尾解析出、没写进清单的那份，extract.mjs 的开关）；shadow_lines 是影子里有几份快照。
+    const snapItems = (file, label, wantItems, wantLines) => {
       const sid = expect.session_id;
-      const p = sid ? join(stateDir, `${sid}.list.jsonl`) : null;
+      const p = sid ? join(stateDir, `${sid}.${file}`) : null;
       const lines = p && existsSync(p) ? readFileSync(p, 'utf8').split('\n').filter((l) => l.trim()) : [];
+      let ok = true;
+      if (wantLines !== undefined) ok = check(name, `${label}.lines`, lines.length === wantLines, `期望 ${wantLines} 份，得到 ${lines.length}`) && ok;
+      if (wantItems === undefined) return ok;
       let snap = null;
       try { snap = JSON.parse(lines[lines.length - 1]); } catch { /* 下面报 */ }
-      let ok = check(name, 'list.last', !!snap && Array.isArray(snap.items), '清单文件没有合法的最后一份快照');
+      ok = check(name, `${label}.last`, !!snap && Array.isArray(snap.items), `${file} 没有合法的最后一份快照`) && ok;
       if (snap && Array.isArray(snap.items)) {
-        for (const [id, want] of Object.entries(expect.list_items)) {
+        for (const [id, want] of Object.entries(wantItems)) {
           const it = snap.items.find((x) => x.id === id) ?? null;
-          if (want === null) { ok = check(name, `list.${id}`, it === null, `${id} 不该存在，却有：${JSON.stringify(it)}`) && ok; continue; }
-          ok = check(name, `list.${id}`, it !== null, `${id} 不存在`) && ok;
+          if (want === null) { ok = check(name, `${label}.${id}`, it === null, `${id} 不该存在，却有：${JSON.stringify(it)}`) && ok; continue; }
+          ok = check(name, `${label}.${id}`, it !== null, `${id} 不存在`) && ok;
           if (!it) continue;
           for (const [k, v] of Object.entries(want)) {
             const got = it[k] ?? null;
-            ok = check(name, `list.${id}.${k}`, JSON.stringify(got) === JSON.stringify(v), `期望 ${JSON.stringify(v)}，得到 ${JSON.stringify(got)}`) && ok;
+            ok = check(name, `${label}.${id}.${k}`, JSON.stringify(got) === JSON.stringify(v), `期望 ${JSON.stringify(v)}，得到 ${JSON.stringify(got)}`) && ok;
           }
         }
       }
-      marks.push(`list:${ok ? 'ok' : 'FAIL'}`);
+      return ok;
+    };
+    if (expect.list_items !== undefined) marks.push(`list:${snapItems('list.jsonl', 'list', expect.list_items) ? 'ok' : 'FAIL'}`);
+    if (expect.shadow_items !== undefined || expect.shadow_lines !== undefined) {
+      marks.push(`shadow:${snapItems('shadow.jsonl', 'shadow', expect.shadow_items, expect.shadow_lines) ? 'ok' : 'FAIL'}`);
     }
   } finally {
     rmSync(stateDir, { recursive: true, force: true });

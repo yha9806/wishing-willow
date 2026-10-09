@@ -1,0 +1,2 @@
+{"type": "user", "uuid": "117-u1", "isSidechain": false, "timestamp": "2026-10-09T10:00:00.000Z", "message": {"role": "user", "content": "把合成事项庚做完"}}
+{"type": "assistant", "uuid": "117-a1", "isSidechain": false, "timestamp": "2026-10-09T10:00:05.000Z", "message": {"role": "assistant", "content": [{"type": "text", "text": "你批准的：做合成事项庚\n我读成了：做合成事项庚\n我补上的：无\n标签：做合成事项\n\n先开个头。"}]}}

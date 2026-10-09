@@ -1,0 +1,27 @@
+{
+  "note": "清单对照（ops-private spec 2026-10-09 D8）：回复末尾「清单变化：」照旧解析，算出本来会写的快照，只写进 <会话>.shadow.jsonl，清单本身不变；命令照常写清单。回复里一字不差复述命令的那一行照旧跳过。结束钩子在同一轮跑第二次（别的 Stop 钩子把这一轮拦回去），影子里也只记一份。env 把开关清空，用的是代码里的默认值：默认改回写清单，这个用例就该变红。",
+  "session_id": "test-sess-117",
+  "env": { "WILLOW_REPLY_PATH": "" },
+  "steps": [
+    { "append": "transcript.pre.jsonl" },
+    { "hook": "capture", "input": "ups-a.json" },
+    { "append": "transcript.turn-a1.jsonl" },
+    { "hook": "listctl", "input": "cmd-add.json", "stdout_includes": ["记下了：新增 L1"] },
+    { "append": "transcript.turn-a2.jsonl" },
+    { "hook": "extract", "input": "stop-a.json" },
+    { "hook": "extract", "input": "stop-a.json" },
+    { "hook": "capture", "input": "ups-b.json", "stdout": "inject",
+      "context_includes": ["L1 在做：合成事项庚", "开着 1 项"],
+      "context_excludes": ["合成事项辛", "开着 2 项"] }
+  ],
+  "list_items": {
+    "L1": { "status": "在做", "text": "合成事项庚" },
+    "L2": null
+  },
+  "shadow_lines": 1,
+  "shadow_items": {
+    "L1": { "status": "在做", "text": "合成事项庚" },
+    "L2": { "status": "等你", "text": "合成事项辛" },
+    "L3": null
+  }
+}
