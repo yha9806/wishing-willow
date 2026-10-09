@@ -8,13 +8,18 @@
 import {
   SCHEMA, readStdin, parseInput, readState, writeState, appendTurnLog, pruneState, findDeclaration, findNext, touchedPaths, mergeTouched, quietExit,
   turnAssistantRows, turnLastAt, turnFirstAt, turnCommits, locateTurnStart, turnFinalText } from './_willow.mjs';
-import { parseOps, applyOps, readList, appendSnapshot, appliedRows, commandedLines, normLine, nextProblem, heldProblem, sweepDue, sweepText, openAsked } from './_list.mjs';
+import { parseOps, applyOps, readList, appendSnapshot, appendShadow, appliedRows, commandedLines, normLine, nextProblem, heldProblem, sweepDue, sweepText, openAsked } from './_list.mjs';
 import { sessionLang } from './_lang.mjs';
 import { hookupNotes, sessionVerdicts } from './_inbox.mjs';
 import { cardProblem } from './_card.mjs';
 import { claimProblem } from './_claim.mjs';
 import { retryInherit } from './_inherit.mjs';
 import { readChecks, startChecker, recheckForDone } from './_check.mjs';
+
+// 清单对照（ops-private spec 2026-10-09 D8）：回复末尾的「清单变化：」照旧解析，算出本来会写的那份快照，
+// 只写进 <会话>.shadow.jsonl，不写清单；清单只认命令（listctl.mjs）。数影子里有、同一轮命令没记的，就是关掉这条路会漏的。
+// 改回写清单：把下面的 'shadow' 改成 'list'。环境变量只给测试用（tests/replay 钉成 list）。
+const REPLY_PATH = process.env.WILLOW_REPLY_PATH || 'shadow';
 
 try {
   const input = parseInput(readStdin());
@@ -57,7 +62,8 @@ try {
   let held = null;
   try {
     // 已经执行过的消息不再执行：压缩会把它们原样重写进这一轮后面（见 appliedRows、turnSlice）。
-    const done = appliedRows(sessionId);
+    const shadow = REPLY_PATH === 'shadow';
+    const done = appliedRows(sessionId, { shadow });
     const fresh = turnAssistantRows(input, prev).filter((r) => r.uuid === null || !done.has(r.uuid));
     // 这一轮已经用命令记过的行（listctl.mjs），回复末尾又写了一遍的，不再执行。
     const commanded = commandedLines(sessionId, prev?.turnId ?? null);
@@ -73,9 +79,10 @@ try {
         const rows = fresh.filter((r) => r.uuid !== null && parseOps(r.texts).length).map((r) => r.uuid);
         // 写做完时只重核本机的判据；一轮结束的钩子不同步调 gh，联网的确认不了就不报（L11）。
         const checks = readChecks(sessionId);
-        appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn, sessionLang(prev),
+        const snap = { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn, sessionLang(prev),
           { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked, checks, now: endedAt,
-            recheck: (it) => recheckForDone(it, checks, { net: false }) }), rows });
+            recheck: (it) => recheckForDone(it, checks, { net: false }) }), rows };
+        if (shadow) appendShadow(sessionId, { ...snap, shadow: true }); else appendSnapshot(sessionId, snap);
       }
     }
   } catch { /* 见上 */ }

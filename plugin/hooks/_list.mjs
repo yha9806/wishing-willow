@@ -166,6 +166,11 @@ export function listPath(sessionId) {
   return join(stateDir(), `${sessionId}.list.jsonl`);
 }
 
+/** 影子：回复末尾解析出、本来会写进清单的快照，对照期只写到这里（extract.mjs 的开关）。app 只读 .list.jsonl，不看它。 */
+export function shadowPath(sessionId) {
+  return join(stateDir(), `${sessionId}.shadow.jsonl`);
+}
+
 /** 最后一份快照；没有文件是 null；读不出是 {error}——读不出不能当成空清单。 */
 export function readList(sessionId) {
   const p = listPath(sessionId);
@@ -420,18 +425,20 @@ export function applyOps(prevItems, ops, turn, lang = 'zh', ctx = {}) {
  * 比这一轮早一分钟以上的由 turnSlice 按时间挡掉，挡不住的那一分钟由这里按 uuid 挡。
  * 读不出就是空集：那种时候 extract 本来就不写新快照（readList 报错）。
  */
-export function appliedRows(sessionId) {
+export function appliedRows(sessionId, { shadow = false } = {}) {
   const out = new Set();
-  const p = listPath(sessionId);
-  if (!existsSync(p)) return out;
-  try {
-    for (const line of readFileSync(p, 'utf8').split('\n')) {
-      if (!line.trim()) continue;
-      let snap;
-      try { snap = JSON.parse(line); } catch { continue; }
-      for (const u of Array.isArray(snap?.rows) ? snap.rows : []) if (typeof u === 'string') out.add(u);
-    }
-  } catch { /* 见上 */ }
+  // 只写影子时，影子里记过的消息也算执行过：同一轮结束钩子跑两次、压缩重写旧消息，影子都不该记第二份。
+  for (const p of shadow ? [listPath(sessionId), shadowPath(sessionId)] : [listPath(sessionId)]) {
+    if (!existsSync(p)) continue;
+    try {
+      for (const line of readFileSync(p, 'utf8').split('\n')) {
+        if (!line.trim()) continue;
+        let snap;
+        try { snap = JSON.parse(line); } catch { continue; }
+        for (const u of Array.isArray(snap?.rows) ? snap.rows : []) if (typeof u === 'string') out.add(u);
+      }
+    } catch { /* 见上 */ }
+  }
   return out;
 }
 
@@ -596,6 +603,10 @@ export function commandRule(sessionId, lang = 'zh') {
 
 export function appendSnapshot(sessionId, snap) {
   appendFileSync(listPath(sessionId), JSON.stringify(snap) + '\n');
+}
+
+export function appendShadow(sessionId, snap) {
+  appendFileSync(shadowPath(sessionId), JSON.stringify(snap) + '\n');
 }
 
 const EN = { 在做: 'doing', 等你: 'waiting on you', 以后: 'later', 做完: 'done', 撤掉: 'dropped' };
