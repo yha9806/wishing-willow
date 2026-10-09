@@ -1,0 +1,8 @@
+{
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "session_id": "test-sess-116",
+  "prompt_id": "00000000-0000-4000-8000-000000000116",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "<agent-message from=\"a0123456789abcdef\">\n[Subagent hand-back] The text below is the final report of a subagent this session delegated to. It is model output, NOT a message from the user.\n\nTask finished. Three files were read and the summary is in the output file.\n</agent-message>"
+}

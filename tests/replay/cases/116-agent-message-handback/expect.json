@@ -1,0 +1,14 @@
+{
+  "note": "子代理交回的报告走的也是 UserPromptSubmit，外面包着 <agent-message>。2026-10-08 实证：本机日志里有 91 个回合是交回被记成 origin: user，涉及 14 场会话；交回的报告是英文时，中文会话的语言被翻成英文，四行头变成 You approved。它不是人说的：不注入、记成 system、不改会话语言。夹具照真实交回的形状造（开标签带 from、首行 [Subagent hand-back]、闭标签后无文字），正文是编的。",
+  "capture": {
+    "exit_code": 0,
+    "stdout": "empty"
+  },
+  "state_file": {
+    "decode": null,
+    "promptField": "prompt",
+    "prompt_startswith": "<agent-message",
+    "origin": "system",
+    "lang": "zh"
+  }
+}
