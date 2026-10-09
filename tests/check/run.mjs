@@ -150,10 +150,36 @@ test('done-stamps-times', 'new', () => {
   const x = r.items[0];
   return eq([x.checkMetAt, x.checkSeenAt, x.doneAt, r.problems], ['2026-10-07T15:53:14Z', '2026-10-07T16:00:00.000Z', '2026-10-07T17:00:00.000Z', []], '做完');
 });
-// D8：写了做完、判据核到未满足：照记做完，报问题。
-test('done-while-unmet', 'new', () => {
-  const r = list.applyOps([item()], list.parseOps(['清单变化：\nL1 做完：合成证据']), turn, 'zh', { checks: unmetCache, now: '2026-10-07T17:00:00.000Z' });
+// D8：写了做完、判据核到未满足：照记做完，报问题。缓存里的「未满足」是写做完之前核的，先当场再核一次（L11）。
+const recheckForDone = mod.recheckForDone ?? missing('recheckForDone');
+const unmetCache13 = { v: 1, entries: { 'merged:synth/repo#13': { state: 'unmet', checkedAt: '2026-10-07T16:00:00.000Z', metAt: null, seenAt: null, detail: 'open' } } };
+const item13 = () => ({ ...item(), check: '合并 synth/repo#13' });
+test('done-while-unmet', 'guard', () => {
+  const r = list.applyOps([item13()], list.parseOps(['清单变化：\nL1 做完：合成证据']), turn, 'zh',
+    { checks: unmetCache13, now: '2026-10-07T17:00:00.000Z', recheck: (it) => recheckForDone(it, unmetCache13, { gh: GH, net: true }) });
   return r.items[0].status === '做完' && r.problems.some((p) => p.includes('L1') && p.includes('未满足')) ? null : `应照记并报问题：${JSON.stringify(r)}`;
+});
+// 10-08 实见：推完、合完紧接着写做完，缓存还是推送前核的「未满足」，两次误报。重核后满足，不报，照 D6 记时间。
+test('done-stale-unmet-rechecked', 'new', () => {
+  const r = list.applyOps([item()], list.parseOps(['清单变化：\nL1 做完：合成证据']), turn, 'zh',
+    { checks: unmetCache, now: '2026-10-07T17:00:00.000Z', recheck: (it) => recheckForDone(it, unmetCache, { gh: GH, net: true }) });
+  return eq([r.problems, r.items[0].checkMetAt], [[], '2026-10-07T15:53:14Z'], '重核后满足');
+});
+// 一轮结束的钩子不同步调 gh：联网的那几条确认不了，不报，也不调 gh。
+test('done-stale-unmet-hook-no-net', 'new', () => {
+  const before = calls().length;
+  const r = list.applyOps([item()], list.parseOps(['清单变化：\nL1 做完：合成证据']), turn, 'zh',
+    { checks: unmetCache, now: '2026-10-07T17:00:00.000Z', recheck: (it) => recheckForDone(it, unmetCache, { gh: GH, net: false }) });
+  return eq([r.problems, calls().length - before], [[], 0], '钩子里');
+});
+// 本机的判据便宜，钩子里也当场再核：文件写做完前刚出现，不报。
+test('done-stale-unmet-file', 'new', () => {
+  const f = join(STATE, 'synth-late.md');
+  writeFileSync(f, '合成');
+  const c = { v: 1, entries: { [`file:${f}`]: { state: 'unmet', checkedAt: '2026-10-07T16:00:00.000Z', metAt: null, seenAt: null, detail: 'missing' } } };
+  const r = list.applyOps([{ ...item(), check: `文件 ${f}` }], list.parseOps(['清单变化：\nL1 做完：合成证据']), turn, 'zh',
+    { checks: c, now: '2026-10-07T17:00:00.000Z', recheck: (it) => recheckForDone(it, c, { net: false }) });
+  return eq(r.problems, [], '文件已出现');
 });
 test('done-without-check', 'guard', () => {
   const r = list.applyOps([{ id: 'L1', text: '合成', status: '在做', wait: null, touched: 1 }], list.parseOps(['清单变化：\nL1 做完：合成证据']), turn, 'zh', { checks: unmetCache });
@@ -297,6 +323,18 @@ await testAsync('spawn-detached', 'new', async () => {
   if (!existsSync(checksPath(sid))) return '5 秒内没写出结果';
   const c = JSON.parse(readFileSync(checksPath(sid), 'utf8'));
   return eq(c.entries['merged:synth/repo#12']?.state, 'met', '脱离的核查进程写下的');
+});
+
+// listctl 端到端：缓存里是推送前核的「未满足」，PR 其实已合；写做完不该报（L11 原样复现）。
+test('listctl-done-after-merge', 'new', () => {
+  const sid = 'test-sess-done';
+  writeFileSync(join(STATE, `${sid}.json`), JSON.stringify({ schema: 19, sessionId: sid, pid: process.pid, turnIndex: 3, turnId: 't3' }));
+  writeFileSync(join(STATE, `${sid}.list.jsonl`), JSON.stringify({ at: '2026-10-07T16:00:00.000Z', turnId: 't3', turnIndex: 3, items: [
+    { id: 'L1', text: '合成事项甲', status: '等你', wait: null, touched: 3, check: '合并 synth/repo#12' }], changes: [], problems: [], rows: [] }) + '\n');
+  writeFileSync(checksPath(sid), JSON.stringify(unmetCache));
+  const r = spawnSync(process.execPath, [join(HOOKS, 'listctl.mjs'), '--session', sid, 'L1 做完：合成证据'],
+    { env: { ...env, WILLOW_CHECK_SPAWN: '0' }, encoding: 'utf8' });
+  return r.status === 0 && !`${r.stdout}${r.stderr}`.includes('未满足') ? null : `退出码 ${r.status}：${r.stdout}${r.stderr}`;
 });
 
 console.log('\n  check · 列清单\n');

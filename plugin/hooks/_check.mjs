@@ -177,6 +177,25 @@ export function runAtom(atom, opts = {}) {
 }
 
 /**
+ * 写做完时重核没满足的那几条（D8）。缓存里的「未满足」是写做完之前核的，推送、合并多半就发生在这中间
+ * （10-08 实见：推完、合完紧接着写做完，两次都报「判据核到未满足」）。返回重核后的 itemCheck。
+ * net 为 false 时不调 gh（一轮结束的钩子不同步联网）：联网的那几条确认不了，返回 stale，不报。
+ * 不写缓存：项一关，它的条目下次核查时就删掉了。
+ */
+export function recheckForDone(item, cache, opts = {}) {
+  const s = itemCheck(item, cache);
+  if (s.state !== 'unmet') return s;
+  const entries = { ...cache?.entries };
+  for (const a of s.atoms) {
+    if (entries[a.key]?.state !== 'unmet') continue;
+    if (NET.has(a.kind) && !opts.net) return { ...s, state: 'stale' };
+    const e = runAtom(a, opts);
+    entries[a.key] = { ...e, seenAt: e.state === 'met' ? e.checkedAt : null };
+  }
+  return itemCheck(item, { ...cache, entries });
+}
+
+/**
  * 起一个脱离的核查进程，自己立刻返回（一轮结束的钩子、listctl 用）。没有该核的、锁着、或 WILLOW_CHECK_SPAWN=0 时不起。
  * 返回起没起。
  */

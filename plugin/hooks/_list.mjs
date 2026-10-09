@@ -389,11 +389,13 @@ export function applyOps(prevItems, ops, turn, lang = 'zh', ctx = {}) {
     if (o.op === 'done' && !o.note) problems.push(T(`${o.id} 做完没附证据`, `${o.id} done without evidence`));
     if (o.op === 'done' && it.check && !CLOSED.has(it.status)) {
       // 带判据的项写做完：记两个时间（现实里成立、第一次核到），和写做完的这一刻；判据核到没满足就说一次，照记做完（D6、D8）。
-      const s = ctx?.checks ? itemCheck(it, ctx.checks) : null;
+      // 缓存里的「未满足」早于写做完，先交给调用方重核（recheckForDone）；没给重核的，确认不了，不报（L11）。
+      let s = ctx?.checks ? itemCheck(it, ctx.checks) : null;
+      if (s?.state === 'unmet') s = typeof ctx.recheck === 'function' ? ctx.recheck(it) : { state: 'stale' };
       if (s?.state === 'met') { it.checkMetAt = s.metAt; it.checkSeenAt = s.seenAt; }
       if (s?.state === 'unmet') {
-        problems.push(T(`${o.id} 写了做完，但判据核到未满足（${it.check}）：核一下证据，或改判据`,
-          `${o.id} was marked done but its check does not hold yet (${it.check}): recheck the evidence or change the check`));
+        problems.push(T(`${o.id} 写了做完，但刚核过判据仍未满足（${it.check}）：核一下证据，或改判据`,
+          `${o.id} was marked done but a fresh check says it does not hold yet (${it.check}): recheck the evidence or change the check`));
       }
       if (ctx?.now) it.doneAt = ctx.now;
     }

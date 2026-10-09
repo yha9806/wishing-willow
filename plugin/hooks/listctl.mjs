@@ -15,7 +15,7 @@ import { parseOps, applyOps, readList, appendSnapshot, inlineLine, hookupCheck }
 import { hookupNotes } from './_inbox.mjs';
 import { sessionLang, pick } from './_lang.mjs';
 import { retryInherit, inheritedLine } from './_inherit.mjs';
-import { readChecks, startChecker } from './_check.mjs';
+import { readChecks, startChecker, recheckForDone } from './_check.mjs';
 
 // 回话的语言：会话记下的；还没读到会话时按系统语言。
 let lang = sessionLang(null);
@@ -97,7 +97,10 @@ if (cur?.error) fail(T(`清单文件读不出（${cur.error}），没写——�
 const turn = { turnId: prev.turnId ?? null, turnIndex: prev.turnIndex ?? null };
 // 开了对号的稿件：「属于」「不挂」写的编号对它们核（spec「稿件待做挂上对话清单」D2）。
 const at = new Date().toISOString();
-const r = applyOps(cur?.items, ops, turn, lang, { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked, checks: readChecks(sessionId), now: at });
+// 写做完时缓存里还是「未满足」的，当场再核（这是模型跑的命令，可以等 gh）：推完、合完紧接着写做完是常态（L11）。
+const checks = readChecks(sessionId);
+const r = applyOps(cur?.items, ops, turn, lang, { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked, checks, now: at,
+  recheck: (it) => recheckForDone(it, checks, { net: true }) });
 appendSnapshot(sessionId, {
   at, ...turn, ...r, rows: [], via: by === 'author' ? 'author' : 'command', lines: known.map((o) => o.raw),
 });
