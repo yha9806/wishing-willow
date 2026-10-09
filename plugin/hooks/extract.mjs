@@ -14,7 +14,7 @@ import { hookupNotes, sessionVerdicts } from './_inbox.mjs';
 import { cardProblem } from './_card.mjs';
 import { claimProblem } from './_claim.mjs';
 import { retryInherit } from './_inherit.mjs';
-import { readChecks, startChecker } from './_check.mjs';
+import { readChecks, startChecker, recheckForDone } from './_check.mjs';
 
 try {
   const input = parseInput(readStdin());
@@ -71,8 +71,11 @@ try {
       if (!cur?.error) {
         const turn = { turnId: prev?.turnId ?? null, turnIndex: prev?.turnIndex ?? null };
         const rows = fresh.filter((r) => r.uuid !== null && parseOps(r.texts).length).map((r) => r.uuid);
+        // 写做完时只重核本机的判据；一轮结束的钩子不同步调 gh，联网的确认不了就不报（L11）。
+        const checks = readChecks(sessionId);
         appendSnapshot(sessionId, { at: endedAt, ...turn, ...applyOps(cur?.items, ops, turn, sessionLang(prev),
-          { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked, checks: readChecks(sessionId), now: endedAt }), rows });
+          { manuscripts: hookupNotes(sessionId), unhooked: cur?.unhooked, checks, now: endedAt,
+            recheck: (it) => recheckForDone(it, checks, { net: false }) }), rows });
       }
     }
   } catch { /* 见上 */ }
