@@ -558,15 +558,18 @@ export function turnLastAt(input, prev) {
   const text = turnSlice(path, prev.transcriptOffset);
   if (!text) return null;
   let last = null;
+  let answered = false;
   for (const line of text.split('\n')) {
     if (!line.trim()) continue;
     let row;
     try { row = JSON.parse(line); } catch { continue; }
     if (row?.type !== 'assistant' && row?.type !== 'user') continue;
+    if (row.type === 'assistant') answered = true;
     const t = Date.parse(row.timestamp ?? '');
     if (Number.isFinite(t) && (last === null || t > last)) last = t;
   }
-  return last;
+  // 一条助手消息都没有：回答还没写进聊天记录，最后一行是提问本身，可能比 capture 记下的开始还早（118）。当作取不到。
+  return answered ? last : null;
 }
 
 /** 这一轮助手写的全部文字，按顺序。 */

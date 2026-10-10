@@ -36,10 +36,13 @@ struct TurnLogEntry: Sendable, Equatable, Identifiable {
     var unverifiable: Bool { !declared && interrupted != true && (midTurn == true || supersededAt != nil) }
 
     /// How long the turn took. Shown because a long turn that drifted is the
-    /// expensive kind.
+    /// expensive kind. Never negative: the two times come from different clocks
+    /// (the prompt hook and the transcript), and a row that ended "before" it
+    /// started makes lintel reject the whole activity (10-09, a slash command
+    /// logged at −0.19 s).
     var duration: TimeInterval? {
         guard let at, let endedAt else { return nil }
-        return endedAt.timeIntervalSince(at)
+        return max(0, endedAt.timeIntervalSince(at))
     }
 }
 

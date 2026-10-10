@@ -1,0 +1,2 @@
+{"parentUuid":"118-a0","type":"user","isSidechain":false,"uuid":"118-u1","sessionId":"test-sess-118","timestamp":"<NOW-5s>","message":{"role":"user","content":"<command-name>/合成命令</command-name>"},"promptId":"p118a"}
+{"parentUuid":"118-u1","type":"user","isSidechain":false,"isMeta":true,"uuid":"118-u2","sessionId":"test-sess-118","timestamp":"<NOW-5s>","message":{"role":"user","content":[{"type":"text","text":"合成命令展开后的说明文字。"}]},"promptId":"p118a"}

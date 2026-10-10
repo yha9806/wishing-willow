@@ -44,7 +44,7 @@ try {
 
   // Only ever touch `decode` and the timestamp. `prompt` stays exactly as
   // capture.mjs wrote it — this hook has no business rewriting what you said.
-  // 结束时刻取这一轮最后一条消息的时间；取不到，或它不早于此刻，才用钩子跑的时刻（turnLastAt）。
+  // 结束时刻取这一轮最后一条消息的时间；取不到（回答还没写进记录也算），或它不早于此刻，才用钩子跑的时刻（turnLastAt）。
   const nowMs = Date.now();
   const lastMs = turnLastAt(input, prev);
   const endedAt = new Date(lastMs !== null && lastMs < nowMs ? lastMs : nowMs).toISOString();

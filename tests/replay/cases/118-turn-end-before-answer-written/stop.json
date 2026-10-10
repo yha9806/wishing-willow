@@ -1,0 +1,10 @@
+{
+  "session_id": "test-sess-118",
+  "prompt_id": "p118a",
+  "transcript_path": "<STATE_DIR>/transcript.jsonl",
+  "cwd": "/tmp/fake/project",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "合成命令的结果已经写好了。"
+}
