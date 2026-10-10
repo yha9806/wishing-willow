@@ -1,0 +1,22 @@
+{
+  "note": "结束钩子跑的时候，这一轮的回答还没写进聊天记录，这一段里只有提问那几行（10-09 一条斜杠命令：命令行比 capture 早 0.19 秒写下，回答 11 秒后才落盘）。以前拿提问行的时刻当结束时刻，结束早于开始，用时成了负数，刘海按「用时不在 0 以上」把整场对话的活动拒收。这一段里一条助手消息都没有，就当聊天记录还没写到这一轮的结尾，用钩子跑的时刻。",
+  "session_id": "test-sess-118",
+  "steps": [
+    {
+      "append": "pre.jsonl"
+    },
+    {
+      "hook": "capture",
+      "input": "ups.json"
+    },
+    {
+      "append": "turn.jsonl"
+    },
+    {
+      "hook": "extract",
+      "input": "stop.json"
+    }
+  ],
+  "log_lines": 1,
+  "log_last_duration_min": 0
+}

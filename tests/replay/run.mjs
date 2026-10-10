@@ -79,7 +79,7 @@ for (const name of caseNames) {
   // state_file 的未知键（14-tag-line 假绿）和这里的 log_* 。
   const TOP_KEYS = new Set([
     'note', 'env', 'transcript', 'transcript_two_phase', 'runtime_fields_exempt',
-    'capture', 'extract', 'state_file', 'state_keys', 'log_lines', 'log_last', 'list_items', 'shadow_items', 'shadow_lines', 'steps', 'session_id',
+    'capture', 'extract', 'state_file', 'state_keys', 'log_lines', 'log_last', 'log_last_duration_min', 'list_items', 'shadow_items', 'shadow_lines', 'steps', 'session_id',
   ]);
   for (const k of Object.keys(expect)) {
     if (!TOP_KEYS.has(k)) check(name, 'expect.keys', false, `runner 不认识期望键 ${k}`);
@@ -287,7 +287,7 @@ for (const name of caseNames) {
       marks.push(`state:${ok ? 'ok' : 'FAIL'}`);
     }
     // ── 轮次日志 ─────────────────────────────────────────────────────────
-    if (expect.log_lines !== undefined || expect.log_last !== undefined) {
+    if (expect.log_lines !== undefined || expect.log_last !== undefined || expect.log_last_duration_min !== undefined) {
       const sid = expect.session_id ?? (() => { try { return read(stop).session_id ?? read(ups).session_id; } catch { return null; } })();
       const logPath = sid ? join(stateDir, `${sid}.log.jsonl`) : null;
       const lines = logPath && existsSync(logPath)
@@ -309,6 +309,15 @@ for (const name of caseNames) {
               `期望 ${JSON.stringify(want)}，得到 ${JSON.stringify(got)}`) && ok;
           }
         }
+      }
+      // 最后一行的用时（endedAt − at，秒）不得低于这个数。两个时刻一个是 capture 跑的时刻、一个来自聊天记录，
+      // 用例写不出确切值，只能写下限：负数会让刘海整份拒收这场对话（118）。
+      if (expect.log_last_duration_min !== undefined) {
+        let last = null;
+        try { last = JSON.parse(lines[lines.length - 1]); } catch { /* 下面报 */ }
+        const secs = last ? (Date.parse(last.endedAt ?? '') - Date.parse(last.at ?? '')) / 1000 : NaN;
+        ok = check(name, 'log.last.duration', Number.isFinite(secs) && secs >= expect.log_last_duration_min,
+          `期望用时 ≥ ${expect.log_last_duration_min} 秒，得到 ${Number.isFinite(secs) ? secs : '算不出'}（at ${last?.at ?? null}，endedAt ${last?.endedAt ?? null}）`) && ok;
       }
       marks.push(`log:${ok ? 'ok' : 'FAIL'}`);
     }
