@@ -48,9 +48,9 @@ struct LongTextTests {
         #expect(all.contains("读成了一句"))
     }
 
-    /// 10-12：模型把一整句写成了「标签：」（78 字）。标签进了右翼、耳朵、翻面标题、面板标题与轮次，
-    /// 五处都是 lintel 的短字段（≤64 字），整份活动被拒收，刘海上一直挂着「有拒收」。
-    @Test("78 字的标签：右翼、耳朵、翻面标题、面板标题、轮次都截到 64 字以内")
+    /// 10-12：模型把一整句写成了「标签：」（78 字）。标签进了胶囊、右翼、耳朵、翻面标题、面板标题与轮次，
+    /// 都是 lintel 的短字段（≤64 字），整份活动被拒收，刘海上一直挂着「有拒收」。
+    @Test("78 字的标签：胶囊、右翼、耳朵、翻面标题、面板标题、轮次都截到 64 字以内")
     func longTagFitsShortFields() throws {
         let d = FileManager.default.temporaryDirectory.appendingPathComponent("willow-tag-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
@@ -69,7 +69,9 @@ struct LongTextTests {
 
         let history = try #require((a["detail"] as? [String: Any])?["history"] as? [[String: Any]])
         #expect(!history.isEmpty, "夹具要真的造出一轮，不然轮次那一处测不到")
+        // 胶囊只在会话开着时导出（夹具的 pid 是测试进程自己，算开着）；10-12 的拒收日志里它也超过一次。
         let short: [(String, Any?)] = [
+            ("pill.preview", (a["pill"] as? [String: Any])?["preview"]),
             ("label.text", (a["label"] as? [String: Any])?["text"]),
             ("ears.tag.text", ((a["ears"] as? [String: Any])?["tag"] as? [String: Any])?["text"]),
             ("flip.title", (a["flip"] as? [String: Any])?["title"]),

@@ -409,7 +409,7 @@ enum ActivityExport {
         case .silent: out["dot"] = "orange"
         }
         if let t = SessionPill.title(pill) { out["title"] = t }
-        out["preview"] = store.progress(for: s)?.tag ?? s.tag ?? FocusRule.lastLoggedTag(s, store) ?? s.workspace
+        out["preview"] = short(store.progress(for: s)?.tag ?? s.tag ?? FocusRule.lastLoggedTag(s, store) ?? s.workspace)
         return out
     }
 
