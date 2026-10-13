@@ -42,6 +42,10 @@ enum ActivityExport {
     static func iso(_ d: Date?) -> Any { d.map { $0.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true)) } ?? NSNull() }
     static func opt(_ v: Any?) -> Any { v ?? NSNull() }
 
+    /// lintel 的短字段（标签、名字、注……）上限 64 字（Validation.Limit.short），超了整份活动被拒收、会话从刘海上消失，
+    /// 刘海上一直挂着「有拒收」。10-12 实见：模型把一整句写成了「标签：」，78 字的标签进了右翼、耳朵、翻面标题、面板标题与轮次，五处一起拒。
+    static func short(_ s: String) -> String { s.count > 64 ? String(s.prefix(63)) + "…" : s }
+
     /// 全部会话 → [活动 id: 活动字典]。
     static func activities(_ store: WillowStore, now: Date = Date()) -> [String: [String: Any]] {
         var out: [String: [String: Any]] = [:]
@@ -79,7 +83,7 @@ enum ActivityExport {
         ]
         // 对话的名字（桌面端的标题），不随每轮变；lintel 的名字上限 64 字，超了整份活动被拒收，这边先截短。
         if let n = SessionTitleCache.shared.title(path: s.record.transcriptPath) {
-            a["name"] = n.count > 64 ? String(n.prefix(63)) + "…" : n
+            a["name"] = short(n)
         }
         // 进行中的一轮计时在走：许愿柳停了（来源进程退出），lintel 要能看出「没有消息」，不能让计时一直走下去。
         if turnLive(s) { a["heartbeatSeconds"] = 60 }
@@ -87,7 +91,7 @@ enum ActivityExport {
         // 右翼：FocusRule.label；看过之后是否缩回
         let lu = FocusRule.label(s, unseen, store)
         let ls = FocusRule.label(s, seen, store)
-        a["label"] = lu.map { ["text": $0.text, "tone": s.declaration == .unreadable ? "red" : ($0.carried ? "white55" : "white")] } ?? NSNull()
+        a["label"] = lu.map { ["text": short($0.text), "tone": s.declaration == .unreadable ? "red" : ($0.carried ? "white55" : "white")] } ?? NSNull()
         a["labelUntilSeen"] = lu != nil && ls == nil
 
         // 胶囊：FocusRule.pill + SessionPill
@@ -211,11 +215,11 @@ enum ActivityExport {
                 var out: [String: Any] = ["id": x.id, "text": x.text, "state": state]
                 if let current { out["now"] = current }
                 // lintel 的 wait 上限 64 字，超了整份活动被拒收：先截短。
-                if let wait { out["wait"] = wait.count > 64 ? String(wait.prefix(63)) + "…" : wait }
+                if let wait { out["wait"] = short(wait) }
                 // 挡着什么（lintel blocks：字符串数组、每个 ≤64 字、最多 16 个；超了整份活动被拒收，这边先截）。
-                if !x.blocks.isEmpty { out["blocks"] = x.blocks.prefix(16).map { $0.count > 64 ? String($0.prefix(63)) + "…" : $0 } }
+                if !x.blocks.isEmpty { out["blocks"] = x.blocks.prefix(16).map(short) }
                 // lintel 的注上限 64 字，超了整份活动被拒收、会话从刘海上消失（09-24 实见）：这边先截短。
-                if let note { out["note"] = note.count > 64 ? String(note.prefix(63)) + "…" : note }
+                if let note { out["note"] = short(note) }
                 // 到了日子的「等别的」「以后」（ops-private spec 2026-10-06 刘海 D1）：天数和字这边算好，lintel 只看有没有。
                 // 10-06 实见：一件答应了两周多没做的、一件约在当天的，都在「以后」「等别的」里，弹出框不放以后、窗口里以后折着。
                 if let due = due(x.text, state: state) { out["due"] = due }
@@ -410,7 +414,7 @@ enum ActivityExport {
     }
 
     static func earTag(_ t: (text: String, carried: Bool), _ s: SessionState) -> [String: Any] {
-        ["text": t.text, "tone": s.flaggedByModel ? "orange" : (t.carried ? "inkTertiary" : "inkPrimary")]
+        ["text": short(t.text), "tone": s.flaggedByModel ? "orange" : (t.carried ? "inkTertiary" : "inkPrimary")]
     }
 
     // MARK: 展开态三块（IslandExpandedContent.request / reading / working / stats）
@@ -589,7 +593,7 @@ enum ActivityExport {
     }
 
     static func title(_ s: SessionState, _ store: WillowStore) -> String {
-        store.progress(for: s)?.tag ?? s.tag ?? FocusRule.lastLoggedTag(s, store) ?? L("还没有标签", "No tag yet")
+        short(store.progress(for: s)?.tag ?? s.tag ?? FocusRule.lastLoggedTag(s, store) ?? L("还没有标签", "No tag yet"))
     }
 
     // MARK: 点击面板（DetailView）
@@ -662,7 +666,7 @@ enum ActivityExport {
         }
         out["history"] = entries.reversed().map { t -> [String: Any] in
             var turn: [String: Any] = [
-                "id": t.id, "at": iso(t.at), "tag": opt(t.tag),
+                "id": t.id, "at": iso(t.at), "tag": opt(t.tag.map(short)),
                 "badge": t.interrupted == true ? L("被打断", "Interrupted") : NSNull(),
                 "duration": t.duration.flatMap { $0 >= 1 ? DetailView.duration($0) : nil } ?? NSNull(),
                 "lines": [askedLine(system: t.isSystemMessage, prompt: t.prompt, midTurn: t.midTurn == true), readLine(t)],
@@ -674,7 +678,7 @@ enum ActivityExport {
         }
         if turnLive(s), let turn = s.record.turnId, !entries.contains(where: { $0.turnId == turn }) {
             var live: [String: Any] = [
-                "at": iso(s.record.updatedAt), "tag": opt(p?.tag ?? s.tag), "badge": L("进行中", "Live"), "clockSince": iso(s.record.updatedAt),
+                "at": iso(s.record.updatedAt), "tag": opt((p?.tag ?? s.tag).map(short)), "badge": L("进行中", "Live"), "clockSince": iso(s.record.updatedAt),
                 "lines": [
                     askedLine(system: s.record.isSystemMessage, prompt: s.prompt, midTurn: s.record.midTurn == true),
                     p?.decode.map { line(L("理解", "Read"), $0, $0.hasPrefix("⚠") ? "orange" : "inkPrimary") }

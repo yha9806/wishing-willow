@@ -47,4 +47,38 @@ struct LongTextTests {
         #expect(all.contains { $0.hasSuffix("（原文 35000 字，截到这里）") })
         #expect(all.contains("读成了一句"))
     }
+
+    /// 10-12：模型把一整句写成了「标签：」（78 字）。标签进了右翼、耳朵、翻面标题、面板标题与轮次，
+    /// 五处都是 lintel 的短字段（≤64 字），整份活动被拒收，刘海上一直挂着「有拒收」。
+    @Test("78 字的标签：右翼、耳朵、翻面标题、面板标题、轮次都截到 64 字以内")
+    func longTagFitsShortFields() throws {
+        let d = FileManager.default.temporaryDirectory.appendingPathComponent("willow-tag-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        let tag = String(repeating: "合成的长标签句", count: 11) + "。"   // 78 字
+        let now = iso.format(Date())
+        let obj: [String: Any] = ["schema": 13, "sessionId": "s", "pid": Int(ProcessInfo.processInfo.processIdentifier), "cwd": "/x/w",
+                                  "turnId": "t1", "updatedAt": now, "prompt": "合成的一句", "promptField": "prompt",
+                                  "origin": "user", "reminded": true, "decode": "读成了一句", "tag": tag, "turnEndedAt": now]
+        try JSONSerialization.data(withJSONObject: obj).write(to: d.appendingPathComponent("s.json"))
+        let row: [String: Any] = ["turnId": "t1", "at": now, "endedAt": now, "reminded": true, "origin": "user",
+                                  "prompt": "合成的一句", "decode": "读成了一句", "tag": tag]
+        try JSONSerialization.data(withJSONObject: row).write(to: d.appendingPathComponent("s.log.jsonl"))
+        let store = WillowStore(directory: d)
+        store.reload()
+        let a = try #require(ActivityExport.activities(store).values.first)
+
+        let history = try #require((a["detail"] as? [String: Any])?["history"] as? [[String: Any]])
+        #expect(!history.isEmpty, "夹具要真的造出一轮，不然轮次那一处测不到")
+        let short: [(String, Any?)] = [
+            ("label.text", (a["label"] as? [String: Any])?["text"]),
+            ("ears.tag.text", ((a["ears"] as? [String: Any])?["tag"] as? [String: Any])?["text"]),
+            ("flip.title", (a["flip"] as? [String: Any])?["title"]),
+            ("detail.listTitle", (a["detail"] as? [String: Any])?["listTitle"]),
+        ] + history.map { ("detail.history[].tag", $0["tag"]) }
+        for (path, v) in short {
+            let s = try #require(v as? String, "\(path) 没有写出来")
+            #expect(s.count <= 64, "\(path) 是 \(s.count) 字")
+            #expect(s.hasPrefix("合成的长标签句"), "\(path) 不是这条标签：\(s)")
+        }
+    }
 }
