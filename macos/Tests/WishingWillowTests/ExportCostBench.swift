@@ -17,11 +17,16 @@ struct ExportCostBench {
         let t0 = Date()
         for _ in 0..<runs { _ = ActivityExport.activities(store) }
         let ms = Date().timeIntervalSince(t0) * 1000 / Double(runs)
+        // 写盘前的收尾与编码（K11）：write() 每份活动都做这两步，这里不落盘。
+        let all = ActivityExport.activities(store)
+        let te = Date()
+        for _ in 0..<runs { for a in all.values { _ = try? ActivityExport.encode(ActivityExport.fitted(a)) } }
+        let encodeMs = Date().timeIntervalSince(te) * 1000 / Double(runs)
         // 重载（目录监视每次触发都跑一遍）：同一份目录、文件没变时的耗时。
         let t1 = Date()
         for _ in 0..<runs { store.reload() }
         let reloadMs = Date().timeIntervalSince(t1) * 1000 / Double(runs)
-        print(String(format: "BENCH sessions=%d export_ms=%.1f reload_ms=%.1f", store.sessions.count, ms, reloadMs))
+        print(String(format: "BENCH sessions=%d export_ms=%.1f encode_ms=%.1f reload_ms=%.1f", store.sessions.count, ms, encodeMs, reloadMs))
         #expect(store.sessions.count > 0)
     }
 }

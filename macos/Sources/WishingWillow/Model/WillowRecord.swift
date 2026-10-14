@@ -120,7 +120,15 @@ enum PromptSource {
     /// 显示给你看的原话：去掉夹在里面的信封块（system-reminder 等），只留你说的。记录里仍是逐字原文，只有显示走这里。
     /// 09-27 grill 6：轮次页把「<system-reminder>…Worktree path…</system-reminder> 继续……」整段当成了「要求」。
     /// 哪些标签算信封，读插件自己的 envelopes.json（钩子判来历用的同一份，规则只有一份）；读不到就原样显示，不猜。
-    static func spoken(_ prompt: String?) -> String? { spoken(prompt, block: installedBlock) }
+    /// 结果按原话缓存（K11 功耗，2026-10-14）：导出每次把每个会话每一轮的原话都过一遍信封正则，
+    /// 83 个会话上导出一次约 57 ms，采样里这一步排在写盘之后、第二。信封规则进程内不变（installedBlock 只读一次），
+    /// 同一句原话结果也不变，所以只算一次。
+    static func spoken(_ prompt: String?) -> String? {
+        guard let prompt else { return nil }
+        return spokenCache.value(prompt) { spoken($0, block: installedBlock) ?? $0 }
+    }
+
+    private static let spokenCache = StringMemo()
 
     static func spoken(_ prompt: String?, block: NSRegularExpression?) -> String? {
         guard let prompt, let block else { return prompt }
