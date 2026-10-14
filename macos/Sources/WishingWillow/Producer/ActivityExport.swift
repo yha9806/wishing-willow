@@ -749,7 +749,9 @@ enum ActivityExport {
     static func fitted(_ v: Any) -> Any {
         switch v {
         case let s as String:
-            guard s.count > lintelLineLimit else { return s }
+            // 字数（按字形数）不会多于 UTF-8 字节数，字节数没超就不必逐字去数（K11 功耗，2026-10-14：
+            // 每次导出都把每个字符串逐字数一遍。83 个会话的快照上，收尾加编码从约 50 ms 降到约 38 ms）。
+            guard s.utf8.count > lintelLineLimit, s.count > lintelLineLimit else { return s }
             let tail = L("…（原文 \(s.count) 字，截到这里）", "… (\(s.count) characters, cut here)")
             return String(s.prefix(lintelLineLimit - tail.count)) + tail
         case let d as [String: Any]:
